@@ -32,11 +32,9 @@ def render(
 
 def loss(
         sigma, measured, r: torch.Tensor, d: torch.Tensor, pose: Pose,
-        epsilon: float=0.01, n: int=360, k: int=120):
+        epsilon: float = 0.01, n: int = 360, k: int = 120):
     """Get loss for an input image."""
-
-    
-
+    pass
 
 
 def stochastic_integration(
