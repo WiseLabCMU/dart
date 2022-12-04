@@ -11,7 +11,7 @@ classdef OccupancyMap3d
         function obj = OccupancyMap3d(sz, res)
             ls = linspace(-sz/2, sz/2, res);
             [obj.y, obj.x, obj.z] = meshgrid(ls, ls, ls);
-            obj.v = zeros(res, res, res);
+            obj.v = zeros(res, res, res, 'double');
         end
         
         function [u, v, w] = xyz2uvw_clipped(obj, x, y, z)
