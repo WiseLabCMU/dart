@@ -10,7 +10,7 @@ classdef OccupancyMap3d
     methods
         function obj = OccupancyMap3d(sz, res)
             ls = linspace(-sz/2, sz/2, res);
-            [obj.x, obj.y, obj.z] = meshgrid(ls, ls, ls);
+            [obj.y, obj.x, obj.z] = meshgrid(ls, ls, ls);
             obj.v = zeros(res, res, res);
         end
         
