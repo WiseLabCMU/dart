@@ -18,7 +18,6 @@ traj = waypointTrajectory(waypoints, waypoint_ts, ...
     AutoBank = AutoBank ...
 );
 
-t_sample = 0 : 1/fs : T-1/fs;
-[position, orientation, velocity, acceleration, angularVelocity] = traj.lookupPose(t_sample);
+t_sample = [0 : 1/fs : T-1/fs].';
 
 end

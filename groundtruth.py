@@ -5,10 +5,10 @@ import torch
 class Map3d:
     def __init__(self, mapfile):
         map = loadmat(mapfile)
-        self.x = torch.Tensor(map['x'].astype('double'))
-        self.y = torch.Tensor(map['y'].astype('double'))
-        self.z = torch.Tensor(map['z'].astype('double'))
-        self.v = torch.Tensor(map['v'].astype('double'))
+        self.x = torch.Tensor(map['x']).double()
+        self.y = torch.Tensor(map['y']).double()
+        self.z = torch.Tensor(map['z']).double()
+        self.v = torch.Tensor(map['v']).double()
         resx, resy, resz = self.v.shape
         ppmx = resx / (self.x[-1, -1, -1] - self.x[0, 0, 0])
         ppmy = resy / (self.y[-1, -1, -1] - self.y[0, 0, 0])
@@ -22,7 +22,7 @@ class Map3d:
     def sample_nearest(self, xyz):
         uvw = torch.round(xyz * self.ppm + self.res / 2).long()
         mask = torch.logical_and(0 <= uvw, uvw < self.res).all(dim=1)
-        output = torch.zeros(mask.shape)
+        output = torch.zeros(mask.shape).double()
         output[mask] = self.v[uvw[mask, 0], uvw[mask, 1], uvw[mask, 2]]
         return output
 
@@ -31,9 +31,23 @@ class Map3d:
         return torch.zeros((batch,))
 
 
+class Trajectory:
+    def __init__(self, trajfile):
+        traj = loadmat(trajfile)
+        self.timestamp = torch.Tensor(traj['timestamp']).double()
+        self.position = torch.Tensor(traj['position']).double()
+        self.orientation = torch.Tensor(traj['orientation']).double()
+        self.velocity = torch.Tensor(traj['velocity']).double()
+        self.acceleration = torch.Tensor(traj['acceleration']).double()
+        self.angularVelocity = torch.Tensor(traj['angularVelocity']).double()
+
+
 if __name__ == '__main__':
-    gt = Map3d('data/map.mat')
-    sigma = gt.get_sigma()
+    map = Map3d('data/map.mat')
+    sigma = map.get_sigma()
     xyz = torch.Tensor([[-10,-10,-10],[0.1,0.1,0.1],[0.75,0.75,0.75]])
     batch = sigma(xyz)
     print(batch)
+
+    traj = Trajectory('data/traj.mat')
+    print(traj.orientation.shape)
