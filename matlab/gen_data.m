@@ -7,7 +7,4 @@ y = map.y;
 z = map.z;
 v = map.v;
 
-save('../data/mapx', 'x');
-save('../data/mapy', 'y');
-save('../data/mapz', 'z');
-save('../data/mapv', 'v');
+save('../data/map', 'x', 'y', 'z', 'v');
