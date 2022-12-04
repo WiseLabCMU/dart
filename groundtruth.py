@@ -16,6 +16,9 @@ class Map3d:
         self.res = torch.Tensor([resx, resy, resz])
         self.ppm = torch.Tensor([ppmx, ppmy, ppmz])
 
+    def get_sigma(self):
+        return self.sample_nearest.__get__(self, self.__class__)
+
     def sample_nearest(self, xyz):
         uvw = torch.round(xyz * self.ppm + self.res / 2).long()
         mask = torch.logical_and(0 <= uvw, uvw < self.res).all(dim=1)
@@ -30,7 +33,7 @@ class Map3d:
 
 if __name__ == '__main__':
     gt = Map3d('data/map.mat')
-    sigma = gt.sample_nearest.__get__(gt, Map3d)
+    sigma = gt.get_sigma()
     xyz = torch.Tensor([[-10,-10,-10],[0.1,0.1,0.1],[0.75,0.75,0.75]])
     batch = sigma(xyz)
     print(batch)
