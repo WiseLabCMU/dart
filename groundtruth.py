@@ -10,9 +10,9 @@ class Map3d:
         self.z = torch.Tensor(map['z']).double()
         self.v = torch.Tensor(map['v']).double()
         resx, resy, resz = self.v.shape
-        ppmx = resx / (self.x[-1, -1, -1] - self.x[0, 0, 0])
-        ppmy = resy / (self.y[-1, -1, -1] - self.y[0, 0, 0])
-        ppmz = resz / (self.z[-1, -1, -1] - self.z[0, 0, 0])
+        ppmx = 1 / (self.x[1, 0, 0] - self.x[0, 0, 0])
+        ppmy = 1 / (self.y[0, 1, 0] - self.y[0, 0, 0])
+        ppmz = 1 / (self.z[0, 0, 1] - self.z[0, 0, 0])
         self.res = torch.Tensor([resx, resy, resz])
         self.ppm = torch.Tensor([ppmx, ppmy, ppmz])
 
@@ -37,13 +37,13 @@ class Map3d:
         return output
 
     def xyz2uvw_nearest(self, xyz):
-        return torch.round(xyz * self.ppm + self.res / 2).long()
+        return torch.round(xyz * self.ppm + self.res / 2 - 0.5).long()
 
     def xyz2uvw_floor(self, xyz):
-        return torch.floor(xyz * self.ppm + self.res / 2).long()
+        return torch.floor(xyz * self.ppm + self.res / 2 - 0.5).long()
 
     def uvw2xyz(self, uvw):
-        return (uvw - self.res / 2) / self.ppm
+        return (uvw + 0.5 - self.res / 2) / self.ppm
 
     def uvw2val(self, uvw):
         mask = torch.logical_and(0 <= uvw, uvw < self.res).all(dim=1)
@@ -66,7 +66,7 @@ class Trajectory:
 if __name__ == '__main__':
     map = Map3d('data/map.mat')
     sigma = map.get_sigma()
-    xyz = torch.Tensor([[-10,-10,-10],[0.1,0.1,0.1],[0.75,0.75,0.75],[-.54, 0, 0]])
+    xyz = torch.Tensor([[-10,-10,-10],[0.1,0.1,0.1],[0.75,0.75,0.75],[-.46, 0, 0]])
     batch = sigma(xyz)
     print(batch)
 
