@@ -1,3 +1,5 @@
+clear; clc;
+
 map = gen_map();
 [traj, timestamp] = gen_traj();
 volshow(map.v);
