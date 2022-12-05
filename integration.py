@@ -1,7 +1,7 @@
 """Stochastic integration routines."""
 
 import torch
-from sample import Pose, sample_points
+from sample import Pose, vsample_points
 
 
 def render(
@@ -26,7 +26,7 @@ def render(
     """
     rr, dd = torch.meshgrid(r, d, indexing='ij')
     return stochastic_integration(
-        rr.reshape(-1), dd.reshape(-1), sigma, pose, n=n, k=k
+        sigma, rr.reshape(-1), dd.reshape(-1), pose, n=n, k=k
     ).reshape(len(r), len(d))
 
 
@@ -38,7 +38,7 @@ def loss(
 
 
 def stochastic_integration(
-        sigma, rd: torch.Tensor, pose: Pose, n: int = 360, k: int = 120):
+        sigma, r: torch.Tensor, d: torch.Tensor, pose: Pose, n: int = 360, k: int = 120):
     """Stochastic integration over the field sigma.
 
     Parameters
@@ -54,8 +54,8 @@ def stochastic_integration(
     k : int
         Number of samples for stochastic integration.
     """
-    batch = rd.shape[0]
-    samples, weights = sample_points(rd, pose, n=n, k=k)
+    batch = r.shape[0]
+    samples, weights = vsample_points(r, d, pose, n=n, k=k)
 
     s_hat = sigma(samples.reshape(-1, 3)).reshape(batch, k)
-    return torch.mean(s_hat, axis=1) * 2 * torch.pi * rd[:, 0] * weights / n
+    return torch.mean(s_hat, axis=1) * 2 * torch.pi * r * weights / n
