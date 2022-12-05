@@ -13,8 +13,8 @@ class Map3d:
         ppmx = 1 / (self.x[1, 0, 0] - self.x[0, 0, 0])
         ppmy = 1 / (self.y[0, 1, 0] - self.y[0, 0, 0])
         ppmz = 1 / (self.z[0, 0, 1] - self.z[0, 0, 0])
-        self.res = torch.Tensor([resx, resy, resz])
-        self.ppm = torch.Tensor([ppmx, ppmy, ppmz])
+        self.res = torch.Tensor([resx, resy, resz]).cuda()
+        self.ppm = torch.Tensor([ppmx, ppmy, ppmz]).cuda()
 
     def get_sigma(self):
         return self.sample_trilinear.__get__(self, self.__class__)
@@ -55,12 +55,12 @@ class Map3d:
 class Trajectory:
     def __init__(self, trajfile):
         traj = loadmat(trajfile)
-        self.timestamp = torch.Tensor(traj['timestamp']).double()
-        self.position = torch.Tensor(traj['position']).double()
-        self.orientation = torch.Tensor(traj['orientation']).double()
-        self.velocity = torch.Tensor(traj['velocity']).double()
-        self.acceleration = torch.Tensor(traj['acceleration']).double()
-        self.angularVelocity = torch.Tensor(traj['angularVelocity']).double()
+        self.timestamp = torch.Tensor(traj['timestamp']).double().cuda()
+        self.position = torch.Tensor(traj['position']).double().cuda()
+        self.orientation = torch.Tensor(traj['orientation']).double().cuda()
+        self.velocity = torch.Tensor(traj['velocity']).double().cuda()
+        self.acceleration = torch.Tensor(traj['acceleration']).double().cuda()
+        self.angularVelocity = torch.Tensor(traj['angularVelocity']).double().cuda()
 
 
 if __name__ == '__main__':

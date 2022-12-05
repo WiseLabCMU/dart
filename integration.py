@@ -18,7 +18,7 @@ def render(
     d : torch.Tensor
         Selected doppler bins.
     pose : Pose
-        Sensor pose parameters.
+        Sensor pose parameters (single sample).
     n : int
         Bin angular resolution.
     k : int
@@ -58,4 +58,5 @@ def stochastic_integration(
     samples, weights = vsample_points(r, d, pose, n=n, k=k)
 
     s_hat = sigma(samples.reshape(-1, 3)).reshape(batch, k)
-    return torch.mean(s_hat, axis=1) * 2 * torch.pi * r * weights / n
+    return torch.nan_to_num(
+        torch.mean(s_hat, axis=1) * 2 * torch.pi * r * weights / n)
