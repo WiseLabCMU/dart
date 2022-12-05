@@ -150,7 +150,8 @@ def sample_points(
 
     bin_width = 2 * np.pi / n
     offsets = (torch.rand(k) - 0.5) * bin_width
-    samples = torch.multinomial(valid, k, replacement=True) / n * 2 * torch.pi
+    samples = torch.multinomial(
+        valid + 1e-10, k, replacement=True) / n * 2 * torch.pi
     psi_actual = samples + offsets
 
     points_sensor = project(r, d, psi_actual, pose)
@@ -158,7 +159,13 @@ def sample_points(
     return points_world, torch.sum(valid)
 
 
-def vsample_points(
+def _sample_points(
+        r: torch.Tensor, d: torch.Tensor,
+        pose: Pose = None, n: int = 360, k: int = 120):
+    return sample_points(r, d, pose, n, k)
+
+
+def vpsample_points(
         r: torch.Tensor, d: torch.Tensor,
         pose: Pose, n: int = 360, k: int = 120):
     """Vectorized over range, doppler, and pose.
@@ -167,3 +174,11 @@ def vsample_points(
     this from being jit compiled.
     """
     return vmap(sample_points, randomness="different")(r, d, pose, n=n, k=k)
+
+
+def vsample_points(
+        r: torch.Tensor, d: torch.Tensor,
+        pose: Pose, n: int = 360, k: int = 120):
+    """Vectorized over range, doppler, but not pose."""
+    return vmap(
+        _sample_points, randomness="different")(r, d, pose=pose, n=n, k=k)
