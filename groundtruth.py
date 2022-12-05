@@ -16,9 +16,6 @@ class Map3d:
         self.res = torch.Tensor([resx, resy, resz]).cuda()
         self.ppm = torch.Tensor([ppmx, ppmy, ppmz]).cuda()
 
-    def get_sigma(self):
-        return self.sample_trilinear.__get__(self, self.__class__)
-
     def sample_nearest(self, xyz):
         return self.uvw2val(self.xyz2uvw_nearest(xyz))
 
