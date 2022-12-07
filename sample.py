@@ -90,7 +90,7 @@ def project(r: torch.Tensor, d: torch.Tensor, psi: torch.Tensor, pose: Pose):
         xyz output coords.
     """
     psi = psi.reshape(1, -1)
-    r_prime = torch.sqrt(1 - (r / pose.s)**2)
+    r_prime = torch.sqrt(1 - (d / pose.s)**2)
 
     # psi is (1, k); p, q are (3, 1)
     return r * (
