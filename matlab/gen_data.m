@@ -1,8 +1,7 @@
-clear; clc;
+clear; clc; close all;
 
 map = gen_map();
 [traj, timestamp] = gen_traj();
-volshow(map.v);
 
 x = map.x;
 y = map.y;
@@ -13,3 +12,8 @@ orientation = permute(quat2rotm(orientation), [3 1 2]);
 
 save('../data/map', 'x', 'y', 'z', 'v');
 save('../data/traj', 'timestamp', 'position', 'orientation', 'velocity', 'acceleration', 'angularVelocity');
+
+volshow(map.v);
+scatter3(position(:,1), position(:,2), position(:,3),'.');
+axis equal;
+axis vis3d;
