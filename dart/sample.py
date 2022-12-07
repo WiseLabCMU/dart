@@ -236,6 +236,17 @@ class VirtualRadar:
         """Render a single doppler column for a radar image.
 
         TODO: reimplement to handle occlusion.
+
+        Parameters
+        ----------
+        t_sensor: Sensor-space rays on the unit sphere.
+        sigma: Field function.
+        pose: Sensor pose.
+        weight: Sample size weight.
+
+        Returns
+        -------
+        Rendered column for one doppler value and a stack of range values.
         """
         def render_range(r):
             t_world = vmap(
