@@ -57,6 +57,7 @@ def stochastic_integration(
     batch = r.shape[0]
     samples, weights = vsample_points(r, d, pose, n=n, k=k)
 
-    s_hat = sigma(samples.reshape(-1, 3)).reshape(batch, k)
+    s_hat = sigma(
+        torch.permute(samples, (0, 2, 1)).reshape(-1, 3)).reshape(batch, k)
     return torch.nan_to_num(
         torch.mean(s_hat, axis=1) * 2 * torch.pi * r * weights / n)
