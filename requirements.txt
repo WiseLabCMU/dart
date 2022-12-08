@@ -3,3 +3,5 @@ matplotlib
 scipy
 jaxtyping
 beartype
+dm-haiku
+tensorflow
