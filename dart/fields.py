@@ -42,8 +42,8 @@ class GroundTruth:
             jnp.zeros(()))
 
 
-@jaxtyped
-@typechecker
+# @jaxtyped
+# @typechecker
 class SimpleGrid(hk.Module):
     """Simple reflectance grid."""
 
@@ -51,14 +51,38 @@ class SimpleGrid(hk.Module):
         self, size: Tuple[int, int, int], lower: Float32[Array, "3"],
         resolution: Union[Float32[Array, "3"], Float32[Array, ""]],
     ) -> None:
+        super().__init__()
         self.lower = lower
         self.resolution = resolution
         self.size = size
 
     def __call__(self, x: Float32[Array, "3"]) -> Float32[Array, ""]:
         """Index into learned reflectance map."""
-        grid = self.get_parameter("grid", self.size, init=jnp.zeros)
-        index = (x - self.lower) / self.resolution
+        grid = hk.get_parameter("grid", self.size, init=jnp.zeros)
+        index = (x - self.lower) * self.resolution
         valid = jnp.all(
             (0 <= index) & (index <= jnp.array(self.size) - 1))
-        return jnp.where(valid, interpolate(index, grid), jnp.zeros(()))
+        return jnp.where(
+            valid,
+            interpolate(index, grid.reshape(*grid.shape, 1))[0],
+            jnp.zeros(()))
+
+
+class NGPHashTable:
+    """Single hash table for NGP field.
+
+    References
+    ----------
+    [1] Muller et al, "Instant Neural Graphics Primitives with a
+        Multiresolution Hash Encoding," 2022.
+    """
+
+    def __init__(self, size):
+        self.size = size
+
+    def hash(self, x):
+        """Apply hash function specified by NGP (Eq. 4 [1])."""
+        pi2 = 2654435761
+        pi3 = 805459861
+
+        return (x[0] + x[1] * pi2 + x[2] * pi3) % self.size

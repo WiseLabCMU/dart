@@ -13,7 +13,7 @@ from beartype import beartype as typechecker
 from beartype.typing import NamedTuple, Tuple, Callable, Optional
 
 from jax import numpy as jnp
-from jax import random, vmap, jit
+from jax import random, vmap
 
 
 class RadarPose(NamedTuple):
@@ -57,7 +57,6 @@ class VirtualRadar:
         n: int = 360, k: int = 120,
         r: Optional[Float32[Array, "nr"]] = None,
         d: Optional[Float32[Array, "nd"]] = None,
-
     ) -> None:
         self.r = r
         self.d = d
