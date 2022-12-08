@@ -13,7 +13,7 @@ from beartype import beartype as typechecker
 from beartype.typing import NamedTuple, Tuple, Callable, Optional
 
 from jax import numpy as jnp
-from jax import random, vmap
+from jax import random, vmap, jit
 
 
 class RadarPose(NamedTuple):
@@ -37,6 +37,8 @@ class RadarPose(NamedTuple):
     A: Float32[Array, "3 3"]
 
 
+@jaxtyped
+@typechecker
 class VirtualRadar:
     """Virtual Radar Sensor Model.
 
@@ -65,8 +67,6 @@ class VirtualRadar:
         self.k = k
         self.bin_width = 2 * jnp.pi / n
 
-    @jaxtyped
-    @typechecker
     @staticmethod
     def make_pose(
         v: Float32[Array, "3"], x: Float32[Array, "3"],
@@ -97,8 +97,6 @@ class VirtualRadar:
 
         return RadarPose(v=v, s=s, p=p, q=q, x=x, A=A)
 
-    @jaxtyped
-    @typechecker
     @staticmethod
     def project(
         d: Float32[Array, ""], psi: Float32[Array, "n"], pose: RadarPose
@@ -122,8 +120,6 @@ class VirtualRadar:
                 + jnp.outer(pose.q, jnp.sin(psi)))
             + pose.v.reshape(3, 1) * d_norm)
 
-    @jaxtyped
-    @typechecker
     def valid_mask(
         self, d: Float32[Array, ""], psi: Float32[Array, "n"], pose: RadarPose
     ) -> Bool[Array, "n"]:
@@ -148,8 +144,6 @@ class VirtualRadar:
             & (phi < self.phi_lim) & (phi > -self.phi_lim)
             & (x > 0))
 
-    @jaxtyped
-    @typechecker
     def sample_rays(
             self, key, d: Float32[Array, ""], psi: Float32[Array, "n"],
             valid_psi: Bool[Array, "n"], pose: RadarPose
@@ -179,8 +173,6 @@ class VirtualRadar:
         points = self.project(d, psi_actual, pose)
         return points
 
-    @jaxtyped
-    @typechecker
     @staticmethod
     def sensor_to_world(
         r: Float32[Array, ""], x: Float32[Array, "3 k"], pose: RadarPose
@@ -199,8 +191,6 @@ class VirtualRadar:
         """
         return pose.x.reshape(3, 1) + jnp.matmul(pose.A, r * x)
 
-    @jaxtyped
-    @typechecker
     def sample_points(
         self, key, r: Float32[Array, ""], d: Float32[Array, ""],
         pose: RadarPose
@@ -226,16 +216,12 @@ class VirtualRadar:
         points_world = self.sensor_to_world(r, points_sensor, pose)
         return points_world, num_bins
 
-    @jaxtyped
-    @typechecker
     def render_column(
         self, t_sensor: Float32[Array, "3 k"],
-        sigma: Callable[[Float32[Array, "3"]], Float32], pose: RadarPose,
-        weight: Float32[Array, ""]
+        sigma: Callable[[Float32[Array, "3"]], Float32[Array, ""]],
+        pose: RadarPose, weight: Float32[Array, ""]
     ) -> Float32[Array, "nr"]:
         """Render a single doppler column for a radar image.
-
-        TODO: reimplement to handle occlusion.
 
         Parameters
         ----------
@@ -249,20 +235,19 @@ class VirtualRadar:
         Rendered column for one doppler value and a stack of range values.
         """
         def render_range(r):
-            t_world = vmap(
-                partial(self.sensor_to_world, r=r, pose=pose))(t_sensor)
-            sigma_samples = vmap(sigma)(t_world)
+            t_world = self.sensor_to_world(r=r, x=t_sensor, pose=pose)
+            sigma_samples = jnp.nan_to_num(vmap(sigma)(t_world.T))
             return jnp.mean(sigma_samples) * 2 * jnp.pi * r * weight / self.n
 
         return vmap(render_range)(self.r)
 
-    @jaxtyped
-    @typechecker
     def render(
-        self, key, sigma: Callable[[Float32[Array, "3"]], Float32],
+        self, key, sigma: Callable[[Float32[Array, "3"]], Float32[Array, ""]],
         pose: RadarPose
     ) -> Float32[Array, "nr nd"]:
-        """Render (range, doppler) radar image.
+        """Render single (range, doppler) radar image.
+
+        NOTE: This function is not vmap or jit safe.
 
         Parameters
         ----------
@@ -276,13 +261,14 @@ class VirtualRadar:
         rendered as 0.
         """
         psi = jnp.arange(self.n) * self.bin_width
-        valid_psi = vmap(partial(self.valid_mask, psi=psi, pose=pose))(self.d)
+        valid_psi = vmap(partial(
+            self.valid_mask, psi=psi, pose=pose))(self.d)
         num_bins = jnp.sum(valid_psi, axis=1)
-        valid_d = self.d[num_bins > 0]
 
-        keys = jnp.array(jnp.split(key))
-        t_sensor = vmap(partial(self.sample_rays, pose=pose))(
-            keys, valid_d, psi, valid_psi)
+        keys = jnp.array(random.split(key, self.d.shape[0]))
+
+        t_sensor = vmap(partial(self.sample_rays, psi=psi, pose=pose))(
+            keys, d=self.d, valid_psi=valid_psi)
         return vmap(
             partial(self.render_column, sigma=sigma, pose=pose)
-        )(t_sensor, num_bins)
+        )(t_sensor, weight=num_bins.astype(float)).T
