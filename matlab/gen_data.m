@@ -8,7 +8,7 @@ y = map.y;
 z = map.z;
 v = map.v;
 [position, orientation, velocity, acceleration, angularVelocity] = traj.lookupPose(timestamp);
-orientation = permute(quat2rotm(orientation), [3 1 2]);
+orientation = permute(quat2rotm(orientation), [3 2 1]); % lookupPose provides world->body, so we need to invert
 
 save('../data/map', 'x', 'y', 'z', 'v');
 save('../data/traj', 'timestamp', 'position', 'orientation', 'velocity', 'acceleration', 'angularVelocity');
