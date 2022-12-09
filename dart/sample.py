@@ -215,7 +215,7 @@ class VirtualRadar:
         points_world = self.sensor_to_world(r, points_sensor, pose)
         return points_world, num_bins
 
-    def render_column(
+    def _render_column(
         self, t_sensor: Float32[Array, "3 k"],
         sigma: Callable[[Float32[Array, "3"]], Float32[Array, ""]],
         pose: RadarPose, weight: Float32[Array, ""]
@@ -233,12 +233,19 @@ class VirtualRadar:
         -------
         Rendered column for one doppler value and a stack of range values.
         """
-        def render_range(r):
+        def sample_rays(r):
             t_world = self.sensor_to_world(r=r, x=t_sensor, pose=pose)
-            sigma_samples = jnp.nan_to_num(vmap(sigma)(t_world.T))
-            return jnp.mean(sigma_samples) * 2 * jnp.pi * r * weight / self.n
+            return jnp.nan_to_num(vmap(sigma)(t_world.T))
 
-        return vmap(render_range)(self.r)
+        sigma_samples = vmap(sample_rays)(self.r)
+        energy = jnp.cumprod(1 - sigma_samples[:-1], axis=0)
+        reflected = energy * sigma_samples[1:]
+
+        return (
+            jnp.concatenate([
+                jnp.array(jnp.mean(sigma_samples[0])).reshape((1,)),
+                jnp.mean(reflected, axis=1)])
+            * 2 * jnp.pi * self.r * weight / self.n)
 
     def render(
         self, key, sigma: Callable[[Float32[Array, "3"]], Float32[Array, ""]],
