@@ -1,16 +1,21 @@
 """Datasets."""
 
+from beartype.typing import Any
+from functools import partial
+
+import jax
 from jax import numpy as jnp
-from jax import vmap
 import numpy as np
 from tensorflow.data import Dataset
 from scipy.io import loadmat
 
 from .fields import GroundTruth
-from .sample import VirtualRadar
+from .pose import make_pose
+from .column import make_column
+from .sensor import VirtualRadar
 
 
-def _load_arrays(file: str) -> any:
+def _load_arrays(file: str) -> Any:
     if file.endswith(".npz"):
         return np.load(file)
     elif file.endswith(".mat"):
@@ -35,18 +40,41 @@ def gt_map(file: str) -> GroundTruth:
         jnp.array(data['v'], dtype=float), lower=lower, resolution=resolution)
 
 
-def trajectory(traj: str, sensor: VirtualRadar) -> Dataset:
+def trajectory(traj: str) -> Dataset:
     """Generate trajectory dataset."""
     traj = _load_arrays(traj)
-    pose = vmap(sensor.make_pose)(
+    pose = jax.vmap(make_pose)(
         traj["velocity"], traj["position"], traj["orientation"])
     return Dataset.from_tensor_slices(pose)
 
 
-def dart(traj: str, images: str, sensor: VirtualRadar) -> Dataset:
+def image_traj(traj: str, images: str) -> Dataset:
     """Dataset with trajectory and images."""
     traj = _load_arrays(traj)
     images = _load_arrays(images)
-    pose = vmap(sensor.make_pose)(
+    pose = jax.vmap(make_pose)(
         traj["velocity"], traj["position"], traj["orientation"])
     return Dataset.from_tensor_slices((pose, images["y"]))
+
+
+def dart(traj: str, images: str, sensor: VirtualRadar) -> Dataset:
+    """Dataset with columns, poses, and other parameters."""
+    traj = _load_arrays(traj)
+    images = _load_arrays(images)['y']
+    poses = jax.vmap(make_pose)(
+        traj["velocity"], traj["position"], traj["orientation"])
+
+    def process_image(img, pose, sensor):
+        return jax.vmap(
+            partial(make_column, pose=pose, sensor=sensor)
+        )(col=img, d=sensor.d)
+
+    columns = jax.vmap(partial(process_image, sensor=sensor))(images, poses)
+
+    columns_flat = jax.tree_util.tree_map(
+        lambda x: x.reshape(-1, *x.shape[2:]), columns)
+    not_empty = columns_flat.weight > 0
+
+    columns_valid = jax.tree_util.tree_map(
+        lambda x: x[not_empty], columns_flat)
+    return Dataset.from_tensor_slices(columns_valid)

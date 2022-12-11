@@ -1,8 +1,7 @@
 """Reflectance field functions."""
 
-from jaxtyping import Float32, Array, jaxtyped
-from beartype import beartype as typechecker
-from beartype.typing import Union, Tuple
+from jaxtyping import Float32, Array
+from beartype.typing import Union
 
 from jax import numpy as jnp
 import haiku as hk
@@ -10,8 +9,6 @@ import haiku as hk
 from .spatial import interpolate
 
 
-@jaxtyped
-@typechecker
 class GroundTruth:
     """Ground truth reflectance map.
 
@@ -42,13 +39,11 @@ class GroundTruth:
             jnp.zeros(()))
 
 
-# @jaxtyped
-# @typechecker
 class SimpleGrid(hk.Module):
     """Simple reflectance grid."""
 
     def __init__(
-        self, size: Tuple[int, int, int], lower: Float32[Array, "3"],
+        self, size: tuple[int, int, int], lower: Float32[Array, "3"],
         resolution: Union[Float32[Array, "3"], Float32[Array, ""]],
     ) -> None:
         super().__init__()

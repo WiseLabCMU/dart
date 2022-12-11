@@ -1,7 +1,10 @@
-numpy
-matplotlib
-scipy
-jaxtyping
-beartype
-dm-haiku
-tensorflow
+numpy==1.23.5
+matplotlib==3.6.2
+scipy==1.9.3
+tensorflow==2.11.0
+tqdm==4.64.1
+jaxtyping==0.2.8
+beartype==0.11.0
+jax==0.3.25
+dm-haiku==0.0.9
+optax==0.1.4

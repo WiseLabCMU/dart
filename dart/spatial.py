@@ -1,14 +1,11 @@
 """Spatial utilities."""
 
-from jaxtyping import Float32, Array, jaxtyped
-from beartype import beartype as typechecker
+from jaxtyping import Float32, Array
 from beartype.typing import Union, Callable
 
 from jax import numpy as jnp
 
 
-@jaxtyped
-@typechecker
 def interpolate(
     x: Float32[Array, "3"],
     grid: Union[
