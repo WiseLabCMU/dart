@@ -40,6 +40,7 @@ class DART:
     ) -> None:
 
         self.gpus = gpus if gpus else len(jax.devices())
+        self.devices = jax.local_devices()[:gpus]
 
         def forward(batch):
             key = hk.next_rng_key()
@@ -72,7 +73,7 @@ class DART:
 
             return jax.value_and_grad(loss_func)(state.params)
 
-        def step(grads):
+        def step(grads, state):
             clip = jax.tree_util.tree_map(jnp.nan_to_num, grads)
             updates, opt_state = self.optimizer.update(
                 clip, state.opt_state, state.params)
@@ -94,22 +95,25 @@ class DART:
                     batch = jax.tree_util.tree_map(jnp.array, batch)
                     if self.gpus > 1:
                         def distribute(x):
-                            return x.reshape(
-                                self.gpus,
-                                int(batch.data.shape[0] / self.gpus),
-                                *x.shape[1:])
+                            shards = [
+                                s for s in x.reshape(
+                                    self.gpus,
+                                    int(batch.data.shape[0] / self.gpus),
+                                    *x.shape[1:])
+                            ]
+                            return jax.device_put_sharded(shards, self.devices)
 
                         batch = jax.tree_util.tree_map(distribute, batch)
                         rng = jnp.array(jax.random.split(rng, self.gpus))
                         loss, grad = jax.pmap(
                             partial(loss_and_grad, state))(rng, batch)
-                        loss = jnp.lax.pmean(loss)
+                        loss = jnp.mean(loss)
                         grad = jax.tree_util.tree_map(
-                            lambda x: jax.lax.pmean(x), grad)
+                            lambda x: jnp.mean(x), grad)
                     else:
                         loss, grad = jax.jit(loss_and_grad)(state, rng, batch)
 
-                    state = jax.jit(step)(grad)
+                    state = jax.jit(step)(grad, state)
                     avg = (avg * j + loss) / (j + 1)
                     epoch.set_postfix(loss=avg)
 
