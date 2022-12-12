@@ -2,7 +2,7 @@
 
 from functools import partial
 from jaxtyping import Float32, Integer, Array
-from beartype.typing import Tuple, Callable
+from beartype.typing import Tuple, Callable, Optional
 import json
 
 import numpy as np
@@ -28,10 +28,15 @@ class VirtualRadarUtils:
             }, f)
 
     @classmethod
-    def from_config(cls, path: str = "data/sensor.json"):
-        """Load radar from saved parameters."""
+    def from_config(
+            cls, path: str = "data/sensor.json", **kwargs):
+        """Load radar from saved parameters.
+
+        Any keyword-args passed override the values in the config file.
+        """
         with open(path) as f:
             cfg = json.load(f)
+        cfg.update(kwargs)
 
         return cls(
             theta_lim=cfg["theta_lim"], phi_lim=cfg["phi_lim"],

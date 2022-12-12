@@ -67,7 +67,7 @@ def dart(traj: str, images: str, sensor: VirtualRadar) -> Dataset:
     def process_image(img, pose, sensor):
         return jax.vmap(
             partial(make_column, pose=pose, sensor=sensor)
-        )(col=img, d=sensor.d)
+        )(data=img, doppler=sensor.d)
 
     columns = jax.vmap(partial(process_image, sensor=sensor))(images, poses)
 

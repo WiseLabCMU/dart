@@ -44,6 +44,7 @@ def _parse():
     p.add_argument(
         "-j", "--traj", default="data/traj.mat", help="Sensor trajectory.")
     p.add_argument("-b", "--batch", default=64, type=int, help="Batch size")
+    p.add_argument("--from", default=None, )
     return p
 
 
