@@ -1,9 +1,10 @@
 """Front-end sensor utilities not used during training."""
 
+import json
+
 from functools import partial
 from jaxtyping import Float32, Integer, Array
 from beartype.typing import Tuple, Callable
-import json
 
 from jax import numpy as jnp
 from jax import random, vmap
@@ -61,11 +62,10 @@ class VirtualRadarUtilMixin:
         points: Sampled points in sensor space.
         num_bins: Number of occupied bins (effective weight of samples).
         """
-        psi = jnp.arange(self.n) * self.bin_width
-        valid_psi = self.valid_mask(d, psi, pose)
+        valid_psi = self.valid_mask(d, pose)
         num_bins = jnp.sum(valid_psi)
 
-        points_sensor = self.sample_rays(key, d, psi, valid_psi, pose)
+        points_sensor = self.sample_rays(key, d, valid_psi, pose)
         points_world = sensor_to_world(r, points_sensor, pose)
         return points_world, num_bins
 
@@ -88,15 +88,21 @@ class VirtualRadarUtilMixin:
         Rendered image. Points not observed within the field of view are
         rendered as 0.
         """
-        psi = jnp.arange(self.n) * self.bin_width
-        valid_psi = vmap(partial(
-            self.valid_mask, psi=psi, pose=pose))(self.d)
+        valid_psi = vmap(partial(self.valid_mask, pose=pose))(self.d)
         num_bins = jnp.sum(valid_psi, axis=1)
 
         keys = jnp.array(random.split(key, self.d.shape[0]))
 
-        t_sensor = vmap(partial(self.sample_rays, psi=psi, pose=pose))(
+        t_sensor = vmap(partial(self.sample_rays, pose=pose))(
             keys, d=self.d, valid_psi=valid_psi)
         return vmap(
             partial(self.render_column, sigma=sigma, pose=pose)
         )(t_sensor, weight=num_bins.astype(float)).T
+
+    def plot_image(self, ax, image, labels=False):
+        """Plot range-doppler image using matplotlib.imshow."""
+        ax.imshow(
+            image, extent=self._plot_extents, aspect='auto', origin='lower')
+        if labels:
+            ax.set_ylabel("Range")
+            ax.set_xlabel("Doppler")

@@ -59,7 +59,14 @@ def image_traj(traj: str, images: str) -> Dataset:
 def dart(
         traj: str, images: str, sensor: VirtualRadar, pre_shuffle: bool = True
 ) -> Dataset:
-    """Dataset with columns, poses, and other parameters."""
+    """Dataset with columns, poses, and other parameters.
+
+    The dataset is ordered by::
+
+        (image/pose index, doppler)
+
+    With only the image/pose "pre-shuffled."
+    """
     traj = _load_arrays(traj)
     images = _load_arrays(images)['y']
     poses = jax.vmap(make_pose)(
@@ -71,16 +78,18 @@ def dart(
         images = jax.tree_util.tree_map(lambda x: x[indices], images)
         poses = jax.tree_util.tree_map(lambda x: x[indices], poses)
 
-    def process_image(img, pose):
-        return jax.vmap(partial(sensor.make_column, pose=pose))(
-            data=img.T, doppler=sensor.d)
+    def process_image(pose):
+        return jax.vmap(
+            partial(sensor.make_column, pose=pose))(doppler=sensor.d)
 
-    columns = jax.vmap(process_image)(images, poses)
+    columns = jax.vmap(process_image)(poses)
+    images_col = jnp.swapaxes(images, 1, 2)
+    dataset = (columns, images_col)
 
-    columns_flat = jax.tree_util.tree_map(
-        lambda x: x.reshape(-1, *x.shape[2:]), columns)
-    not_empty = columns_flat.weight > 0
+    dataset_flat = jax.tree_util.tree_map(
+        lambda x: x.reshape(-1, *x.shape[2:]), dataset)
+    not_empty = dataset_flat[0].weight > 0
 
-    columns_valid = jax.tree_util.tree_map(
-        lambda x: x[not_empty], columns_flat)
-    return Dataset.from_tensor_slices(columns_valid)
+    dataset_valid = jax.tree_util.tree_map(
+        lambda x: x[not_empty], dataset_flat)
+    return Dataset.from_tensor_slices(dataset_valid)

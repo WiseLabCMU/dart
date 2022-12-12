@@ -14,7 +14,7 @@ class TrainingColumn(NamedTuple):
 
     For 256 range bins and 256 angular bins, this takes::
 
-        96 + 256 / 8 + 4 + 4 + 256 * 4 = 1160 bytes.
+        96 + 256 / 8 + 4 + 4 = 136 bytes.
 
     Attributes
     ----------
@@ -22,14 +22,12 @@ class TrainingColumn(NamedTuple):
     valid: validity of each angular bin; bit-packed bool array (n / 8 bytes).
     weight: number of valid bins (4 bytes).
     doppler: doppler value for this column (4 bytes).
-    data: range-doppler data (n * 4 bytes).
     """
 
     pose: RadarPose
     valid: UInt8[Array, "n8"]
     weight: Float32[Array, ""]
     doppler: Float32[Array, ""]
-    data: Float32[Array, "nr"]
 
 
 class VirtualRadarColumnMixins:
@@ -68,14 +66,12 @@ class VirtualRadarColumnMixins:
             * 2 * jnp.pi * self.r * weight / self.n)
 
     def make_column(
-        self, data: Float32[Array, "nr"], doppler: Float32[Array, ""],
-        pose: RadarPose,
+        self, doppler: Float32[Array, ""], pose: RadarPose,
     ) -> TrainingColumn:
         """Create column for training.
 
         Parameters
         ----------
-        data: data in this column.
         d: doppler value.
         pose: sensor pose.
 
@@ -83,18 +79,17 @@ class VirtualRadarColumnMixins:
         -------
         Training point with per-computed valid bins.
         """
-        psi = jnp.arange(self.n) * self.bin_width
-        valid = self.valid_mask(doppler, psi, pose)
+        valid = self.valid_mask(doppler, pose)
         packed = jnp.packbits(valid)
         weight = jnp.sum(valid).astype(jnp.float32)
         return TrainingColumn(
-            pose=pose, valid=packed, weight=weight, doppler=doppler, data=data)
+            pose=pose, valid=packed, weight=weight, doppler=doppler)
 
     def column_forward(
         self, key, column: TrainingColumn,
         sigma: Callable[[Float32[Array, "3"]], Float32[Array, ""]],
     ) -> Float32[Array, "nr"]:
-        """Compute loss for a training column.
+        """Render a training column.
 
         Parameters
         ----------
@@ -106,9 +101,8 @@ class VirtualRadarColumnMixins:
         -------
         Predicted doppler column.
         """
-        psi = jnp.arange(self.n) * self.bin_width
         valid = jnp.unpackbits(column.valid)
         t = self.sample_rays(
-            key, d=column.doppler, psi=psi, valid_psi=valid, pose=column.pose)
+            key, d=column.doppler, valid_psi=valid, pose=column.pose)
         return self.render_column(
             t=t, sigma=sigma, pose=column.pose, weight=column.weight)

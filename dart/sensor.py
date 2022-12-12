@@ -45,22 +45,28 @@ class VirtualRadar(VirtualRadarUtilMixin, VirtualRadarColumnMixins):
         self.k = k
         self.bin_width = 2 * jnp.pi / n
 
+        self._plot_extents = [
+            min(self.r), max(self.r), min(self.d), max(self.d)]
+
     def valid_mask(
-        self, d: Float32[Array, ""], psi: Float32[Array, "n"], pose: RadarPose
+        self, d: Float32[Array, ""], pose: RadarPose
     ) -> Bool[Array, "n"]:
         """Get valid psi values within field of view as a mask.
+
+        Computes a mask for bins::
+
+            jnp.arange(n) * bin_width
 
         Parameters
         ----------
         d: Doppler bin.
-        psi: Angles to check on the doppler-sphere intersection.
         pose: Sensor pose parameters.
 
         Returns
         -------
         Output mask for each bin.
         """
-        x, y, z = project_angle(d, psi, pose)
+        x, y, z = project_angle(d, jnp.arange(self.n) * self.bin_width, pose)
 
         theta = jnp.arcsin(z)
         phi = jnp.arcsin(y * jnp.cos(theta))
@@ -70,17 +76,17 @@ class VirtualRadar(VirtualRadarUtilMixin, VirtualRadarColumnMixins):
             & (x > 0))
 
     def sample_rays(
-            self, key, d: Float32[Array, ""], psi: Float32[Array, "n"],
+            self, key, d: Float32[Array, ""],
             valid_psi: Bool[Array, "n"], pose: RadarPose
     ) -> Float32[Array, "3 k"]:
-        """Sample rays according to pre-computed psi.
+        """Sample rays according to pre-computed psi mask.
 
         Parameters
         ----------
         key: PRNGKey for random sampling.
         d: Doppler bin.
-        psi: Angles in the (p, q) basis for the r-sphere d-plane intersection.
-        valid_psi: Valid psi bins.
+        valid_psi: Valid psi bins for angles jnp.arange(n) * bin_width in the
+            (p, q) basis for the r-sphere d-plane intersection.
         pose: Sensor pose parameters.
 
         Returns
@@ -91,7 +97,7 @@ class VirtualRadar(VirtualRadarUtilMixin, VirtualRadarColumnMixins):
 
         weights = valid_psi.astype(jnp.float32) * 10
         indices = random.categorical(k1, weights, shape=(self.k,))
-        bin_centers = psi[indices]
+        bin_centers = indices.astype(jnp.float32) * self.bin_width
 
         offsets = self.bin_width * (random.uniform(k2, shape=(self.k,)) - 0.5)
         psi_actual = bin_centers + offsets
