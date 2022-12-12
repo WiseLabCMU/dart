@@ -2,18 +2,17 @@
 
 from functools import partial
 from jaxtyping import Float32, Integer, Array
-from beartype.typing import Tuple, Callable, Optional
+from beartype.typing import Tuple, Callable
 import json
 
-import numpy as np
 from jax import numpy as jnp
 from jax import random, vmap
 
 from .pose import RadarPose, sensor_to_world
 
 
-class VirtualRadarUtils:
-    """Mixin with various utilities."""
+class VirtualRadarUtilMixin:
+    """Radar utilities."""
 
     def to_config(self, path: str = "data/sensor.json"):
         """Save radar parameters."""

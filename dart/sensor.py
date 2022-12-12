@@ -8,16 +8,17 @@ Conventions
 """
 
 from jaxtyping import Float32, Bool, Array
-from beartype.typing import Callable, Optional
+from beartype.typing import Optional
 
 from jax import numpy as jnp
-from jax import random, vmap
+from jax import random
 
-from .pose import RadarPose, sensor_to_world, project_angle
-from .sensor_utils import VirtualRadarUtils
+from .pose import RadarPose, project_angle
+from .sensor_utils import VirtualRadarUtilMixin
+from .sensor_column import VirtualRadarColumnMixins
 
 
-class VirtualRadar(VirtualRadarUtils):
+class VirtualRadar(VirtualRadarUtilMixin, VirtualRadarColumnMixins):
     """Virtual Radar Sensor Model.
 
     Parameters
@@ -96,35 +97,3 @@ class VirtualRadar(VirtualRadarUtils):
         psi_actual = bin_centers + offsets
         points = project_angle(d, psi_actual, pose)
         return points
-
-    def render_column(
-        self, t: Float32[Array, "3 k"],
-        sigma: Callable[[Float32[Array, "3"]], Float32[Array, ""]],
-        pose: RadarPose, weight: Float32[Array, ""]
-    ) -> Float32[Array, "nr"]:
-        """Render a single doppler column for a radar image.
-
-        Parameters
-        ----------
-        t: Sensor-space rays on the unit sphere.
-        sigma: Field function.
-        pose: Sensor pose.
-        weight: Sample size weight.
-
-        Returns
-        -------
-        Rendered column for one doppler value and a stack of range values.
-        """
-        def sample_rays(r):
-            t_world = sensor_to_world(r=r, t=t, pose=pose)
-            return jnp.nan_to_num(vmap(sigma)(t_world.T))
-
-        sigma_samples = vmap(sample_rays)(self.r)
-        energy = jnp.cumprod(1 - sigma_samples[:-1], axis=0)
-        reflected = energy * sigma_samples[1:]
-
-        return (
-            jnp.concatenate([
-                jnp.array(jnp.mean(sigma_samples[0])).reshape((1,)),
-                jnp.mean(reflected, axis=1)])
-            * 2 * jnp.pi * self.r * weight / self.n)

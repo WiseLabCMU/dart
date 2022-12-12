@@ -11,7 +11,6 @@ from scipy.io import loadmat
 
 from .fields import GroundTruth
 from .pose import make_pose
-from .column import make_column
 from .sensor import VirtualRadar
 
 
@@ -57,19 +56,26 @@ def image_traj(traj: str, images: str) -> Dataset:
     return Dataset.from_tensor_slices((pose, images["y"]))
 
 
-def dart(traj: str, images: str, sensor: VirtualRadar) -> Dataset:
+def dart(
+        traj: str, images: str, sensor: VirtualRadar, pre_shuffle: bool = True
+) -> Dataset:
     """Dataset with columns, poses, and other parameters."""
     traj = _load_arrays(traj)
     images = _load_arrays(images)['y']
     poses = jax.vmap(make_pose)(
         traj["velocity"], traj["position"], traj["orientation"])
 
-    def process_image(img, pose, sensor):
-        return jax.vmap(
-            partial(make_column, pose=pose, sensor=sensor)
-        )(data=img, doppler=sensor.d)
+    if pre_shuffle:
+        indices = np.arange(images.shape[0])
+        np.random.shuffle(indices)
+        images = jax.tree_util.tree_map(lambda x: x[indices], images)
+        poses = jax.tree_util.tree_map(lambda x: x[indices], poses)
 
-    columns = jax.vmap(partial(process_image, sensor=sensor))(images, poses)
+    def process_image(img, pose):
+        return jax.vmap(partial(sensor.make_column, pose=pose))(
+            data=img.T, doppler=sensor.d)
+
+    columns = jax.vmap(process_image)(images, poses)
 
     columns_flat = jax.tree_util.tree_map(
         lambda x: x.reshape(-1, *x.shape[2:]), columns)
