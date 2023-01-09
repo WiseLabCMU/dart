@@ -1,0 +1,1 @@
+In make_pose, p = cross(v,x) and q = cross(v,p) so that v = cross(p,q). Seems better than using SVD.
