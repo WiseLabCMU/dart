@@ -4,7 +4,8 @@
 import tables as tb
 import pyrealsense2 as rs
 
-TRAJFILE = '../data/traj.h5'
+TRAJ_FILENAME = '../data/traj.h5'
+TRAJ_BUFSIZE = 200
 
 
 class Pose(tb.IsDescription):
@@ -21,21 +22,27 @@ class Pose(tb.IsDescription):
     qz      = tb.Float64Col()
 
 
-if __name__ == '__main__':
+def datacollect():
     pipe = rs.pipeline()
     cfg = rs.config()
     cfg.disable_all_streams()
     cfg.enable_stream(rs.stream.pose)
     pipe.start(cfg)
-    with tb.open_file(TRAJFILE, mode='w', title='Trajectory file') as h5file:
+    with tb.open_file(TRAJ_FILENAME, mode='w', title='Trajectory file') as h5file:
         traj_group = h5file.create_group('/', 'traj', 'Trajectory information')
         pose_table = h5file.create_table(traj_group, 'pose', Pose, 'Pose data')
+        pose_count = 0
+        start_time = None
+        end_time = None
         try:
             while True:
                 frames = pipe.poll_for_frames()
                 if frames:
                     frame = frames.get_pose_frame()
                     if frame:
+                        end_time = frame.timestamp / 1000
+                        if not start_time:
+                            start_time = end_time
                         pose = frame.get_pose_data()
                         pose_table.row['t'] = frame.timestamp / 1000
                         pose_table.row['x'] = pose.translation.x
@@ -49,7 +56,19 @@ if __name__ == '__main__':
                         pose_table.row['qy'] = pose.rotation.y
                         pose_table.row['qz'] = pose.rotation.z
                         pose_table.row.append()
-                        print("Frame #{}".format(frame.frame_number))
-        finally:
+                        pose_count += 1
+                        if pose_count >= TRAJ_BUFSIZE:
+                            print(f'Flushing {pose_count} poses.')
+                            print(f'Trajectory time: {end_time - start_time}s\n')
+                            pose_table.flush()
+                            pose_count = 0
+        except KeyboardInterrupt:
             pipe.stop()
+            print(f'Interrupted.')
+            print(f'Flushing {pose_count} poses.')
+            print(f'Trajectory time: {end_time - start_time}s\n')
             pose_table.flush()
+            pose_count = 0
+
+if __name__ == '__main__':
+    datacollect()
