@@ -4,10 +4,23 @@ traj = jsondecode(fileread(filename));
 N = size(traj, 1);
 
 timestamp = zeros(N, 1);
+position = zeros(N, 3);
+orientation = zeros(N, 3, 3);
+velocity = zeros(N, 3);
+acceleration = zeros(N, 3);
+angularVelocity = zeros(N, 3);
+f = waitbar(0, 'Loading trajectory');
 for p = 1:N
     pose = traj(p).data;
     dt = datetime(pose.timestamp, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS''Z''');
+    timestamp(p) = posixtime(dt);
+    position(p, 1) = pose.position.x;
+    position(p, 2) = pose.position.y;
+    position(p, 3) = pose.position.z;
+    orientation(p, :, :) = quat2rotm(quaternion(pose.rotation.w, pose.rotation.x, pose.rotation.y, pose.rotation.z));
+    f = waitbar(p/N, f, 'Loading trajectory');
 end
+close(f);
 
 % T = 10;
 % fs = 1000;
