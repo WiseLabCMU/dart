@@ -1,4 +1,5 @@
 % function scans = scans_from_file(filename)
+filename = 'E:\dartdata\CupData\cup.mat';
 
 load(filename, 'frames', 'start_time', 'end_time');
 N = size(frames, 1);
@@ -11,9 +12,11 @@ a = squeeze(frames(:,1,1,:));
 a = a(1:(floor(size(a, 1) / framelen)*framelen), :);
 b = reshape(a.', chirplen, framelen, []);
 
+x = -512:511;
+y = 0:511;
 for i = 1:126
-    c = fftshift(fft2(b(:,:,i)));
-    imagesc(abs(c));
+    c = fftshift(fft2(b(:,:,i)), 2);
+    plotComplex(x, y, c);
     pause(0.2);
 end
 
