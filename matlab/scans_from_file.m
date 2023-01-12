@@ -34,7 +34,7 @@ y = (v-1) * 0.04;
 c = fftshift(fft2(b), 2);
 f = waitbar(0, 'Plotting frames');
 for i = 1:numframes
-    plotComplex(x, y, c(v, u, i));
+    imcomplex(x, y, abs(c(v, u, i)));
     f = waitbar(i/numframes, f, 'Plotting frames');
     pause(dt);
 end
