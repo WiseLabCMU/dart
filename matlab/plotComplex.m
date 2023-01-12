@@ -13,7 +13,7 @@ rgb = hsv2rgb(hsv);
 [varargout{1 : nargout}] = pcolor(x, y, ind, varargin{:});
 % [varargout{1 : nargout}] = scatter(x(:), y(:), 'filled', 'CData', ind(:), varargin{:});
 shading flat;
-axis equal tight;
+axis tight;
 colormap(map);
 
 end

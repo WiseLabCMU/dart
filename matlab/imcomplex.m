@@ -11,7 +11,7 @@ hsv = cat(3, h, s, v);
 rgb = hsv2rgb(hsv);
 
 [varargout{1 : nargout}] = image(x, y, rgb);
-axis equal tight xy;
+axis tight xy;
 
 end
 
