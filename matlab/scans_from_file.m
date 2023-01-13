@@ -33,12 +33,14 @@ v = 1:chirplen_dec;
 x = (u-1-framelen/2) * 0.0156;
 y = (v-1) * 0.04;
 c = permute(fftshift(fft2(b), 2), [3 1 2]);
+c = c(:, v, u);
+
 scans = abs(c);
 
 if doplot
     f = waitbar(0, 'Plotting frames');
     for i = 1:numframes
-        imcomplex(x, y, abs(c(i, v, u)));
+        imcomplex(x, y, abs(c(i, :, :)));
         f = waitbar(i/numframes, f, 'Plotting frames');
         pause(ts);
     end
