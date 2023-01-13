@@ -1,1 +1,3 @@
-In make_pose, q = cross(x,v) and p = cross(q,v) so that v = cross(p,q). Seems better than using SVD.
+try chirp-z-transform
+try sliding doppler window
+choose optimal doppler framelen
