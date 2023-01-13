@@ -35,8 +35,11 @@ def gt_map(file: str) -> GroundTruth:
     upper = jnp.array([np.max(x), np.max(y), np.max(z)])
     resolution = jnp.array(data['v'].shape) / (upper - lower)
 
+    occupancy = jnp.array(data['v'], dtype=float)
+    grid = jnp.stack([occupancy, occupancy], axis=-1)
+
     return GroundTruth(
-        jnp.array(data['v'], dtype=float), lower=lower, resolution=resolution)
+        grid, lower=lower, resolution=resolution)
 
 
 def trajectory(traj: str) -> Dataset:
