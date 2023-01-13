@@ -1,7 +1,5 @@
 function [pos, rot, vel] = traj_from_file(filename, scan_t)
 
-%TODO coordinate frame transform
-
 traj = jsondecode(fileread(filename));
 N = size(traj, 1);
 
@@ -15,9 +13,9 @@ for p = 1:N
     dt = datetime(pose.timestamp, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS''Z''');
     waypoint_ts(p) = posixtime(dt);
     waypoints(p, 1) = pose.position.x;
-    waypoints(p, 2) = pose.position.y;
-    waypoints(p, 3) = pose.position.z;
-    dirs(:, :, p) = quat2rotm(quaternion(pose.rotation.w, pose.rotation.x, pose.rotation.y, pose.rotation.z));
+    waypoints(p, 2) = -pose.position.z;
+    waypoints(p, 3) = pose.position.y;
+    dirs(:, :, p) = quat2rotm(quaternion(pose.rotation.w, pose.rotation.x, -pose.rotation.z, pose.rotation.y));
     f = waitbar(p/N, f, 'Loading trajectory');
 end
 close(f);
