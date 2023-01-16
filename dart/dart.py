@@ -15,6 +15,7 @@ from beartype.typing import Callable, NamedTuple, Optional, Union
 from .pose import RadarPose
 from .sensor import VirtualRadar
 from .sensor_column import TrainingColumn
+from .fields import NGP
 
 
 class ModelState(NamedTuple):
@@ -62,19 +63,28 @@ class DART:
         self.model_grid = hk.transform(forward_grid)
         self.optimizer = optimizer
         self.project = project
+        self.sensor = sensor
 
-    def init(self, key, dataset) -> ModelState:
+    def init(
+        self, dataset, key: Union[Integer[Array, "2"], int] = 42
+    ) -> ModelState:
         """Initialize model parameters and optimizer state."""
+        if isinstance(key, int):
+            key = jax.random.PRNGKey(key)
+
         sample = jax.tree_util.tree_map(jnp.array, list(dataset.take(1))[0][0])
         params = self.model_train.init(key, sample)
         opt_state = self.optimizer.init(params)
         return ModelState(params=params, opt_state=opt_state)
 
     def fit(
-        self, key, dataset, state: ModelState, epochs: int = 1,
-        tqdm=default_tqdm
+        self, train, state: ModelState, epochs: int = 1,
+        tqdm=default_tqdm, key: Union[Integer[Array, "2"], int] = 42
     ) -> ModelState:
         """Train model."""
+        if isinstance(key, int):
+            key = jax.random.PRNGKey(key)
+
         # Note: not putting step in a closure here results in a ~100x
         # performance penalty!
         def step(state, rng, columns, y_true):
@@ -94,9 +104,7 @@ class DART:
             return loss, ModelState(params, opt_state)
 
         for i in range(epochs):
-            with tqdm(
-                dataset, unit="batch", desc="Epoch {}".format(i)
-            ) as epoch:
+            with tqdm(train, unit="batch", desc="Epoch {}".format(i)) as epoch:
                 avg = 0.
                 for j, batch in enumerate(epoch):
                     key, rng = jax.random.split(key, 2)
@@ -140,3 +148,10 @@ class DART:
             jnp.meshgrid(x, y, z, indexing='ij'), axis=-1).reshape(-1, 3)
         values = jax.jit(self.model_grid.apply)(params, None, xyz)
         return values.reshape(x.shape[0], y.shape[0], z.shape[0], 2)
+
+    @classmethod
+    def from_config(cls, sensor=None, field=None, lr=0.01, **_):
+        """Create DART from config items."""
+        return cls(
+            VirtualRadar(**sensor), optax.adam(lr),
+            NGP.from_config(**field))

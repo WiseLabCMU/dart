@@ -1,5 +1,6 @@
 """Generate simulated data."""
 
+import json
 from tqdm import tqdm
 from argparse import ArgumentParser
 from functools import partial
@@ -52,11 +53,16 @@ if __name__ == '__main__':
 
     args = _parse().parse_args()
 
-    sensor = VirtualRadar(
-        r=jnp.linspace(args.rmin, args.rmax, args.rres),
-        d=jnp.linspace(args.dmin, args.dmax, args.dres),
-        phi_lim=args.phi, theta_lim=args.theta, n=args.n, k=args.k)
-    sensor.to_config(args.out + ".json")
+    cfg = {
+        "theta_lim": args.theta, "phi_lim": args.phi,
+        "n": args.n, "k": args.k,
+        "r": list(np.linspace(args.rmin, args.rmax, args.rres)),
+        "d": list(np.linspace(args.dmin, args.dmax, args.dres))
+    }
+
+    sensor = VirtualRadar(**cfg)
+    with open(args.out + ".json", 'w') as f:
+        json.dump(cfg, f)
 
     gt = dataset.gt_map(args.gt)
     traj = dataset.trajectory(args.traj)

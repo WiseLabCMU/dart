@@ -1,7 +1,5 @@
 """Front-end sensor utilities not used during training."""
 
-import json
-
 from functools import partial
 from jaxtyping import Float32, Integer, Array
 from beartype.typing import Tuple, Callable
@@ -14,36 +12,6 @@ from .pose import RadarPose, sensor_to_world
 
 class VirtualRadarUtilMixin:
     """Radar utilities."""
-
-    def to_config(self, path: str = "data/sensor.json"):
-        """Save radar parameters."""
-        with open(path, 'w') as f:
-            json.dump({
-                "theta_lim": self.theta_lim,
-                "phi_lim": self.phi_lim,
-                "n": self.n,
-                "k": self.k,
-                "r": [float(x) for x in self.r],
-                "d": [float(x) for x in self.d]
-            }, f)
-
-    @classmethod
-    def from_config(
-            cls, path: str = "data/sensor.json", **kwargs):
-        """Load radar from saved parameters.
-
-        Any keyword-args passed override the values in the config file.
-        """
-        with open(path) as f:
-            cfg = json.load(f)
-        cfg.update(kwargs)
-
-        return cls(
-            theta_lim=cfg["theta_lim"], phi_lim=cfg["phi_lim"],
-            n=cfg["n"], k=cfg["k"],
-            r=jnp.array(cfg["r"]).astype(jnp.float32),
-            d=jnp.array(cfg["d"]).astype(jnp.float32)
-        )
 
     def sample_points(
         self, key, r: Float32[Array, ""], d: Float32[Array, ""],
@@ -102,7 +70,16 @@ class VirtualRadarUtilMixin:
     def plot_image(self, ax, image, labels=False):
         """Plot range-doppler image using matplotlib.imshow."""
         ax.imshow(
-            image, extent=self._plot_extents, aspect='auto', origin='lower')
+            image, extent=self._extents, aspect='auto', origin='lower')
         if labels:
             ax.set_ylabel("Range")
             ax.set_xlabel("Doppler")
+
+    def plot_images(self, axs, images, predicted):
+        """Plot predicted and actual images side by side."""
+        for y_true, y_pred, ax in zip(images, predicted, axs.reshape(-1, 2)):
+            self.plot_image(ax[0], y_true)
+            self.plot_image(ax[1], y_pred)
+            ax[0].set_title("Actual")
+            ax[1].set_title("Predicted")
+        ax[1].set_yticks([])

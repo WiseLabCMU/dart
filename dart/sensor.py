@@ -8,7 +8,7 @@ Conventions
 """
 
 from jaxtyping import Float32, Bool, Array
-from beartype.typing import Optional
+from beartype.typing import Union, List
 
 from jax import numpy as jnp
 from jax import random
@@ -34,19 +34,17 @@ class VirtualRadar(VirtualRadarUtilMixin, VirtualRadarColumnMixins):
     def __init__(
         self, theta_lim: float = jnp.pi / 12, phi_lim: float = jnp.pi / 3,
         n: int = 256, k: int = 128,
-        r: Optional[Float32[Array, "nr"]] = None,
-        d: Optional[Float32[Array, "nd"]] = None,
+        r: Union[Float32[Array, "nr"], List[float]] = None,
+        d: Union[Float32[Array, "nd"], List[float]] = None
     ) -> None:
-        self.r = r
-        self.d = d
+        self.r = jnp.array(r).astype(jnp.float32)
+        self.d = jnp.array(d).astype(jnp.float32)
         self.theta_lim = theta_lim
         self.phi_lim = phi_lim
         self.n = n
         self.k = k
         self.bin_width = 2 * jnp.pi / n
-
-        self._plot_extents = [
-            min(self.r), max(self.r), min(self.d), max(self.d)]
+        self._extents = [min(self.d), max(self.d), min(self.r), max(self.r)]
 
     def valid_mask(
         self, d: Float32[Array, ""], pose: RadarPose
