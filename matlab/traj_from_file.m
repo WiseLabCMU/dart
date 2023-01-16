@@ -1,55 +1,28 @@
-function [timestamp, position, orientation, velocity, acceleration, angularVelocity] = traj_from_file(filename)
+function [pos, rot, vel] = traj_from_file(filename, scan_t)
 
 traj = jsondecode(fileread(filename));
 N = size(traj, 1);
 
-timestamp = zeros(N, 1);
-position = zeros(N, 3);
-orientation = zeros(N, 3, 3);
-velocity = zeros(N, 3);
-acceleration = zeros(N, 3);
-angularVelocity = zeros(N, 3);
+waypoint_ts = zeros(N, 1);
+waypoints = zeros(N, 3);
+dirs = zeros(3, 3, N);
+
 f = waitbar(0, 'Loading trajectory');
 for p = 1:N
     pose = traj(p).data;
     dt = datetime(pose.timestamp, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS''Z''');
-    timestamp(p) = posixtime(dt);
-    position(p, 1) = pose.position.x;
-    position(p, 2) = pose.position.y;
-    position(p, 3) = pose.position.z;
-    orientation(p, :, :) = quat2rotm(quaternion(pose.rotation.w, pose.rotation.x, pose.rotation.y, pose.rotation.z));
+    waypoint_ts(p) = posixtime(dt);
+    waypoints(p, 1) = pose.position.x;
+    waypoints(p, 2) = -pose.position.z;
+    waypoints(p, 3) = pose.position.y;
+    dirs(:, :, p) = quat2rotm(quaternion(pose.rotation.w, pose.rotation.x, -pose.rotation.z, pose.rotation.y));
     f = waitbar(p/N, f, 'Loading trajectory');
 end
 close(f);
 
-% T = 10;
-% fs = 1000;
-% waypoints = [ ...
-%     -12, -12, -5; ...
-%     -10, 10, -3.75; ...
-%     8, 8, -2.5; ...
-%     6, -6, -1.25; ...
-%     -4, -4, 0; ...
-%     -6, 6, 1.25; ...
-%     8, 8, 2.5; ...
-%     10, -10, 3.75; ...
-%     -12, -12, 5; ...
-% ]*0.5;
-% dirs = cat(3, ...
-%     axang2rotm([0, 0, 1, deg2rad(45)]), ...
-%     axang2rotm([0, 0, 1, deg2rad(-45)]), ...
-%     axang2rotm([0, 0, 1, deg2rad(-135)]), ...
-%     axang2rotm([0, 0, 1, deg2rad(-225)]), ...
-%     axang2rotm([0, 0, 1, deg2rad(-315)]), ...
-%     axang2rotm([0, 0, 1, deg2rad(-45)]), ...
-%     axang2rotm([0, 0, 1, deg2rad(-135)]), ...
-%     axang2rotm([0, 0, 1, deg2rad(-225)]), ...
-%     axang2rotm([0, 0, 1, deg2rad(-315)]) ...
-% );
-% 
-% waypoint_ts = linspace(0, T, size(waypoints, 1)).';
-% traj = waypointTrajectory(waypoints, waypoint_ts, Orientation=dirs, ReferenceFrame='ENU');
-% 
-% t_sample = [0 : 1/fs : T-1/fs].';
+traj = waypointTrajectory(waypoints, waypoint_ts, Orientation=dirs, ReferenceFrame='ENU');
+
+[pos, rot, vel, ~, ~] = traj.lookupPose(scan_t);
+rot = permute(quat2rotm(rot), [3 2 1]); % lookupPose provides world->body, so we need to invert
 
 end

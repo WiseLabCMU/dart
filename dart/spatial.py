@@ -1,6 +1,6 @@
 """Spatial utilities."""
 
-from jaxtyping import Float32, Array
+from jaxtyping import Float32, Integer, Array
 from beartype.typing import Union, Callable
 
 from jax import numpy as jnp
@@ -10,7 +10,7 @@ def interpolate(
     x: Float32[Array, "3"],
     grid: Union[
         Float32[Array, "nx ny nz d"],
-        Callable[[Float32[Array, "8 3"]], Float32[Array, "d"]]
+        Callable[[Integer[Array, "8 3"]], Float32[Array, "8 d"]]
     ] = None
 ) -> Float32[Array, "d"]:
     """Trilinear 3D Interpolation (jit + vmap safe).
@@ -33,9 +33,9 @@ def interpolate(
     mask = ((
         jnp.arange(8).reshape(-1, 1)
         & jnp.left_shift(1, jnp.arange(3)).reshape(1, -1)
-    ) != 0).astype(int)
+    ) != 0).astype(jnp.int32)
     # (0, 0, 0) and (1, 1, 1) cube bounds
-    bounds = jnp.stack([jnp.floor(x), jnp.ceil(x)]).astype(int)
+    bounds = jnp.stack([jnp.floor(x), jnp.ceil(x)]).astype(jnp.int32)
     # Corner values
     c = bounds[mask, [0, 1, 2]]
     if isinstance(grid, jnp.ndarray):

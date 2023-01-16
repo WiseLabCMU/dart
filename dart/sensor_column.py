@@ -35,7 +35,7 @@ class VirtualRadarColumnMixins:
 
     def render_column(
         self, t: Float32[Array, "3 k"],
-        sigma: Callable[[Float32[Array, "3"]], Float32[Array, ""]],
+        sigma: Callable[[Float32[Array, "3"]], Float32[Array, "2"]],
         pose: RadarPose, weight: Float32[Array, ""]
     ) -> Float32[Array, "nr"]:
         """Render a single doppler column for a radar image.
@@ -55,8 +55,10 @@ class VirtualRadarColumnMixins:
             t_world = sensor_to_world(r=r, t=t, pose=pose)
             return jnp.nan_to_num(vmap(sigma)(t_world.T))
 
-        sigma_samples = vmap(project_rays)(self.r)
-        energy = jnp.cumprod(1 - sigma_samples[:-1], axis=0)
+        field_vals = vmap(project_rays)(self.r)
+        sigma_samples = field_vals[:, :, 0]
+        alpha_samples = field_vals[:, :, 1]
+        energy = jnp.cumprod(1 - alpha_samples[:-1], axis=0)
         reflected = energy * sigma_samples[1:]
 
         return (
@@ -87,7 +89,7 @@ class VirtualRadarColumnMixins:
 
     def column_forward(
         self, key, column: TrainingColumn,
-        sigma: Callable[[Float32[Array, "3"]], Float32[Array, ""]],
+        sigma: Callable[[Float32[Array, "3"]], Float32[Array, "2"]],
     ) -> Float32[Array, "nr"]:
         """Render a training column.
 

@@ -1,9 +1,21 @@
 """Sensor pose utilities."""
 
 from jaxtyping import Float32, Array
-from beartype.typing import NamedTuple
+from beartype.typing import NamedTuple, Union
 
 from jax import numpy as jnp
+
+
+class CameraPose(NamedTuple):
+    """Camera pose parameters for simple ray rendering.
+
+    x: sensor location in global coordinates.
+    A: 3D rotation matrix for sensor pose; should transform sensor-space to
+        world-space.
+    """
+
+    x: Float32[Array, "3"]
+    A: Float32[Array, "3 3"]
 
 
 class RadarPose(NamedTuple):
@@ -58,7 +70,8 @@ def make_pose(
 
 
 def sensor_to_world(
-    r: Float32[Array, ""], t: Float32[Array, "3 k"], pose: RadarPose
+    r: Float32[Array, ""], t: Float32[Array, "3 k"],
+    pose: Union[CameraPose, RadarPose]
 ) -> Float32[Array, "3 k"]:
     """Project points to world-space.
 

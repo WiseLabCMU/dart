@@ -163,3 +163,4 @@ codegen/
 # Octave session info
 octave-workspace
 
+/data/frames.mat

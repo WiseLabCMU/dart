@@ -1,10 +1,16 @@
-clear; clc; close all;
+trajfile = 'D:\CupData\pose.txt';
+scanfile = 'D:\CupData\cup.mat';
 
-trajfile = 'E:\dartdata\CupData\pose.txt';
-scanfile = 'E:\dartdata\CupData\cup.mat';
+range_decimation = 16;
+doppler_decimation = 8;
+framelen = 1024;
 
-[timestamp, position, orientation, velocity, acceleration, angularVelocity] = traj_from_file(trajfile);
-scans = scans_from_file(scanfile);
+[t, rad] = scans_from_file( ...
+    scanfile, ...
+    range_decimation, ...
+    doppler_decimation, ...
+    framelen);
 
-save('../data/map', 'x', 'y', 'z', 'v');
-save('../data/traj', 'timestamp', 'position', 'orientation', 'velocity', 'acceleration', 'angularVelocity');
+[pos, rot, vel] = traj_from_file(trajfile, t);
+
+save('../data/frames', 't', 'rad', 'pos', 'rot', 'vel');
