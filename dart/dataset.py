@@ -59,6 +59,14 @@ def image_traj(traj: str, images: str) -> Dataset:
     return Dataset.from_tensor_slices((pose, images["y"]))
 
 
+def image_traj2(path: str) -> Dataset:
+    """Dataset with trajectory and images."""
+    data = _load_arrays(path)
+    poses = jax.vmap(make_pose)(data["vel"], data["pos"], data["rot"])
+
+    return Dataset.from_tensor_slices((poses, data["rad"]))
+
+
 def dart(
         traj: str, images: str, sensor: VirtualRadar, pre_shuffle: bool = True
 ) -> Dataset:
@@ -96,3 +104,44 @@ def dart(
     dataset_valid = jax.tree_util.tree_map(
         lambda x: x[not_empty], dataset_flat)
     return Dataset.from_tensor_slices(dataset_valid)
+
+
+def dart2(
+        path: str, sensor: VirtualRadar, pre_shuffle: bool = True) -> Dataset:
+    """Real dataset with all in one.
+
+    The dataset is ordered by::
+
+        (image/pose index, doppler)
+
+    With only the image/pose "pre-shuffled."
+    """
+    data = _load_arrays(path)
+    poses = jax.vmap(make_pose)(data["vel"], data["pos"], data["rot"])
+
+    if pre_shuffle:
+        indices = np.arange(data["rad"].shape[0])
+        np.random.shuffle(indices)
+        images = data["rad"]
+        images = jax.tree_util.tree_map(lambda x: x[indices], images)
+        images = jnp.sqrt(images) / 10000
+        poses = jax.tree_util.tree_map(lambda x: x[indices], poses)
+
+    def process_image(pose):
+        return jax.vmap(
+            partial(sensor.make_column, pose=pose))(doppler=sensor.d)
+
+    columns = jax.vmap(process_image)(poses)
+    images_col = jnp.swapaxes(images, 1, 2)
+    dataset = (columns, images_col)
+
+    dataset_flat = jax.tree_util.tree_map(
+        lambda x: x.reshape(-1, *x.shape[2:]), dataset)
+    not_empty = dataset_flat[0].weight > 0
+
+    dataset_valid = jax.tree_util.tree_map(
+        lambda x: x[not_empty], dataset_flat)
+
+    print(dataset_valid[1].shape)
+
+    return Dataset.from_tensor_slices(dataset_valid).repeat(100)

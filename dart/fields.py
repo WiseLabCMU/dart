@@ -23,7 +23,7 @@ class GroundTruth:
     """
 
     def __init__(
-        self, grid: Float32[Array, "nx ny nz"], lower: Float32[Array, "3"],
+        self, grid: Float32[Array, "nx ny nz 2"], lower: Float32[Array, "3"],
         resolution: Union[Float32[Array, "3"], Float32[Array, ""]]
     ) -> None:
         self.lower = lower
@@ -34,7 +34,7 @@ class GroundTruth:
         """Index into reflectance map."""
         index = (x - self.lower) * self.resolution
         valid = jnp.all(
-            (0 <= index) & (index <= jnp.array(self.grid.shape) - 1))
+            (0 <= index) & (index <= jnp.array(self.grid.shape[:-1]) - 1))
         return jnp.where(valid, interpolate(index, self.grid), jnp.zeros((2,)))
 
 
@@ -89,13 +89,14 @@ class NGP:
 
     def __init__(
             self, levels: Float32[Array, "n"],
-            size: tuple[int, int] = (16384, 2)):
+            size: tuple[int, int] = (16384, 2), units: tuple = [32, 2]):
         self.size = size
         self.levels = levels
-        self.head = hk.Sequential([
-            hk.Linear(32), jax.nn.relu,
-            hk.Linear(2), jax.nn.relu
-        ])
+        self.units = units
+        mlp = []
+        for u in units:
+            mlp += [hk.Linear(u), jax.nn.relu]
+        self.head = hk.Sequential(mlp)
 
     def hash(self, x: Integer[Array, "3"]) -> Integer[Array, ""]:
         """Apply hash function specified by NGP (Eq. 4 [1])."""
@@ -119,3 +120,12 @@ class NGP:
 
         table_out = jax.vmap(interpolate_level)(xscales, grid)
         return self.head(table_out.reshape(-1))
+
+    @classmethod
+    def from_config(cls, levels=8, exponent=0.5, base=4, size=16, features=2):
+        """Create NGP from config items."""
+        def closure():
+            return cls(
+                levels=base * 2**(exponent * jnp.arange(levels)),
+                size=(2**size, features))
+        return closure
