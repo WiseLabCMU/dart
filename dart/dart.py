@@ -3,19 +3,23 @@
 from tqdm import tqdm as default_tqdm
 from functools import partial
 import pickle
+import os
 
 import jax
+import numpy as np
 from jax import numpy as jnp
 import haiku as hk
 import optax
 
 from jaxtyping import Float32, Array, PyTree, Integer
 from beartype.typing import Callable, NamedTuple, Optional, Union
+from tensorflow.data import Dataset
 
 from .pose import RadarPose
 from .sensor import VirtualRadar
 from .sensor_column import TrainingColumn
 from .fields import NGP
+from .utils import to_jax, to_prngkey, update_avg
 
 
 class ModelState(NamedTuple):
@@ -69,30 +73,29 @@ class DART:
         self, dataset, key: Union[Integer[Array, "2"], int] = 42
     ) -> ModelState:
         """Initialize model parameters and optimizer state."""
-        if isinstance(key, int):
-            key = jax.random.PRNGKey(key)
-
-        sample = jax.tree_util.tree_map(jnp.array, list(dataset.take(1))[0][0])
-        params = self.model_train.init(key, sample)
+        sample = to_jax(list(dataset.take(1))[0][0])
+        params = self.model_train.init(to_prngkey(key), sample)
         opt_state = self.optimizer.init(params)
         return ModelState(params=params, opt_state=opt_state)
 
     def fit(
-        self, train, state: ModelState, epochs: int = 1,
+        self, train: Dataset, state: ModelState,
+        val: Optional[Dataset] = None, epochs: int = 1,
         tqdm=default_tqdm, key: Union[Integer[Array, "2"], int] = 42
     ) -> ModelState:
         """Train model."""
-        if isinstance(key, int):
-            key = jax.random.PRNGKey(key)
+        @jax.jit
+        def loss_func(params, rng, batch):
+            columns, y_true = batch
+            y_pred = self.model_train.apply(params, rng, columns)
+            return jnp.sum(jnp.square(y_true - y_pred)) / y_true.shape[0]
 
-        # Note: not putting step in a closure here results in a ~100x
-        # performance penalty!
-        def step(state, rng, columns, y_true):
-            def loss_func(params):
-                y_pred = self.model_train.apply(params, rng, columns)
-                return jnp.sum((y_true - y_pred)**2) / y_true.shape[0]
-
-            loss, grads = jax.value_and_grad(loss_func)(state.params)
+        # Note: not putting step in a closure here (jitting grads and updates
+        # separately) results in a ~100x performance penalty!
+        @jax.jit
+        def step(state, rng, batch):
+            loss, grads = jax.value_and_grad(
+                partial(loss_func, rng=rng, batch=batch))(state.params)
 
             clip = jax.tree_util.tree_map(jnp.nan_to_num, grads)
             updates, opt_state = self.optimizer.update(
@@ -103,21 +106,29 @@ class DART:
                 params = self.project(params)
             return loss, ModelState(params, opt_state)
 
+        key = to_prngkey(key)
         for i in range(epochs):
             with tqdm(train, unit="batch", desc="Epoch {}".format(i)) as epoch:
                 avg = 0.
                 for j, batch in enumerate(epoch):
                     key, rng = jax.random.split(key, 2)
-                    columns, y_true = jax.tree_util.tree_map(jnp.array, batch)
+                    loss, state = step(state, rng, to_jax(batch))
+                    avg = update_avg(loss, avg, j, epoch)
 
-                    loss, state = jax.jit(step)(state, rng, columns, y_true)
-                    avg = (avg * j + loss) / (j + 1)
-                    epoch.set_postfix(loss=avg)
+            if val is not None:
+                losses = []
+                for j, batch in enumerate(epoch):
+                    key, rng = jax.random.split(key, 2)
+                    losses.append(loss_func(state.params, rng, to_jax(batch)))
+                print("Val: {}".format(np.mean(losses)))
 
         return state
 
     def save(self, path: str, state: ModelState) -> None:
         """Save state to file using pickle."""
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+
         with open(path, 'wb') as f:
             pickle.dump(state, f)
 

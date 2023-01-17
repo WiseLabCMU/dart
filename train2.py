@@ -5,7 +5,9 @@ import time
 from tqdm import tqdm
 from argparse import ArgumentParser
 
-from dart import dataset, DART
+import jax
+
+from dart import DART
 
 
 def _parse():
@@ -47,33 +49,58 @@ def _parse():
     return p
 
 
-if __name__ == '__main__':
+def _main(cfg):
 
-    args = _parse().parse_args()
+    print(json.dumps(cfg))
 
     print("Setting up...")
     start = time.time()
 
-    with open(args.sensor) as f:
-        cfg = {"sensor": json.load(f)}
-    cfg["sensor"].update(n=args.n, k=args.k)
-    cfg.update(
-        shuffle_buffer=100000, lr=args.lr, batch=args.batch,
-        field={
-            "levels": args.levels, "exponent": args.exponent,
-            "base": args.base, "size": args.size, "features": args.features
-        })
-
-    with open(args.out + ".json", 'w') as f:
-        json.dump(cfg, f)
+    root = jax.random.PRNGKey(cfg["key"])
+    k1, k2, k3 = jax.random.split(root, 3)
 
     dart = DART.from_config(**cfg)
-    ds = dataset.dart2("data/frames.mat", dart.sensor, pre_shuffle=True)
-    ds = ds.shuffle(100000, reshuffle_each_iteration=True)
+    train, val = dart.sensor.dataset(key=k1, **cfg["dataset"])
+    train = train.shuffle(cfg["shuffle_buffer"], reshuffle_each_iteration=True)
 
     print("Done setting up ({:.1f}s).".format(time.time() - start))
 
+    state = dart.init(train.batch(2), key=k2)
     state = dart.fit(
-        ds.batch(args.batch), dart.init(ds.batch(2), key=args.key),
-        epochs=args.epochs, tqdm=tqdm, key=args.key + 1)
-    dart.save(args.out + ".chkpt", state)
+        train.batch(cfg["batch"]), state, epochs=cfg["epochs"], tqdm=tqdm,
+        key=k3, val=val.batch(cfg["batch"]))
+    dart.save(cfg["out"] + ".chkpt", state)
+
+
+if __name__ == '__main__':
+
+    args = _parse().parse_args()
+
+    with open("data/awr1843boost.json") as f:
+        sensor_cfg = json.load(f)
+    sensor_cfg.update(n=args.n, k=args.k)
+
+    cfg = {
+        "sensor": sensor_cfg,
+        "field": {
+            "levels": args.levels,
+            "exponent": args.exponent,
+            "base": args.base,
+            "size": args.size,
+            "features": args.features
+        },
+        "dataset": {
+            "val": 0.2,
+            "clip": 99.9,
+            "iid_val": True,
+            "path": "data/cup.mat"
+        },
+        "shuffle_buffer": 100 * 1000,
+        "lr": args.lr,
+        "batch": args.batch,
+        "epochs": args.epochs,
+        "key": args.key,
+        "out": args.out
+    }
+
+    _main(cfg)

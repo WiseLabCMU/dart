@@ -104,8 +104,9 @@ def project_angle(
     Projected (x, y, z) coordinates.
     """
     d_norm = d / pose.s
-    return (
-        jnp.sqrt(1 - d_norm**2) * (
+    return jnp.where(jnp.abs(d_norm) > 1, 0, (
+        jnp.sqrt(1 - jnp.minimum(1, d_norm**2)) * (
             jnp.outer(pose.p, jnp.cos(psi))
             + jnp.outer(pose.q, jnp.sin(psi)))
         + pose.v.reshape(3, 1) * d_norm)
+    )

@@ -3,7 +3,7 @@
 from jax import numpy as jnp
 from jax import vmap
 
-from jaxtyping import Float32, UInt8, Array, Bool
+from jaxtyping import Float32, UInt8, Array
 from beartype.typing import NamedTuple, Callable
 
 from .pose import RadarPose, sensor_to_world
@@ -33,6 +33,19 @@ class TrainingColumn(NamedTuple):
 class VirtualRadarColumnMixins:
     """Radar doppler column methods."""
 
+    def gain(self, t: Float32[Array, "3 k"]) -> Float32[Array, "k"]:
+        """Compute antenna gain."""
+        x, y, z = t
+        theta = jnp.arcsin(z)
+        phi = jnp.arcsin(y * jnp.cos(theta))
+        _theta = theta / (2 * jnp.pi) * 180 / 56
+        _phi = phi / (2 * jnp.pi) * 180 / 56
+
+        return jnp.exp((
+            (0.14 * _theta**6 + 0.13 * _theta**4 - 8.2 * _theta**2)
+            + (3.1 * _phi**8 - 22 * _phi**6 + 54 * _phi**4 - 55 * _phi**2)
+        ).reshape(1, -1) / 10)
+
     def render_column(
         self, t: Float32[Array, "3 k"],
         sigma: Callable[[Float32[Array, "3"]], Float32[Array, "2"]],
@@ -55,17 +68,23 @@ class VirtualRadarColumnMixins:
             t_world = sensor_to_world(r=r, t=t, pose=pose)
             return jnp.nan_to_num(vmap(sigma)(t_world.T))
 
+        # Antenna Gain
+        gain = self.gain(t)
+
+        # Field steps
         field_vals = vmap(project_rays)(self.r)
         sigma_samples = field_vals[:, :, 0]
-        alpha_samples = field_vals[:, :, 1]
-        energy = jnp.cumprod(1 - alpha_samples[:-1], axis=0)
-        reflected = energy * sigma_samples[1:]
+        alpha_samples = 1 - jnp.minimum(field_vals[:, :, 1], 1)
 
-        return (
-            jnp.concatenate([
-                jnp.array(jnp.mean(sigma_samples[0])).reshape((1,)),
-                jnp.mean(reflected, axis=1)])
-            * 2 * jnp.pi * self.r * weight / self.n)
+        # Return signal
+        transmitted = jnp.concatenate([
+            jnp.ones((1, t.shape[1])),
+            jnp.cumprod(alpha_samples[:-1], axis=0)
+        ], axis=0)
+        amplitude = sigma_samples * transmitted * gain
+
+        constant = weight / self.n * self.r
+        return jnp.mean(amplitude, axis=1) * constant
 
     def make_column(
         self, doppler: Float32[Array, ""], pose: RadarPose,

@@ -8,7 +8,7 @@ Conventions
 """
 
 from jaxtyping import Float32, Bool, Array
-from beartype.typing import Union, List
+from beartype.typing import List
 
 from jax import numpy as jnp
 from jax import random
@@ -16,14 +16,18 @@ from jax import random
 from .pose import RadarPose, project_angle
 from .sensor_utils import VirtualRadarUtilMixin
 from .sensor_column import VirtualRadarColumnMixins
+from .sensor_dataset import VirtualRadarDatasetMixins
 
 
-class VirtualRadar(VirtualRadarUtilMixin, VirtualRadarColumnMixins):
+class VirtualRadar(
+        VirtualRadarUtilMixin, VirtualRadarColumnMixins,
+        VirtualRadarDatasetMixins):
     """Virtual Radar Sensor Model.
 
     Parameters
     ----------
-    r, d: Range and Doppler bins used for (r, d) images.
+    r, d: Range, doppler bins used for (r, d) images. Pass as (min, max, bins),
+        i.e. the args of linspace.
     theta_lim, phi_lim: Bounds (radians) on elevation and azimuth angle;
         +/- pi/12 (15 degrees) and pi/3 (60 degrees) by default.
     n: Angular resolution; number of bins in a full circle of the
@@ -34,11 +38,10 @@ class VirtualRadar(VirtualRadarUtilMixin, VirtualRadarColumnMixins):
     def __init__(
         self, theta_lim: float = jnp.pi / 12, phi_lim: float = jnp.pi / 3,
         n: int = 256, k: int = 128,
-        r: Union[Float32[Array, "nr"], List[float]] = None,
-        d: Union[Float32[Array, "nd"], List[float]] = None
+        r: List[float, float, int] = [0], d: List[float, float, int] = [0]
     ) -> None:
-        self.r = jnp.array(r).astype(jnp.float32)
-        self.d = jnp.array(d).astype(jnp.float32)
+        self.r = jnp.linspace(*r)
+        self.d = jnp.linspace(*d)
         self.theta_lim = theta_lim
         self.phi_lim = phi_lim
         self.n = n
@@ -68,10 +71,12 @@ class VirtualRadar(VirtualRadarUtilMixin, VirtualRadarColumnMixins):
 
         theta = jnp.arcsin(z)
         phi = jnp.arcsin(y * jnp.cos(theta))
+
         return (
             (theta < self.theta_lim) & (theta > -self.theta_lim)
             & (phi < self.phi_lim) & (phi > -self.phi_lim)
-            & (x > 0))
+            & (x > 0)
+        )
 
     def sample_rays(
             self, key, d: Float32[Array, ""],
