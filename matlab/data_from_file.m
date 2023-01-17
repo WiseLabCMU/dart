@@ -1,5 +1,5 @@
-trajfile = 'D:\CupData\pose.txt';
-scanfile = 'D:\CupData\cup.mat';
+trajfile = 'D:\CupData\pose-4.txt';
+scanfile = 'D:\CupData\cup-4.mat';
 
 range_decimation = 16;
 doppler_decimation = 8;
@@ -11,6 +11,6 @@ framelen = 1024;
     doppler_decimation, ...
     framelen);
 
-[pos, rot, vel] = traj_from_file(trajfile, t);
+[pos, rot, vel, waypoints] = traj_from_file(trajfile, t);
 
-save('../data/frames', 't', 'rad', 'pos', 'rot', 'vel');
+save('../data/frames4', 't', 'rad', 'pos', 'rot', 'vel');
