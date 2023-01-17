@@ -164,3 +164,7 @@ codegen/
 octave-workspace
 
 /data/frames.mat
+/data/frames4.mat
+/data/frames2.mat
+/data/frames3.mat
+/data/all_frames.mat
