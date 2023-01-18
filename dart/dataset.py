@@ -34,7 +34,7 @@ def gt_map(file: str) -> GroundTruth:
     resolution = jnp.array(data['v'].shape) / (upper - lower)
 
     occupancy = jnp.array(data['v'], dtype=float)
-    grid = jnp.stack([occupancy, 1 - occupancy], axis=-1)
+    grid = jnp.stack([occupancy, occupancy], axis=-1)
 
     return GroundTruth(
         grid, lower=lower, resolution=resolution)

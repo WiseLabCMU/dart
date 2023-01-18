@@ -82,7 +82,7 @@ class DART:
         self, train: Dataset, state: ModelState,
         val: Optional[Dataset] = None, epochs: int = 1,
         tqdm=default_tqdm, key: Union[Integer[Array, "2"], int] = 42
-    ) -> ModelState:
+    ) -> tuple[ModelState, list, list]:
         """Train model."""
         @jax.jit
         def loss_func(params, rng, batch):
@@ -106,6 +106,7 @@ class DART:
                 params = self.project(params)
             return loss, ModelState(params, opt_state)
 
+        train_log, val_log = [], []
         key = to_prngkey(key)
         for i in range(epochs):
             with tqdm(train, unit="batch", desc="Epoch {}".format(i)) as epoch:
@@ -113,16 +114,19 @@ class DART:
                 for j, batch in enumerate(epoch):
                     key, rng = jax.random.split(key, 2)
                     loss, state = step(state, rng, to_jax(batch))
-                    avg = update_avg(loss, avg, j, epoch)
+                    avg = update_avg(float(loss), avg, j, epoch)
+                train_log.append(avg)
 
             if val is not None:
                 losses = []
                 for j, batch in enumerate(epoch):
                     key, rng = jax.random.split(key, 2)
                     losses.append(loss_func(state.params, rng, to_jax(batch)))
-                print("Val: {}".format(np.mean(losses)))
+                val_loss = np.mean(losses)
+                print("Val: {}".format(val_loss))
+                val_log.append(float(val_loss))
 
-        return state
+        return state, train_log, val_log
 
     def save(self, path: str, state: ModelState) -> None:
         """Save state to file using pickle."""

@@ -47,7 +47,7 @@ class VirtualRadar(
         self.n = n
         self.k = k
         self.bin_width = 2 * jnp.pi / n
-        self._extents = [min(self.d), max(self.d), min(self.r), max(self.r)]
+        self._extents = [d[0], d[1], r[0], r[1]]
 
     def valid_mask(
         self, d: Float32[Array, ""], pose: RadarPose
