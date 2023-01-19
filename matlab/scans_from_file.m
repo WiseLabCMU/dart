@@ -5,12 +5,15 @@ function [timestamps, scans] = scans_from_file( ...
     framelen, ...
     doplot)
 
-if ~exist('doplot', 'var')
-    doplot = false;
-end
+% if ~exist('doplot', 'var')
+%     doplot = false;
+% end
 
-load(filename, 'frames', 'start_time', 'end_time');
+fprintf('Loading %s...\n', filename);
+load(filename, 'frames_real', 'frames_imag', 'start_time', 'end_time');
+frames = complex(frames_real, frames_imag);
 
+fprintf('Processing %s...\n', filename);
 chirplen = size(frames, 4); % before decmiation
 numframes = floor(size(frames, 1) / framelen);
 numsamples = numframes * framelen;
@@ -30,22 +33,22 @@ framelen_dec = framelen / doppler_decimation;
 chirplen_dec = chirplen / range_decimation;
 u = framelen/2 + (-framelen_dec/2 : framelen_dec/2-1);
 v = 1:chirplen_dec;
-x = (u-1-framelen/2) * 0.0156;
-y = (v-1) * 0.04;
+% x = (u-1-framelen/2) * 0.0156;
+% y = (v-1) * 0.04;
 c = permute(fftshift(fft2(b), 2), [3 1 2]);
 c = c(:, v, u);
 
 scans = abs(c);
 
-if doplot
-    f = waitbar(0, 'Plotting frames');
-    for i = 1:numframes
-        imcomplex(x, y, abs(c(i, :, :)));
-        f = waitbar(i/numframes, f, 'Plotting frames');
-        pause(ts);
-    end
-    close(f);
-end
+% if doplot
+%     f = waitbar(0, 'Plotting frames');
+%     for i = 1:numframes
+%         imcomplex(x, y, abs(c(i, :, :)));
+%         f = waitbar(i/numframes, f, 'Plotting frames');
+%         pause(ts);
+%     end
+%     close(f);
+% end
 
 
 end

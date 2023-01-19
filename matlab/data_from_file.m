@@ -1,5 +1,5 @@
 datadir = 'D:\dartdata';
-dataset = 'cup';
+dataset = 'cubes';
 
 scandir = fullfile(datadir, dataset, 'frames');
 trajdir = fullfile(datadir, dataset, 'traj');
@@ -16,9 +16,10 @@ for i = 1:length(scanfiles)
     [~, filenameNoExt, ~] = fileparts(scanfile);
     trajfile = fullfile(trajdir, append(filenameNoExt, '.txt'));
     
-    range_decimation = 16;
-    doppler_decimation = 8;
-    framelen = 1024;
+    range_decimation = 2;   % max_range=21m when range_decimation=1
+    doppler_decimation = 2; % max_velocity=2m/s when doppler_decimation=1
+    framelen = 128;         % motion during frame should <~2 range bins (.08m)
+                            % each chirp is .0005s
     
     [t, rad] = scans_from_file( ...
         scanfile, ...
@@ -40,4 +41,4 @@ pos = all_pos;
 rot = all_rot;
 vel = all_vel;
 
-save(outfile, 't', 'rad', 'pos', 'rot', 'vel');
+save(outfile, 't', 'rad', 'pos', 'rot', 'vel', '-v7.3');
