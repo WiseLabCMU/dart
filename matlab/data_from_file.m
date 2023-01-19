@@ -1,9 +1,34 @@
-datadir = 'D:\dartdata';
+datadir = 'E:\dartdata';
 dataset = 'cubes';
 
 scandir = fullfile(datadir, dataset, 'frames');
 trajdir = fullfile(datadir, dataset, 'traj');
-outfile = fullfile(datadir, dataset, 'data.mat');
+outfile = fullfile(datadir, dataset, append(dataset, '.mat'));
+jsonfile = fullfile(datadir, dataset, append(dataset, '.json'));
+
+range_decimation = 2;   % max_range=21m when range_decimation=1
+doppler_decimation = 2; % max_velocity=2m/s when doppler_decimation=1
+framelen = 128;         % motion during frame should <~2 range bins (.08m)
+                        % each chirp is .0005s
+
+DMAX = 1.89494428863791;
+RMAX = 21.5991;
+min_doppler = -DMAX / doppler_decimation;
+max_doppler = DMAX / doppler_decimation;
+res_doppler = framelen / doppler_decimation;
+min_range = RMAX / 512 / 2;
+max_range = min_range + RMAX / range_decimation;
+res_range = 512 / doppler_decimation;
+
+radarjson = struct();
+radarjson.theta_lim = deg2rad(15);
+radarjson.phi_lim = deg2rad(60);
+radarjson.n = 512;
+radarjson.k = 256;
+radarjson.r = [min_range, max_range, res_range];
+radarjson.d = [min_doppler, max_doppler, res_doppler];
+jsonstring = jsonencode(radarjson, 'PrettyPrint', true);
+writelines(jsonstring, jsonfile);
 
 all_t = [];
 all_rad = [];
@@ -15,11 +40,6 @@ for i = 1:length(scanfiles)
     scanfile = fullfile(scandir, scanfiles(i));
     [~, filenameNoExt, ~] = fileparts(scanfile);
     trajfile = fullfile(trajdir, append(filenameNoExt, '.txt'));
-    
-    range_decimation = 2;   % max_range=21m when range_decimation=1
-    doppler_decimation = 2; % max_velocity=2m/s when doppler_decimation=1
-    framelen = 128;         % motion during frame should <~2 range bins (.08m)
-                            % each chirp is .0005s
     
     [t, rad] = scans_from_file( ...
         scanfile, ...
