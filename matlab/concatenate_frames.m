@@ -21,4 +21,10 @@ for i = 1:length(files)
     all_vel = [all_vel; vel];
 end
 
-save('../data/all_frames', 'all_t', 'all_rad', 'all_pos', 'all_rot', 'all_vel');
+t = all_t;
+rad = all_rad;
+pos = all_pos;
+rot = all_rot;
+vel = all_vel;
+
+save('../data/all_frames', 't', 'rad', 'pos', 'rot', 'vel');
