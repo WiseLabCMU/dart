@@ -21,7 +21,7 @@ t_end = posixtime(datetime(end_time, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSS
 t_end = t_end - 5*60*60;
 ts = (t_end - t_start) / numframes;
 
-timestamps = (t_start : ts : t_end-ts).';
+timestamps = (t_start+ts/2 : ts : t_end-ts/2).';
 
 a = squeeze(frames(1:numsamples, 1, 1, :));
 b = reshape(a.', chirplen, framelen, []);
