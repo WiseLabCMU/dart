@@ -1,7 +1,7 @@
 function [pos, rot, vel, waypoints] = traj_from_file(filename, scan_t)
 
-traj = jsondecode(fileread(filename));
-N = size(traj, 1);
+s = readlines(filename);
+N = size(s, 1) - 1; % Skip last line to handle EOF
 
 waypoint_ts = zeros(N, 1);
 waypoints = zeros(N, 3);
@@ -9,7 +9,7 @@ dirs = zeros(3, 3, N);
 
 f = waitbar(0, 'Loading trajectory');
 for p = 1:N
-    pose = traj(p).data;
+    pose = jsondecode(s(p)).data;
     dt = datetime(pose.timestamp, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS''Z''');
     waypoint_ts(p) = posixtime(dt);
     waypoints(p, 1) = pose.position.x;
