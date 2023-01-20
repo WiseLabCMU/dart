@@ -41,13 +41,10 @@ c = c(:, v, u);
 scans = abs(c);
 
 if doplot
-    f = waitbar(0, 'Plotting frames');
     for i = 1:numframes
         imcomplex(x, y, squeeze(abs(c(i, :, :))));
-        f = waitbar(i/numframes, f, 'Plotting frames');
         pause(ts);
     end
-    close(f);
 end
 
 
