@@ -17,7 +17,8 @@ for p = 1:N
     waypoints(p, 2) = -pose.position.z;
     waypoints(p, 3) = pose.position.y;
     mocap_rot = quat2rotm(quaternion(pose.rotation.w, pose.rotation.x, -pose.rotation.z, pose.rotation.y));
-    dirs(:, :, p) = axang2rotm([0, 0, 1, deg2rad(-90)]) * mocap_rot;
+%     dirs(:, :, p) = axang2rotm([0, 0, 1, deg2rad(-90)]) * mocap_rot;
+    dirs(:, :, p) = mocap_rot;
 %     f = waitbar(p/N, f, 'Loading trajectory');
 end
 % close(f);

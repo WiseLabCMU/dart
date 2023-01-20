@@ -1,4 +1,4 @@
-datadir = 'E:\dartdata';
+datadir = 'D:\dartdata';
 dataset = 'cubes';
 
 scandir = fullfile(datadir, dataset, 'frames');
@@ -7,8 +7,8 @@ outfile = fullfile(datadir, dataset, append(dataset, '.mat'));
 jsonfile = fullfile(datadir, dataset, append(dataset, '.json'));
 
 range_decimation = 2;   % max_range=21m when range_decimation=1
-doppler_decimation = 2; % max_velocity=2m/s when doppler_decimation=1
-framelen = 128;         % motion during frame should <~2 range bins (.08m)
+doppler_decimation = 4; % max_velocity=2m/s when doppler_decimation=1
+framelen = 256;         % motion during frame should <~2 range bins (.08m)
                         % each chirp is .0005s
 
 DMAX = 1.89494428863791;
@@ -45,7 +45,8 @@ for i = 1:length(scanfiles)
         scanfile, ...
         range_decimation, ...
         doppler_decimation, ...
-        framelen);
+        framelen, ...
+        false);
     
     [pos, rot, vel, ~] = traj_from_file(trajfile, t);
 

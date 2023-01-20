@@ -1,4 +1,4 @@
-filename = 'D:\dartdata\cubes\traj\cubes-12.txt';
+filename = 'D:\dartdata\cubes\traj\cubes-012.txt';
 
 s = readlines(filename);
 N = size(s, 1) - 1; % Skip last line to handle EOF
