@@ -6,20 +6,25 @@ trajdir = fullfile(datadir, dataset, 'traj');
 outfile = fullfile(datadir, dataset, append(dataset, '.mat'));
 jsonfile = fullfile(datadir, dataset, append(dataset, '.json'));
 
-range_decimation = 2;   % max_range=21m when range_decimation=1
+range_decimation = 8;   % max_range=21m when range_decimation=1
 doppler_decimation = 4; % max_velocity=2m/s when doppler_decimation=1
 framelen = 256;         % motion during frame should <~2 range bins (.08m)
                         % each chirp is .0005s
 
+CHIRPLEN = 512;
 CHIRP_DT = 5e-4;
-DMAX = 1.89494428863791;
+DMAX = 3.7899;
 RMAX = 21.5991;
-min_doppler = -DMAX / doppler_decimation;
-max_doppler = DMAX / doppler_decimation;
+
+bin_doppler = DMAX / framelen;
 res_doppler = framelen / doppler_decimation;
-min_range = RMAX / 512 / 2;
-max_range = min_range + RMAX / range_decimation;
-res_range = 512 / range_decimation;
+min_doppler = -bin_doppler * (res_doppler * 0.5);
+max_doppler = bin_doppler * (res_doppler * 0.5 - 1);
+
+bin_range = RMAX / CHIRPLEN;
+res_range = CHIRPLEN / range_decimation;
+min_range = bin_range * 0.5;
+max_range = bin_range * (res_range + 0.5);
 
 radarjson = struct();
 radarjson.theta_lim = deg2rad(15);
@@ -51,8 +56,8 @@ for i = 1:length(scanfiles)
         framelen, ...
         false);
     
-    scan_t1 = scan_t - CHIRP_DT * framelen / 2;
-    scan_t2 = scan_t + CHIRP_DT * framelen / 2;
+    scan_t1 = scan_t - CHIRP_DT * framelen / doppler_decimation / 2;
+    scan_t2 = scan_t + CHIRP_DT * framelen / doppler_decimation / 2;
     [pos, rot, vel, wp_t, wp_pos, ~] = traj_from_file(trajfile, scan_t1, scan_t2);
 
     all_t = [all_t; scan_t];
