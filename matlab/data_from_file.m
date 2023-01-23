@@ -28,6 +28,8 @@ res_range = CHIRPLEN / range_decimation;
 min_range = bin_range * 0.5;
 max_range = bin_range * (res_range + 0.5);
 
+scan_window = CHIRP_DT * framelen / doppler_decimation;
+
 radarjson = struct();
 radarjson.theta_lim = deg2rad(15);
 radarjson.phi_lim = deg2rad(60);
@@ -68,9 +70,7 @@ for i = 1:length(scanfiles)
         framelen, ...
         false);
     
-    scan_t1 = scan_t - CHIRP_DT * framelen / doppler_decimation / 2;
-    scan_t2 = scan_t + CHIRP_DT * framelen / doppler_decimation / 2;
-    [pos, rot, vel, wp_t, wp_pos, wp_quat] = traj_from_file(trajfile, scan_t1, scan_t2);
+    [pos, rot, vel, wp_t, wp_pos, wp_quat] = traj_from_file(trajfile, scan_t, scan_window);
 
     all_t = [all_t; scan_t];
     all_rad = [all_rad; rad];
