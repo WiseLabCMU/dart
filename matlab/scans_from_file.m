@@ -45,7 +45,7 @@ max_range = bin_range * (res_range + 0.5);
 
 framelen_dec = framelen / doppler_decimation;
 chirplen_dec = chirplen / range_decimation;
-u = framelen/2 + (-framelen_dec/2+1 : framelen_dec/2);
+u = framelen/2 + (floor(-framelen_dec/2+1) : framelen_dec/2);
 v = 1:chirplen_dec;
 x = linspace(min_doppler, max_doppler, res_doppler);
 y = linspace(min_range, max_range, res_range);
