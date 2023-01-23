@@ -5,6 +5,7 @@ scandir = fullfile(datadir, dataset, 'frames');
 trajdir = fullfile(datadir, dataset, 'traj');
 outfile = fullfile(datadir, dataset, append(dataset, '.mat'));
 jsonfile = fullfile(datadir, dataset, append(dataset, '.json'));
+mapfile = fullfile(datadir, dataset, 'map.mat');
 dbgfile = fullfile(datadir, dataset, 'dbg.mat');
 
 range_decimation = 7;   % max_range=21m when range_decimation=1
@@ -38,6 +39,13 @@ jsonstring = jsonencode(radarjson, 'PrettyPrint', true);
 writelines(jsonstring, jsonfile);
 
 map = gen_map();
+x = map.x;
+y = map.y;
+z = map.z;
+v = map.v;
+cx = map.cx;
+cy = map.cy;
+cz = map.cz;
 
 all_t = [];
 all_rad = [];
@@ -80,4 +88,5 @@ rot = all_rot;
 vel = all_vel;
 
 save(outfile, 'scan_t', 'rad', 'pos', 'rot', 'vel', '-v7.3');
-save(dbgfile);
+save(mapfile, 'x', 'y', 'z', 'v', 'cx', 'cy', 'cz', '-v7.3');
+save(dbgfile, '-v7.3');
