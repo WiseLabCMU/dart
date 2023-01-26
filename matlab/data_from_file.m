@@ -7,6 +7,7 @@ outfile = fullfile(datadir, dataset, append(dataset, '.mat'));
 jsonfile = fullfile(datadir, dataset, append(dataset, '.json'));
 mapfile = fullfile(datadir, dataset, 'map.mat');
 dbgfile = fullfile(datadir, dataset, 'dbg.mat');
+simfile = fullfile(datadir, dataset, 'simulated.mat');
 
 range_decimation = 7;   % max_range=21m when range_decimation=1
 doppler_decimation = 4; % max_velocity=2m/s when doppler_decimation=1
@@ -87,6 +88,6 @@ pos = all_pos;
 rot = all_rot;
 vel = all_vel;
 
-save(outfile, 'scan_t', 'rad', 'pos', 'rot', 'vel', '-v7.3');
+save(outfile, 't', 'rad', 'pos', 'rot', 'vel', '-v7.3');
 save(mapfile, 'x', 'y', 'z', 'v', 'cx', 'cy', 'cz', '-v7.3');
 save(dbgfile, '-v7.3');
