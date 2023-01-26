@@ -5,6 +5,7 @@ from jax import numpy as jnp
 import numpy as np
 from tensorflow.data import Dataset
 from scipy.io import loadmat
+import h5py
 
 from beartype.typing import Any
 
@@ -12,11 +13,25 @@ from .fields import GroundTruth
 from .pose import make_pose
 
 
-def _load_arrays(file: str) -> Any:
+def load_arrays(file: str) -> Any:
+    """General load function."""
     if file.endswith(".npz"):
         return np.load(file)
     elif file.endswith(".mat"):
-        return loadmat(file)
+        try:
+            return loadmat(file)
+        except NotImplementedError:
+            f = h5py.File(file, 'r')
+            # tmp = np.array(f.get('rad')[:, :64, :]).T
+            # tmp[:, :, ]
+            # tmp[:, :, 33] = 0.
+            # return {
+            #     'vel': np.array(f.get('vel')).T,
+            #     'pos': np.array(f.get('pos')).T,
+            #     'rot': np.array(f.get('rot')).T,
+            #     'rad': tmp
+            # }
+            return {k: np.array(f.get(k)).T for k in f.keys()}
     else:
         raise TypeError(
             "Unknown file type: {} (expected .npz or .mat)".format(file))
@@ -24,7 +39,7 @@ def _load_arrays(file: str) -> Any:
 
 def gt_map(file: str) -> GroundTruth:
     """Load ground truth reflectance map."""
-    data = _load_arrays(file)
+    data = load_arrays(file)
     x = data['x']
     y = data['y']
     z = data['z']
@@ -42,15 +57,19 @@ def gt_map(file: str) -> GroundTruth:
 
 def trajectory(traj: str) -> Dataset:
     """Generate trajectory dataset."""
-    traj = _load_arrays(traj)
+    traj = load_arrays(traj)
     pose = jax.vmap(make_pose)(traj["vel"], traj["pos"], traj["rot"])
     return Dataset.from_tensor_slices(pose)
 
 
 def image_traj(path: str, clip: float = 99.9) -> Dataset:
     """Dataset with trajectory and images."""
-    data = _load_arrays(path)
+    data = load_arrays(path)
     poses = jax.vmap(make_pose)(data["vel"], data["pos"], data["rot"])
-    images = data["rad"] / np.percentile(data["rad"], clip)
+
+    if clip > 0:
+        images = data["rad"] / np.percentile(data["rad"], clip)
+    else:
+        images = data["rad"]
 
     return Dataset.from_tensor_slices((poses, images))

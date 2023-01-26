@@ -42,6 +42,7 @@ class VirtualRadar(
     ) -> None:
         self.r = jnp.linspace(*r)
         self.d = jnp.linspace(*d)
+        # self.d = jnp.concatenate([self.d[:32], self.d[33:]])
         self.theta_lim = theta_lim
         self.phi_lim = phi_lim
         self.n = n

@@ -21,7 +21,7 @@ def _parse():
 
     g = p.add_argument_group(title="Sensor")
     g.add_argument(
-        "-s", "--sensor", default="data/awr1843boost.json",
+        "-s", "--sensor", default="data/awr1843boost-cup.json",
         help="Sensor parameters (.json).")
     g.add_argument(
         "-n", default=256, type=int,
@@ -33,7 +33,7 @@ def _parse():
     g = p.add_argument_group(title="Field")
     g.add_argument("--levels", default=8, type=int, help="Hash table levels.")
     g.add_argument(
-        "--exponent", default=0.5, type=float,
+        "--exponent", default=0.4, type=float,
         help="Hash table level exponent, in powers of 2.")
     g.add_argument(
         "--base", default=4., type=float,
@@ -56,7 +56,7 @@ def _parse():
 
     g = p.add_argument_group(title="Dataset")
     g.add_argument(
-        "--clip", default=99.9, type=float,
+        "--clip", default=0.0, type=float,
         help="Percentile to normalize input values by.")
     g.add_argument(
         "-p", "--path", default="data/cup.mat", help="Dataset file.")
@@ -90,22 +90,24 @@ def _main(cfg):
     with open(cfg["out"] + ".json", 'w') as f:
         json.dump(cfg, f, indent=4)
 
+    # Grid
+    """
+    x = jnp.linspace(-3, 3, 100)
+    grid = dart.grid(state, x, x, x)
+    np.savez_compressed(cfg["out"] + ".npz", grid=grid)
+
     # Sample images
     traj = dataset.image_traj(cfg["dataset"]["path"])
     poses, images = list(traj.shuffle(10000).batch(12).take(1))[0]
 
     poses_jnp = jax.tree_util.tree_map(jnp.array, poses)
     predicted = dart.render(state, poses_jnp, key=42)
-    fig, axs = plt.subplots(12, 2, figsize=(16, 24))
+    fig, axs = plt.subplots(2, 10, figsize=(24, 16))
     dart.sensor.plot_images(axs, images, predicted)
     fig.tight_layout()
 
     fig.savefig(cfg["out"] + ".png")
-
-    # Grid
-    x = jnp.linspace(-3, 3, 100)
-    grid = dart.grid(state.params, x, x, x)
-    np.savez_compressed(cfg["out"] + ".npz", grid=grid)
+    """
 
 
 if __name__ == '__main__':

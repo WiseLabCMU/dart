@@ -74,7 +74,7 @@ class VirtualRadarColumnMixins:
         # Field steps
         field_vals = vmap(project_rays)(self.r)
         sigma_samples = field_vals[:, :, 0]
-        alpha_samples = 1 - jnp.minimum(field_vals[:, :, 1], 1)
+        alpha_samples = 1 - jnp.tanh(field_vals[:, :, 1])
 
         # Return signal
         transmitted = jnp.concatenate([

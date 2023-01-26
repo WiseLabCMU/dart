@@ -19,7 +19,7 @@ from .pose import RadarPose
 from .sensor import VirtualRadar
 from .sensor_column import TrainingColumn
 from .fields import NGP
-from .utils import to_jax, to_prngkey, update_avg
+from .utils import tf_to_jax, to_prngkey, update_avg
 
 
 class ModelState(NamedTuple):
@@ -73,7 +73,7 @@ class DART:
         self, dataset, key: Union[Integer[Array, "2"], int] = 42
     ) -> ModelState:
         """Initialize model parameters and optimizer state."""
-        sample = to_jax(list(dataset.take(1))[0][0])
+        sample = tf_to_jax(list(dataset.take(1))[0][0])
         params = self.model_train.init(to_prngkey(key), sample)
         opt_state = self.optimizer.init(params)
         return ModelState(params=params, opt_state=opt_state)
@@ -89,6 +89,7 @@ class DART:
             columns, y_true = batch
             y_pred = self.model_train.apply(params, rng, columns)
             return jnp.sum(jnp.square(y_true - y_pred)) / y_true.shape[0]
+            # return jnp.sum(jnp.abs(y_true - y_pred)) / y_true.shape[0]
 
         # Note: not putting step in a closure here (jitting grads and updates
         # separately) results in a ~100x performance penalty!
@@ -113,7 +114,7 @@ class DART:
                 avg = 0.
                 for j, batch in enumerate(epoch):
                     key, rng = jax.random.split(key, 2)
-                    loss, state = step(state, rng, to_jax(batch))
+                    loss, state = step(state, rng, tf_to_jax(batch))
                     avg = update_avg(float(loss), avg, j, epoch)
                 train_log.append(avg)
 
@@ -121,7 +122,8 @@ class DART:
                 losses = []
                 for j, batch in enumerate(epoch):
                     key, rng = jax.random.split(key, 2)
-                    losses.append(loss_func(state.params, rng, to_jax(batch)))
+                    losses.append(
+                        loss_func(state.params, rng, tf_to_jax(batch)))
                 val_loss = np.mean(losses)
                 print("Val: {}".format(val_loss))
                 val_log.append(float(val_loss))
