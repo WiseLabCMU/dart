@@ -9,8 +9,11 @@ if ~exist('doplot', 'var')
     doplot = false;
 end
 
-load(filename, 'frames', 'start_time', 'end_time');
+fprintf('Loading %s...\n', filename);
+load(filename, 'frames_real', 'frames_imag', 'start_time', 'end_time');
+frames = complex(frames_real, frames_imag);
 
+fprintf('Processing %s...\n', filename);
 chirplen = size(frames, 4); % before decmiation
 numframes = floor(size(frames, 1) / framelen);
 numsamples = numframes * framelen;
@@ -21,30 +24,41 @@ t_end = posixtime(datetime(end_time, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSS
 t_end = t_end - 5*60*60;
 ts = (t_end - t_start) / numframes;
 
-timestamps = (t_start : ts : t_end-ts).';
+timestamps = (t_start+ts/2 : ts : t_end-ts/2).';
 
 a = squeeze(frames(1:numsamples, 1, 1, :));
 b = reshape(a.', chirplen, framelen, []);
 
+CHIRPLEN = 512;
+DMAX = 3.7899;
+RMAX = 21.5991;
+
+bin_doppler = DMAX / framelen;
+res_doppler = framelen / doppler_decimation;
+min_doppler = -bin_doppler * (res_doppler * 0.5);
+max_doppler = bin_doppler * (res_doppler * 0.5 - 1);
+
+bin_range = RMAX / CHIRPLEN;
+res_range = CHIRPLEN / range_decimation;
+min_range = bin_range * 0.5;
+max_range = bin_range * (res_range + 0.5);
+
 framelen_dec = framelen / doppler_decimation;
 chirplen_dec = chirplen / range_decimation;
-u = framelen/2 + (-framelen_dec/2 : framelen_dec/2-1);
+u = framelen/2 + (floor(-framelen_dec/2+1) : framelen_dec/2);
 v = 1:chirplen_dec;
-x = (u-1-framelen/2) * 0.0156;
-y = (v-1) * 0.04;
+x = linspace(min_doppler, max_doppler, res_doppler);
+y = linspace(min_range, max_range, res_range);
 c = permute(fftshift(fft2(b), 2), [3 1 2]);
 c = c(:, v, u);
 
 scans = abs(c);
 
 if doplot
-    f = waitbar(0, 'Plotting frames');
     for i = 1:numframes
-        imcomplex(x, y, abs(c(i, :, :)));
-        f = waitbar(i/numframes, f, 'Plotting frames');
+        imcomplex(x, y, squeeze(abs(c(i, :, :))));
         pause(ts);
     end
-    close(f);
 end
 
 
