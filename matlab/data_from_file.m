@@ -9,7 +9,7 @@ mapfile = fullfile(datadir, dataset, 'map.mat');
 dbgfile = fullfile(datadir, dataset, 'dbg.mat');
 simfile = fullfile(datadir, dataset, 'simulated.mat');
 
-range_decimation = 7;   % max_range=21m when range_decimation=1
+range_decimation = 4;   % max_range=21m when range_decimation=1
 doppler_decimation = 4; % max_velocity=2m/s when doppler_decimation=1
 framelen = 256;         % motion during frame should <~2 range bins (.08m)
                         % each chirp is .0005s
