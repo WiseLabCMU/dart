@@ -15,10 +15,13 @@ ts = t(2)-t(1);
 for i = 1:N
     c = squeeze(rad(i,:,:));
     d = squeeze(sim(i,:,:));
+    f = squeeze(pred(i,:,:));
     c(:,33) = 0;
-    subplot(2,1,1);
+    subplot(3,1,1);
     imcomplex(x, y, c);
-    subplot(2,1,2);
+    subplot(3,1,2);
     imcomplex(x, y, d);
+    subplot(3,1,3);
+    imcomplex(x, y, f);
     pause(ts);
 end
