@@ -3,15 +3,16 @@
 from tqdm import tqdm
 
 import jax
-import numpy as np
 from jax import numpy as jnp
+import numpy as np
+
 
 from jaxtyping import PyTree, Integer, Array
 from beartype.typing import Union
 
 
-def to_jax(batch: PyTree) -> PyTree:
-    """Convert non-jax array to jax array."""
+def tf_to_jax(batch: PyTree) -> PyTree:
+    """Convert tensorflow array to jax array without copying."""
     return jax.tree_util.tree_map(jnp.array, batch)
 
 

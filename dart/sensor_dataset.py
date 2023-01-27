@@ -11,8 +11,8 @@ from tensorflow.data import Dataset
 from scipy.io import loadmat
 
 from .pose import make_pose
-
 from .utils import get_size, shuffle
+from .dataset import load_arrays
 
 
 class VirtualRadarDatasetMixins:
@@ -25,6 +25,10 @@ class VirtualRadarDatasetMixins:
                 partial(self.make_column, pose=pose))(doppler=self.d)
 
         poses, images = data
+        # remove 0 doppler
+        # images = jnp.concatenate(
+        #     [images[:, :, :32], images[:, :, 33:]], axis=2)
+
         columns = jax.vmap(process_image)(poses)
         images_col = jnp.swapaxes(images, 1, 2)
         dataset = (columns, images_col)
@@ -69,10 +73,15 @@ class VirtualRadarDatasetMixins:
         -------
         (train, val) datasets.
         """
-        data = loadmat(path)
+        data = load_arrays(path)
+        if clip > 0:
+            images = data["rad"] / np.percentile(data["rad"], clip)
+        else:
+            images = data["rad"]
+
         data = (
             jax.vmap(make_pose)(data["vel"], data["pos"], data["rot"]),
-            data["rad"] / np.percentile(data["rad"], clip))
+            images)
         print("Loaded dataset: {} frames".format(data[1].shape[0]))
 
         if iid_val:

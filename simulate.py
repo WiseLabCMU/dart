@@ -8,7 +8,7 @@ from functools import partial
 import numpy as np
 from jax import numpy as jnp
 import jax
-from scipy.io import loadmat, savemat
+from scipy.io import savemat
 
 from dart import VirtualRadar, dataset
 
@@ -27,7 +27,6 @@ def _parse():
     p.add_argument(
         "-j", "--traj", default="data/traj.mat", help="Sensor trajectory.")
     p.add_argument("-b", "--batch", default=64, type=int, help="Batch size")
-    p.add_argument("--from", default=None, )
     return p
 
 
@@ -54,7 +53,7 @@ if __name__ == '__main__':
 
         frames.append(np.asarray(render(pose=pose, key=keys)))
 
-    out = loadmat(args.traj)
+    out = dataset.load_arrays(args.traj)
     out = {k: v for k, v in out.items() if not k.startswith("__")}
     out["rad"] = np.concatenate(frames, axis=0)
 
