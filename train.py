@@ -6,11 +6,8 @@ from tqdm import tqdm
 from argparse import ArgumentParser
 
 import jax
-import numpy as np
-from jax import numpy as jnp
-from matplotlib import pyplot as plt
 
-from dart import DART, dataset
+from dart import DART
 
 
 def _parse():
@@ -59,6 +56,9 @@ def _parse():
         "--clip", default=0.0, type=float,
         help="Percentile to normalize input values by.")
     g.add_argument(
+        "--norm", default=0.05, type=float,
+        help="Percentile normalization value.")
+    g.add_argument(
         "-p", "--path", default="data/cup.mat", help="Dataset file.")
 
     return p
@@ -90,25 +90,6 @@ def _main(cfg):
     with open(cfg["out"] + ".json", 'w') as f:
         json.dump(cfg, f, indent=4)
 
-    # Grid
-    """
-    x = jnp.linspace(-3, 3, 100)
-    grid = dart.grid(state, x, x, x)
-    np.savez_compressed(cfg["out"] + ".npz", grid=grid)
-
-    # Sample images
-    traj = dataset.image_traj(cfg["dataset"]["path"])
-    poses, images = list(traj.shuffle(10000).batch(12).take(1))[0]
-
-    poses_jnp = jax.tree_util.tree_map(jnp.array, poses)
-    predicted = dart.render(state, poses_jnp, key=42)
-    fig, axs = plt.subplots(2, 10, figsize=(24, 16))
-    dart.sensor.plot_images(axs, images, predicted)
-    fig.tight_layout()
-
-    fig.savefig(cfg["out"] + ".png")
-    """
-
 
 if __name__ == '__main__':
 
@@ -128,7 +109,7 @@ if __name__ == '__main__':
             "features": args.features
         },
         "dataset": {
-            "val": args.val, "clip": args.clip,
+            "val": args.val, "clip": args.clip, "norm": args.norm,
             "iid_val": True, "path": args.path
         }
     }

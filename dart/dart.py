@@ -20,6 +20,7 @@ from .sensor import VirtualRadar
 from .sensor_column import TrainingColumn
 from .fields import NGP
 from .utils import tf_to_jax, to_prngkey, update_avg
+from .opt import sparse_adam
 
 
 class ModelState(NamedTuple):
@@ -170,5 +171,7 @@ class DART:
     def from_config(cls, sensor=None, field=None, lr=0.01, **_):
         """Create DART from config items."""
         return cls(
-            VirtualRadar(**sensor), optax.adam(lr),
+            VirtualRadar(**sensor),
+            sparse_adam(lr=0.01),
+            # optax.adam(0.01),
             NGP.from_config(**field))

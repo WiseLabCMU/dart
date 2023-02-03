@@ -89,13 +89,14 @@ class NGP:
 
     def __init__(
             self, levels: Float32[Array, "n"],
-            size: tuple[int, int] = (16384, 2), units: tuple = [32, 2]):
+            size: tuple[int, int] = (16384, 2), units: tuple = [32]):
         self.size = size
         self.levels = levels
         self.units = units
         mlp = []
         for u in units:
-            mlp += [hk.Linear(u), jax.nn.relu]
+            mlp += [hk.Linear(u), jax.nn.leaky_relu]
+        mlp += [hk.Linear(2)]
         self.head = hk.Sequential(mlp)
 
     def hash(self, x: Integer[Array, "3"]) -> Integer[Array, ""]:
@@ -119,7 +120,10 @@ class NGP:
             return interpolate(xscale, jax.vmap(hash_table))
 
         table_out = jax.vmap(interpolate_level)(xscales, grid)
-        return self.head(table_out.reshape(-1))
+        mlp_out = self.head(table_out.reshape(-1))
+        return jnp.array([
+            jax.nn.relu(mlp_out[0]),
+            jax.nn.sigmoid(mlp_out[1])])
 
     @classmethod
     def from_config(cls, levels=8, exponent=0.5, base=4, size=16, features=2):

@@ -33,13 +33,20 @@ class TrainingColumn(NamedTuple):
 class VirtualRadarColumnMixins:
     """Radar doppler column methods."""
 
+    def angles(
+        self, t: Float32[Array, "3 k"]
+    ) -> tuple[Float32[Array, "k"], Float32[Array, "k"]]:
+        """Get azimuth and elevation from unit sphere values."""
+        x, y, z = t
+        theta = jnp.arcsin(jnp.clip(z, -0.99999, 0.99999))
+        phi = jnp.arcsin(jnp.clip(y / jnp.cos(theta), -0.99999, 0.99999))
+        return (theta, phi)
+
     def gain(self, t: Float32[Array, "3 k"]) -> Float32[Array, "k"]:
         """Compute antenna gain."""
-        x, y, z = t
-        theta = jnp.arcsin(z)
-        phi = jnp.arcsin(y * jnp.cos(theta))
-        _theta = theta / (2 * jnp.pi) * 180 / 56
-        _phi = phi / (2 * jnp.pi) * 180 / 56
+        theta, phi = self.angles(t)
+        _theta = theta / jnp.pi * 180 / 56
+        _phi = phi / jnp.pi * 180 / 56
 
         return jnp.exp((
             (0.14 * _theta**6 + 0.13 * _theta**4 - 8.2 * _theta**2)
@@ -74,7 +81,7 @@ class VirtualRadarColumnMixins:
         # Field steps
         field_vals = vmap(project_rays)(self.r)
         sigma_samples = field_vals[:, :, 0]
-        alpha_samples = 1 - jnp.tanh(field_vals[:, :, 1])
+        alpha_samples = 1 - field_vals[:, :, 1]
 
         # Return signal
         transmitted = jnp.concatenate([

@@ -62,13 +62,13 @@ def trajectory(traj: str) -> Dataset:
     return Dataset.from_tensor_slices(pose)
 
 
-def image_traj(path: str, clip: float = 99.9) -> Dataset:
+def image_traj(path: str, clip: float = 99.9, norm: float = 0.05) -> Dataset:
     """Dataset with trajectory and images."""
     data = load_arrays(path)
     poses = jax.vmap(make_pose)(data["vel"], data["pos"], data["rot"])
 
     if clip > 0:
-        images = data["rad"] / np.percentile(data["rad"], clip)
+        images = data["rad"] / np.percentile(data["rad"], clip) * norm
     else:
         images = data["rad"]
 

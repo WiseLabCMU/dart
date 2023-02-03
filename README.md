@@ -1,5 +1,15 @@
-# dart
+# Doppler-Aided Radar Tomography using Neural Reflectance Fields
+
+## Dependencies
 
 ```sh
-python simulate.py -n 512 -k 256 -v 96 -w 96 --out data/sim_96 -b 16
+sudo apt-get install libhdf5-dev
 ```
+
+Install JAX GPU, then requirements.txt.
+
+## Params
+
+Max batch size:
+- cup, simulation: 2048
+- cabinets, cabinets2: 512

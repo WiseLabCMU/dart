@@ -46,7 +46,8 @@ class VirtualRadarDatasetMixins:
 
     def dataset(
         self, path: str = "data/cup.mat", clip: float = 99.9,
-        val: float = 0., iid_val: bool = False,
+        norm: float = 0.05, val: float = 0., iid_val: bool = False,
+        min_speed: float = 0.1,
         key: Optional[Union[Integer[Array, "2"], int]] = 42
     ) -> tuple[Dataset, Optional[Dataset]]:
         """Real dataset with all in one.
@@ -62,11 +63,14 @@ class VirtualRadarDatasetMixins:
         sensor: Sensor specifications.
         path: Path to file containing data.
         clip: Percentile to normalize input values by.
+        norm: Normalization factor.
         val: Proportion of dataset to hold as a validation set. If val=0,
             Then no validation datset is returned.
         iid_val: If True, then shuffles the dataset before training so that the
             validation split is drawn randomly from the dataset instead of just
             from the end.
+        min_speed: Minimum speed for usable samples. Images with lower
+            velocities are rejected.
         key: Random key to shuffle dataset frames. Does not shuffle columns.
 
         Returns
@@ -75,14 +79,18 @@ class VirtualRadarDatasetMixins:
         """
         data = load_arrays(path)
         if clip > 0:
-            images = data["rad"] / np.percentile(data["rad"], clip)
+            images = data["rad"] / np.percentile(data["rad"], clip) * norm
         else:
             images = data["rad"]
 
         data = (
             jax.vmap(make_pose)(data["vel"], data["pos"], data["rot"]),
             images)
-        print("Loaded dataset: {} frames".format(data[1].shape[0]))
+        valid_speed = data[0].s > min_speed
+
+        print("Loaded dataset: {} valid frames (speed > {}) / {}".format(
+            jnp.sum(valid_speed), min_speed, data[1].shape[0]))
+        data = jax.tree_util.tree_map(lambda x: x[valid_speed], data)
 
         if iid_val:
             data = shuffle(data, key=key)

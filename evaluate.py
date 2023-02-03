@@ -3,7 +3,6 @@
 import json
 from tqdm import tqdm
 from argparse import ArgumentParser
-from functools import partial
 
 import numpy as np
 from jax import numpy as jnp
@@ -15,7 +14,7 @@ from dart import dataset, DART
 
 def _parse():
     p = ArgumentParser()
-    p.add_argument("-p", "--path", help="File path to output json file.")
+    p.add_argument("-p", "--path", help="File path to output base name.")
     p.add_argument(
         "-r", "--key", default=42, type=int, help="Random seed.")
     p.add_argument("-b", "--batch", default=32, type=int, help="Batch size")

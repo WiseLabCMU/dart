@@ -68,15 +68,12 @@ class VirtualRadar(
         -------
         Output mask for each bin.
         """
-        x, y, z = project_angle(d, jnp.arange(self.n) * self.bin_width, pose)
-
-        theta = jnp.arcsin(z)
-        phi = jnp.arcsin(y * jnp.cos(theta))
-
+        t = project_angle(d, jnp.arange(self.n) * self.bin_width, pose)
+        theta, phi = self.angles(t)
         return (
             (theta < self.theta_lim) & (theta > -self.theta_lim)
             & (phi < self.phi_lim) & (phi > -self.phi_lim)
-            & (x > 0)
+            & (t[0] > 0)
         )
 
     def sample_rays(
