@@ -73,7 +73,9 @@ class VirtualRadarColumnMixins:
         """
         def project_rays(r):
             t_world = sensor_to_world(r=r, t=t, pose=pose)
-            return jnp.nan_to_num(vmap(sigma)(t_world.T))
+            dx = pose.x.reshape(-1, 1) - t_world
+            dx_norm = dx / jnp.linalg.norm(dx, axis=0)
+            return jnp.nan_to_num(vmap(sigma)(t_world.T, dx=dx_norm.T))
 
         # Antenna Gain
         gain = self.gain(t)

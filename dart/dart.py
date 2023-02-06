@@ -18,7 +18,7 @@ from tensorflow.data import Dataset
 from .pose import RadarPose
 from .sensor import VirtualRadar
 from .sensor_column import TrainingColumn
-from .fields import NGP
+from .fields import NGP, NGPSH
 from .utils import tf_to_jax, to_prngkey, update_avg
 from .opt import sparse_adam
 
@@ -89,8 +89,8 @@ class DART:
         def loss_func(params, rng, batch):
             columns, y_true = batch
             y_pred = self.model_train.apply(params, rng, columns)
-            # return jnp.sum(jnp.square(y_true - y_pred)) / y_true.shape[0]
-            return jnp.sum(jnp.abs(y_true - y_pred)) / y_true.shape[0]
+            return jnp.sum(jnp.square(y_true - y_pred)) / y_true.shape[0]
+            # return jnp.sum(jnp.abs(y_true - y_pred)) / y_true.shape[0]
 
         # Note: not putting step in a closure here (jitting grads and updates
         # separately) results in a ~100x performance penalty!
@@ -180,6 +180,6 @@ class DART:
         """Create DART from config items."""
         return cls(
             VirtualRadar(**sensor),
-            sparse_adam(lr=0.01),
-            # optax.adam(0.01),
-            NGP.from_config(**field))
+            sparse_adam(lr=0.01),       # optax.adam(0.01),
+            NGPSH.from_config(**field)  # NGP.from_config(**field),
+        )

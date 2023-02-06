@@ -2,13 +2,13 @@
 
 from functools import partial
 from jaxtyping import Float32, Integer, Array
-from beartype.typing import Union
+from beartype.typing import Union, Optional
 
 from jax import numpy as jnp
 import jax
 import haiku as hk
 
-from .spatial import interpolate
+from .spatial import interpolate, spherical_harmonics
 
 
 class GroundTruth:
@@ -30,7 +30,9 @@ class GroundTruth:
         self.resolution = resolution
         self.grid = grid
 
-    def __call__(self, x: Float32[Array, "3"]) -> Float32[Array, "2"]:
+    def __call__(
+        self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None
+    ) -> Float32[Array, "2"]:
         """Index into reflectance map."""
         index = (x - self.lower) * self.resolution
         valid = jnp.all(
@@ -58,7 +60,9 @@ class SimpleGrid(hk.Module):
         self.resolution = resolution
         self.size = size
 
-    def __call__(self, x: Float32[Array, "3"]) -> Float32[Array, "2"]:
+    def __call__(
+        self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None
+    ) -> Float32[Array, "2"]:
         """Index into learned reflectance map."""
         grid = hk.get_parameter("grid", (*self.size, 2), init=jnp.zeros)
         index = (x - self.lower) * self.resolution
@@ -77,9 +81,10 @@ class NGP:
 
     Parameters
     ----------
-    size: Hash table size (and feature dimension)
     levels: Resolution of each hash table level. The length determines the
         number of hash tables.
+    size: Hash table size (and feature dimension).
+    units: MLP network parameters.
 
     References
     ----------
@@ -107,7 +112,9 @@ class NGP:
 
         return (x[0] + x[1] * pi2 + x[2] * pi3) % self.size[0]
 
-    def __call__(self, x: Float32[Array, "3"]) -> Float32[Array, "2"]:
+    def __call__(
+        self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None
+    ) -> Float32[Array, "2"]:
         """Index into learned reflectance map."""
         xscales = x.reshape(1, -1) * self.levels.reshape(-1, 1)
         grid = hk.get_parameter(
@@ -127,9 +134,67 @@ class NGP:
 
     @classmethod
     def from_config(cls, levels=8, exponent=0.5, base=4, size=16, features=2):
-        """Create NGP from config items."""
+        """Create NGP haiku closure from config items."""
         def closure():
             return cls(
                 levels=base * 2**(exponent * jnp.arange(levels)),
                 size=(2**size, features))
         return closure
+
+
+class NGPSH(NGP):
+    """NGP field with spherical harmonics.
+
+    Parameters
+    ----------
+    levels: Resolution of each hash table level. The length determines the
+        number of hash tables.
+    harmonics: Number of spherical harmonic coefficients.
+    size: Hash table size (and feature dimension).
+    units: MLP network parameters.
+
+    References
+    ----------
+    [1] Muller et al, "Instant Neural Graphics Primitives with a
+        Multiresolution Hash Encoding," 2022.
+    """
+
+    def __init__(
+            self, levels: Float32[Array, "n"], harmonics: int = 25,
+            size: tuple[int, int] = (16384, 2), units: tuple = [64, 32]):
+        self.size = size
+        self.levels = levels
+        self.units = units
+        assert harmonics in {1, 4, 9, 16, 25}
+        self.harmonics = harmonics
+        mlp = []
+        for u in units:
+            mlp += [hk.Linear(u), jax.nn.leaky_relu]
+        mlp += [hk.Linear(harmonics + 1)]
+        self.head = hk.Sequential(mlp)
+
+    def __call__(
+        self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None
+    ) -> Float32[Array, "2"]:
+        """Index into learned reflectance map."""
+        xscales = x.reshape(1, -1) * self.levels.reshape(-1, 1)
+        grid = hk.get_parameter(
+            "grid", (self.levels.shape[0], *self.size),
+            init=hk.initializers.RandomUniform(0, 0.0001))
+
+        def interpolate_level(xscale, grid_level):
+            def hash_table(c):
+                return grid_level[self.hash(c)]
+            return interpolate(xscale, jax.vmap(hash_table))
+
+        table_out = jax.vmap(interpolate_level)(xscales, grid)
+        mlp_out = self.head(table_out.reshape(-1))
+        alpha = jax.nn.sigmoid(mlp_out[-1])
+
+        if dx is None:
+            sigma = jnp.sum(jnp.abs(mlp_out[:-1]))
+        else:
+            sh = spherical_harmonics(dx, self.harmonics)
+            sigma = jax.nn.relu(jnp.sum(mlp_out[:-1] * sh))
+
+        return jnp.array([sigma, alpha])
