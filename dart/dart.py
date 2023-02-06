@@ -89,8 +89,8 @@ class DART:
         def loss_func(params, rng, batch):
             columns, y_true = batch
             y_pred = self.model_train.apply(params, rng, columns)
-            return jnp.sum(jnp.square(y_true - y_pred)) / y_true.shape[0]
-            # return jnp.sum(jnp.abs(y_true - y_pred)) / y_true.shape[0]
+            # return jnp.sum(jnp.square(y_true - y_pred)) / y_true.shape[0]
+            return jnp.sum(jnp.abs(y_true - y_pred)) / y_true.shape[0]
 
         # Note: not putting step in a closure here (jitting grads and updates
         # separately) results in a ~100x performance penalty!
@@ -113,10 +113,16 @@ class DART:
         for i in range(epochs):
             with tqdm(train, unit="batch", desc="Epoch {}".format(i)) as epoch:
                 avg = 0.
-                for j, batch in enumerate(epoch):
+                j = 0
+                for _, batch in enumerate(epoch):
                     key, rng = jax.random.split(key, 2)
-                    loss, state = step(state, rng, tf_to_jax(batch))
-                    avg = update_avg(float(loss), avg, j, epoch)
+                    loss, _state = step(state, rng, tf_to_jax(batch))
+                    if not jnp.isnan(loss):
+                        state = _state
+                        avg = update_avg(float(loss), avg, j, epoch)
+                        j += 1
+                    else:
+                        print("Encountered NaN loss! Ignoring update.")
                 train_log.append(avg)
 
             if val is not None:
@@ -125,6 +131,8 @@ class DART:
                     key, rng = jax.random.split(key, 2)
                     losses.append(
                         loss_func(state.params, rng, tf_to_jax(batch)))
+                losses = jnp.array(losses)
+                losses = losses[~jnp.isnan(losses)]
                 val_loss = np.mean(losses)
                 print("Val: {}".format(val_loss))
                 val_log.append(float(val_loss))

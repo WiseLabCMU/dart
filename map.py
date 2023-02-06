@@ -33,9 +33,16 @@ if __name__ == '__main__':
     steps = np.array([0, 1, 2, 3])
     grid = dart.grid(state.params, x, y, z)
 
-    fig, axs = plt.subplots(1, 4, figsize=(16, 4))
-    for layer, ax in zip(steps, axs):
+    fig, axs = plt.subplots(2, 4, figsize=(16, 8))
+    for layer, ax in zip(steps, axs[0]):
         ax.imshow(grid[:, :, layer, 0].T, origin='lower')
+
+        ax.set_xticks(np.linspace(0, 100, 6))
+        ax.set_yticks(np.linspace(0, 100, 6))
+        ax.set_xticklabels(["{:.1f}".format(x) for x in np.linspace(-r, r, 6)])
+        ax.set_yticklabels(["{:.1f}".format(x) for x in np.linspace(-r, r, 6)])
+    for layer, ax in zip(steps, axs[1]):
+        ax.imshow(grid[:, :, layer, 1].T, origin='lower')
 
         ax.set_xticks(np.linspace(0, 100, 6))
         ax.set_yticks(np.linspace(0, 100, 6))
