@@ -8,7 +8,7 @@ rad = real_rad;
 clear real_rad;
 
 x = linspace(min_doppler, max_doppler, res_doppler);
-y = linspace(min_range, max_range, floor(res_range));
+y = linspace(min_range, max_range/2, floor(res_range/2));
 
 N = size(rad, 1);
 ts = t(2)-t(1);
@@ -18,6 +18,10 @@ for i = 1:N
 %     f = squeeze(pred(i,:,:));
     c(:,33) = 0;
     d(:,33) = 0;
+%     c = c - min(c, [], 2);
+%     c = c ./ max(c, [], 2);
+%     d = d - min(d, [], 2);
+%     d = d ./ max(d, [], 2);
     subplot(2,1,1);
     imcomplex(x, y, c);
     title('real');

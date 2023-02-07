@@ -87,7 +87,10 @@ rad = all_rad;
 pos = all_pos;
 rot = all_rot;
 vel = all_vel;
-
+wp_t = all_wp_t;
+wp_pos = all_wp_pos;
+wp_quat = all_wp_quat;
+clear all_t all_rad all_pos all_rot all_vel all_wp_t all_wp_pos all_wp_quat;
 save(outfile, 't', 'rad', 'pos', 'rot', 'vel', '-v7.3');
 save(mapfile, 'x', 'y', 'z', 'v', 'cx', 'cy', 'cz', '-v7.3');
 save(dbgfile, '-v7.3');
