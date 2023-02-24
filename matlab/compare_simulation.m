@@ -59,35 +59,54 @@ q2 = quiver3(0,0,0,0,0,0, ...
 
 fig.WindowState = 'maximized';
 ts = t(2)-t(1);
+last_idx = 0;
 while true
     if btn.Value
         sld.Value = min(sld.Value + 1, sld.Max);
     end
     sld.Value = round(sld.Value);
+    if sld.Value ~= last_idx
+        last_idx = sld.Value;
 
-    subplot(2,3,1);
-    c = squeeze(real_rad(sld.Value,1:64,:));
-    c(:,33) = 0;
-    imcomplex(x, y, c);
-    xlabel('Doppler (m/s)');
-    ylabel('Range (m)');
-    title('Real Scans');
-    set(gca, 'FontSize', 16);
+        subplot(2,3,1);
+        hold off;
+        c = squeeze(real_rad(sld.Value,1:64,:));
+        c(:,33) = 0;
+        imcomplex(x, y, c, 'ButtonDownFcn', @pixelclick_callback);
+        xlabel('Doppler (m/s)');
+        ylabel('Range (m)');
+        title('Real Scans');
+        set(gca, 'FontSize', 16);
+    
+        subplot(2,3,4);
+        hold off;
+        d = squeeze(sim_rad(sld.Value,1:64,:));
+        d(:,33) = 0;
+        imcomplex(x, y, d, 'ButtonDownFcn', @pixelclick_callback);
+        xlabel('Doppler (m/s)');
+        ylabel('Range (m)');
+        title('Simulated Scans');
+        set(gca, 'FontSize', 16);
+    
+        r = squeeze(rot(sld.Value,:,:)) * axang2rotm([0,1,0,deg2rad(90)]);
+        p = pos(sld.Value,:);
+        pose = rigidtform3d(r, p);
+        cam.AbsolutePose = pose;
+        refreshdata(q1, 'caller');
+        refreshdata(q2, 'caller');
+    end
+    drawnow;
+end
 
-    subplot(2,3,4);
-    d = squeeze(sim_rad(sld.Value,1:64,:));
-    d(:,33) = 0;
-    imcomplex(x, y, d);
-    xlabel('Doppler (m/s)');
-    ylabel('Range (m)');
-    title('Simulated Scans');
-    set(gca, 'FontSize', 16);
+function pixelclick_callback(src, event)
+d = event.IntersectionPoint(1);
+r = event.IntersectionPoint(2);
 
-    r = squeeze(rot(sld.Value,:,:)) * axang2rotm([0,1,0,deg2rad(90)]);
-    p = pos(sld.Value,:);
-    pose = rigidtform3d(r, p);
-    cam.AbsolutePose = pose;
-    refreshdata(q1, 'caller');
-    refreshdata(q2, 'caller');
-    pause(ts);
+subplot(2,3,1);
+hold on;
+plot(d,r,'rs','LineWidth',2,'MarkerSize',10);
+
+subplot(2,3,4);
+hold on;
+plot(d,r,'rs','LineWidth',2,'MarkerSize',10);
 end
