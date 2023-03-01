@@ -99,8 +99,8 @@ while true
 end
 
 function pixelclick_callback(src, event)
-d = event.IntersectionPoint(1);
-r = event.IntersectionPoint(2);
+d = interp1(src.XData,src.XData,event.IntersectionPoint(1),'nearest');
+r = interp1(src.YData,src.YData,event.IntersectionPoint(2),'nearest');
 
 subplot(2,3,1);
 hold on;
