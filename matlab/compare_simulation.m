@@ -68,11 +68,19 @@ while true
     if sld.Value ~= last_idx
         last_idx = sld.Value;
 
+        rr = squeeze(rot(sld.Value,:,:));
+        pp = pos(sld.Value,:);
+        vv = vel(sld.Value,:);
+        pose = rigidtform3d(rr * axang2rotm([0,1,0,deg2rad(90)]), pp);
+        cam.AbsolutePose = pose;
+        refreshdata(q1, 'caller');
+        refreshdata(q2, 'caller');
+
         subplot(2,3,1);
         hold off;
         c = squeeze(real_rad(sld.Value,1:64,:));
         c(:,33) = 0;
-        imcomplex(x, y, c, 'ButtonDownFcn', @pixelclick_callback);
+        imcomplex(x, y, c, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
         xlabel('Doppler (m/s)');
         ylabel('Range (m)');
         title('Real Scans');
@@ -82,25 +90,29 @@ while true
         hold off;
         d = squeeze(sim_rad(sld.Value,1:64,:));
         d(:,33) = 0;
-        imcomplex(x, y, d, 'ButtonDownFcn', @pixelclick_callback);
+        imcomplex(x, y, d, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
         xlabel('Doppler (m/s)');
         ylabel('Range (m)');
         title('Simulated Scans');
         set(gca, 'FontSize', 16);
-    
-        r = squeeze(rot(sld.Value,:,:)) * axang2rotm([0,1,0,deg2rad(90)]);
-        p = pos(sld.Value,:);
-        pose = rigidtform3d(r, p);
-        cam.AbsolutePose = pose;
-        refreshdata(q1, 'caller');
-        refreshdata(q2, 'caller');
     end
     drawnow;
 end
 
-function pixelclick_callback(src, event)
+function pixelclick_callback(src, event, pos, vel, rot)
 d = interp1(src.XData,src.XData,event.IntersectionPoint(1),'nearest');
 r = interp1(src.YData,src.YData,event.IntersectionPoint(2),'nearest');
+
+s = norm(vel);
+v = rot.' * vel.' / s;
+[~,~,V] = svd(eye(3)-v*v');
+p = V(1,:).';
+q = V(2,:).';
+dnorm = d/s;
+
+psi = linspace(0,2*pi,256);
+t = r*(sqrt(1-dnorm^2)*(p*cos(psi)+q*sin(psi))+v*dnorm);
+tworld = pos.'+rot*t;
 
 subplot(2,3,1);
 hold on;
@@ -109,4 +121,8 @@ plot(d,r,'rs','LineWidth',2,'MarkerSize',10);
 subplot(2,3,4);
 hold on;
 plot(d,r,'rs','LineWidth',2,'MarkerSize',10);
+
+subplot(2,3,[2,3,5,6]);
+plot3(tworld(1,:),tworld(2,:),tworld(3,:),'r','Linewidth',2);
+
 end
