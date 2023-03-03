@@ -40,6 +40,9 @@ bl2 = uicontrol('Parent',fig,'Style','text','Position',[2420,135,100,30],'String
 bl3 = uicontrol('Parent',fig,'Style','text','Position',[1750,90,100,30],'String','Time (s)','FontSize',16);
 btn = uicontrol('Parent',fig,'Style','checkbox','Position',[1250,90,100,30],'String','Auto','Value',false,'FontSize',16);
 
+global sel_plots;
+sel_plots = dictionary;
+
 q1 = quiver3(0,0,0,0,0,0,'k', ...
     'XDataSource','pos(sld.Value,1)', ...
     'YDataSource','pos(sld.Value,2)', ...
@@ -100,29 +103,52 @@ while true
 end
 
 function pixelclick_callback(src, event, pos, vel, rot)
+global sel_plots;
+
 d = interp1(src.XData,src.XData,event.IntersectionPoint(1),'nearest');
 r = interp1(src.YData,src.YData,event.IntersectionPoint(2),'nearest');
+key = struct;
+key.d = d;
+key.r = r;
 
-s = norm(vel);
-v = rot.' * vel.' / s;
-[~,~,V] = svd(eye(3)-v*v');
-p = V(1,:).';
-q = V(2,:).';
-dnorm = d/s;
-
-psi = linspace(0,2*pi,256);
-t = r*(sqrt(1-dnorm^2)*(p*cos(psi)+q*sin(psi))+v*dnorm);
-tworld = pos.'+rot*t;
-
-subplot(2,3,1);
-hold on;
-plot(d,r,'rs','LineWidth',2,'MarkerSize',10);
-
-subplot(2,3,4);
-hold on;
-plot(d,r,'rs','LineWidth',2,'MarkerSize',10);
-
-subplot(2,3,[2,3,5,6]);
-plot3(tworld(1,:),tworld(2,:),tworld(3,:),'r','Linewidth',2);
+if event.Button == 1
+    s = norm(vel);
+    v = rot.' * vel.' / s;
+    [~,~,V] = svd(eye(3)-v*v');
+    p = V(1,:).';
+    q = V(2,:).';
+    dnorm = d/s;
+    
+    psi = linspace(0,2*pi,256);
+    t = r*(sqrt(1-dnorm^2)*(p*cos(psi)+q*sin(psi))+v*dnorm);
+    tworld = pos.'+rot*t;
+    
+    subplot(2,3,1);
+    hold on;
+    key.p = 1;
+    sel_plots(key) = plot(d,r,'rs','LineWidth',2,'MarkerSize',10,'PickableParts','None');
+    
+    subplot(2,3,4);
+    hold on;
+    key.p = 2;
+    sel_plots(key) = plot(d,r,'rs','LineWidth',2,'MarkerSize',10,'PickableParts','None');
+    
+    subplot(2,3,[2,3,5,6]);
+    key.p = 3;
+    sel_plots(key) = plot3(tworld(1,:),tworld(2,:),tworld(3,:),'r','Linewidth',2);
+elseif event.Button == 3
+    key.p = 1;
+    if isKey(sel_plots,key)
+        delete(sel_plots(key));
+    end
+    key.p = 2;
+    if isKey(sel_plots,key)
+        delete(sel_plots(key));
+    end
+    key.p = 3;
+    if isKey(sel_plots,key)
+        delete(sel_plots(key));
+    end
+end
 
 end
