@@ -70,6 +70,12 @@ while true
     sld.Value = round(sld.Value);
     if sld.Value ~= last_idx
         last_idx = sld.Value;
+        if sel_plots.numEntries() > 0
+            for k = sel_plots.keys()
+                delete(sel_plots(k));
+                sel_plots(k) = [];
+            end
+        end
 
         rr = squeeze(rot(sld.Value,:,:));
         pp = pos(sld.Value,:);
@@ -110,8 +116,9 @@ r = interp1(src.YData,src.YData,event.IntersectionPoint(2),'nearest');
 key = struct;
 key.d = d;
 key.r = r;
+key.p = 1;
 
-if event.Button == 1
+if event.Button == 1 && (sel_plots.numEntries == 0 || ~sel_plots.isKey(key))
     s = norm(vel);
     v = rot.' * vel.' / s;
     [~,~,V] = svd(eye(3)-v*v');
@@ -136,19 +143,16 @@ if event.Button == 1
     subplot(2,3,[2,3,5,6]);
     key.p = 3;
     sel_plots(key) = plot3(tworld(1,:),tworld(2,:),tworld(3,:),'r','Linewidth',2);
-elseif event.Button == 3
+elseif event.Button == 3 && sel_plots.numEntries > 0 && sel_plots.isKey(key)
     key.p = 1;
-    if isKey(sel_plots,key)
-        delete(sel_plots(key));
-    end
+    delete(sel_plots(key));
+    sel_plots(key) = [];
     key.p = 2;
-    if isKey(sel_plots,key)
-        delete(sel_plots(key));
-    end
+    delete(sel_plots(key));
+    sel_plots(key) = [];
     key.p = 3;
-    if isKey(sel_plots,key)
-        delete(sel_plots(key));
-    end
+    delete(sel_plots(key));
+    sel_plots(key) = [];
 end
 
 end
