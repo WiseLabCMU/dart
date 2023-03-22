@@ -122,8 +122,8 @@ if event.Button == 1 && (sel_plots.numEntries == 0 || ~sel_plots.isKey(key))
     s = norm(vel);
     v = rot.' * vel.' / s;
     [~,~,V] = svd(eye(3)-v*v');
-    p = V(1,:).';
-    q = V(2,:).';
+    p = V(:,1);
+    q = V(:,2);
     dnorm = d/s;
     
     psi = linspace(0,2*pi,256);
