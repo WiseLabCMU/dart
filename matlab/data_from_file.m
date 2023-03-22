@@ -9,7 +9,7 @@ mapfile = fullfile(datadir, dataset, 'map.mat');
 dbgfile = fullfile(datadir, dataset, 'dbg.mat');
 simfile = fullfile(datadir, dataset, 'simulated.mat');
 
-range_decimation = 8;   % max_range=21m when range_decimation=1
+range_decimation = 4;   % max_range=21m when range_decimation=1
 doppler_decimation = 4; % max_velocity=2m/s when doppler_decimation=1
 framelen = 256;         % motion during frame should <~2 range bins (.08m)
                         % each chirp is .0005s
@@ -32,8 +32,8 @@ max_range = bin_range * (res_range + 0.5);
 scan_window = CHIRP_DT * framelen / doppler_decimation;
 
 radarjson = struct();
-radarjson.theta_lim = deg2rad(15);
-radarjson.phi_lim = deg2rad(60);
+radarjson.theta_lim = deg2rad(90) - 0.001;
+radarjson.phi_lim = deg2rad(90) - 0.001;
 radarjson.n = 512;
 radarjson.k = 256;
 radarjson.r = [min_range, max_range, res_range];
@@ -68,8 +68,8 @@ for i = 1:length(scanfiles)
         scanfile, ...
         range_decimation, ...
         doppler_decimation, ...
-        framelen, ...
-        false);
+        framelen ...
+        );
     
     [pos, rot, vel, wp_t, wp_pos, wp_quat] = traj_from_file(trajfile, scan_t, scan_window);
 

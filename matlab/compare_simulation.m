@@ -87,8 +87,8 @@ while true
 
         subplot(2,3,1);
         hold off;
-        c = squeeze(real_rad(sld.Value,1:64,:));
-        c(:,33) = 0;
+        c = fliplr(squeeze(real_rad(sld.Value,1:64,:)));
+%         c(:,32) = 0;
         imcomplex(x, y, c, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
         xlabel('Doppler (m/s)');
         ylabel('Range (m)');
@@ -97,8 +97,8 @@ while true
     
         subplot(2,3,4);
         hold off;
-        d = squeeze(sim_rad(sld.Value,1:64,:));
-        d(:,33) = 0;
+        d = fliplr(squeeze(sim_rad(sld.Value,1:64,:)));
+%         d(:,32) = 0;
         imcomplex(x, y, d, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
         xlabel('Doppler (m/s)');
         ylabel('Range (m)');
