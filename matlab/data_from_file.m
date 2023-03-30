@@ -30,7 +30,7 @@ res_range = CHIRPLEN / range_decimation;
 min_range = bin_range * 0.5;
 max_range = bin_range * (res_range + 0.5);
 
-scan_window = CHIRP_DT * framelen / doppler_decimation;
+scan_window = CHIRP_DT * framelen;
 
 radarjson = struct();
 radarjson.theta_lim = deg2rad(90) - 0.001;
