@@ -26,14 +26,14 @@ timestamps = (t_start+ts/2 : ts : t_end-ts/2).';
 a = squeeze(frames(1:numsamples, 1, 1, :));
 b = reshape(a.', chirplen, framelen, []);
 
-framelen_dec = framelen / doppler_decimation;
-chirplen_dec = chirplen / range_decimation;
+res_doppler = framelen / doppler_decimation;
+res_range = chirplen / range_decimation;
 
 fff = fft2(b);
 fff(:, 1, :) = fff(:, 1, :) - median(fff(:, 1, :), 3);
-fff = circshift(fff, framelen_dec / 2, 2); % may have inconsistent phase without fftshift
+fff = circshift(fff, res_doppler / 2, 2); % may have inconsistent phase without fftshift
 c = permute(fff, [3 1 2]);
-c = c(:, 1:chirplen_dec, 1:framelen_dec);
+c = c(:, 1:res_range, 1:res_doppler);
 
 scans = abs(c);
 
