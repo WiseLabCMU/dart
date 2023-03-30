@@ -16,6 +16,7 @@ framelen = 256;         % motion during frame should <~2 range bins (.08m)
 
 CHIRPLEN = 512;
 CHIRP_DT = 5e-4;
+% CHIRP_DT = 1e-3;
 DMAX = 3.7899;
 RMAX = 21.5991;
  
