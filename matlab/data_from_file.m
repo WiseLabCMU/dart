@@ -16,6 +16,7 @@ framelen = 256;         % motion during frame should <~2 range bins (.08m)
 
 CHIRPLEN = 512;
 CHIRP_DT = 5e-4;
+% CHIRP_DT = 1e-3;
 DMAX = 3.7899;
 RMAX = 21.5991;
  
@@ -29,11 +30,11 @@ res_range = CHIRPLEN / range_decimation;
 min_range = bin_range * 0.5;
 max_range = bin_range * (res_range + 0.5);
 
-scan_window = CHIRP_DT * framelen / doppler_decimation;
+scan_window = CHIRP_DT * framelen;
 
 radarjson = struct();
-radarjson.theta_lim = deg2rad(15);
-radarjson.phi_lim = deg2rad(60);
+radarjson.theta_lim = deg2rad(90) - 0.001;
+radarjson.phi_lim = deg2rad(90) - 0.001;
 radarjson.n = 512;
 radarjson.k = 256;
 radarjson.r = [min_range, max_range, res_range];
@@ -68,8 +69,8 @@ for i = 1:length(scanfiles)
         scanfile, ...
         range_decimation, ...
         doppler_decimation, ...
-        framelen, ...
-        false);
+        framelen ...
+        );
     
     [pos, rot, vel, wp_t, wp_pos, wp_quat] = traj_from_file(trajfile, scan_t, scan_window);
 
@@ -87,7 +88,10 @@ rad = all_rad;
 pos = all_pos;
 rot = all_rot;
 vel = all_vel;
-
+wp_t = all_wp_t;
+wp_pos = all_wp_pos;
+wp_quat = all_wp_quat;
+clear all_t all_rad all_pos all_rot all_vel all_wp_t all_wp_pos all_wp_quat;
 save(outfile, 't', 'rad', 'pos', 'rot', 'vel', '-v7.3');
 save(mapfile, 'x', 'y', 'z', 'v', 'cx', 'cy', 'cz', '-v7.3');
 save(dbgfile, '-v7.3');

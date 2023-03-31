@@ -2,12 +2,8 @@ function [timestamps, scans] = scans_from_file( ...
     filename, ...
     range_decimation, ...
     doppler_decimation, ...
-    framelen, ...
-    doplot)
-
-if ~exist('doplot', 'var')
-    doplot = false;
-end
+    framelen ...
+)
 
 fprintf('Loading %s...\n', filename);
 load(filename, 'frames_real', 'frames_imag', 'start_time', 'end_time');
@@ -22,44 +18,23 @@ t_start = posixtime(datetime(start_time, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss
 t_start = t_start - 5*60*60;
 t_end = posixtime(datetime(end_time, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS''Z'''));
 t_end = t_end - 5*60*60;
-ts = (t_end - t_start) / numframes;
+ts = (t_end - t_start) / size(frames, 1) * framelen;
+t_end = t_start + ts * numframes;
 
 timestamps = (t_start+ts/2 : ts : t_end-ts/2).';
 
 a = squeeze(frames(1:numsamples, 1, 1, :));
 b = reshape(a.', chirplen, framelen, []);
 
-CHIRPLEN = 512;
-DMAX = 3.7899;
-RMAX = 21.5991;
-
-bin_doppler = DMAX / framelen;
 res_doppler = framelen / doppler_decimation;
-min_doppler = -bin_doppler * (res_doppler * 0.5);
-max_doppler = bin_doppler * (res_doppler * 0.5 - 1);
+res_range = chirplen / range_decimation;
 
-bin_range = RMAX / CHIRPLEN;
-res_range = CHIRPLEN / range_decimation;
-min_range = bin_range * 0.5;
-max_range = bin_range * (res_range + 0.5);
-
-framelen_dec = framelen / doppler_decimation;
-chirplen_dec = chirplen / range_decimation;
-u = framelen/2 + (floor(-framelen_dec/2+1) : framelen_dec/2);
-v = 1:chirplen_dec;
-x = linspace(min_doppler, max_doppler, res_doppler);
-y = linspace(min_range, max_range, res_range);
-c = permute(fftshift(fft2(b), 2), [3 1 2]);
-c = c(:, v, u);
+fff = fft2(b);
+fff(:, 1, :) = fff(:, 1, :) - median(fff(:, 1, :), 3);
+fff = circshift(fff, res_doppler / 2, 2); % may have inconsistent phase without fftshift
+c = permute(fff, [3 1 2]);
+c = c(:, 1:res_range, 1:res_doppler);
 
 scans = abs(c);
-
-if doplot
-    for i = 1:numframes
-        imcomplex(x, y, squeeze(abs(c(i, :, :))));
-        pause(ts);
-    end
-end
-
 
 end
