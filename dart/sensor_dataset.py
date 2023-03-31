@@ -25,10 +25,6 @@ class VirtualRadarDatasetMixins:
                 partial(self.make_column, pose=pose))(doppler=self.d)
 
         poses, images = data
-        # remove 0 doppler
-        # images = jnp.concatenate(
-        #     [images[:, :, :32], images[:, :, 33:]], axis=2)
-
         columns = jax.vmap(process_image)(poses)
         images_col = jnp.swapaxes(images, 1, 2)
         dataset = (columns, images_col)

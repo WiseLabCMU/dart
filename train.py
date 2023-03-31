@@ -60,6 +60,9 @@ def _parse():
         help="Percentile normalization value.")
     g.add_argument(
         "-p", "--path", default="data/cup.mat", help="Dataset file.")
+    g.add_argument(
+        "--device", default=0, type=int, help="Device index to use for computation (default 0)"
+    )
 
     return p
 
@@ -94,6 +97,7 @@ def _main(cfg):
 if __name__ == '__main__':
 
     args = _parse().parse_args()
+    jax.default_device(jax.devices("gpu")[args.device])
 
     with open(args.sensor) as f:
         sensor_cfg = json.load(f)
@@ -101,7 +105,7 @@ if __name__ == '__main__':
 
     cfg = {
         "sensor": sensor_cfg,
-        "shuffle_buffer": 100 * 1000, "lr": args.lr, "batch": args.batch,
+        "shuffle_buffer": 200 * 1000, "lr": args.lr, "batch": args.batch,
         "epochs": args.epochs, "key": args.key, "out": args.out,
         "field": {
             "levels": args.levels, "exponent": args.exponent,
