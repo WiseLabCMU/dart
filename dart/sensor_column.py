@@ -20,7 +20,7 @@ class TrainingColumn(NamedTuple):
     ----------
     pose: pose for each column (96 bytes).
     valid: validity of each angular bin; bit-packed bool array (n / 8 bytes).
-    weight: number of valid bins (4 bytes).
+    weight: velocity-corrected weight of each bin (4 bytes).
     doppler: doppler value for this column (4 bytes).
     """
 
@@ -49,8 +49,8 @@ class VirtualRadarColumnMixins:
         _phi = phi / jnp.pi * 180 / 56
 
         return jnp.exp((
-            (0.14 * _theta**6 + 0.13 * _theta**4 - 8.2 * _theta**2)
-            + (3.1 * _phi**8 - 22 * _phi**6 + 54 * _phi**4 - 55 * _phi**2)
+            (0.14 * _phi**6 + 0.13 * _phi**4 - 8.2 * _phi**2)
+            + (3.1 * _theta**8 - 22 * _theta**6 + 54 * _theta**4 - 55 * _theta**2)
         ).reshape(1, -1) / 10)
 
     def render_column(
@@ -111,7 +111,7 @@ class VirtualRadarColumnMixins:
         """
         valid = self.valid_mask(doppler, pose)
         packed = jnp.packbits(valid)
-        weight = jnp.sum(valid).astype(jnp.float32)
+        weight = jnp.sum(valid).astype(jnp.float32) / pose.s
         return TrainingColumn(
             pose=pose, valid=packed, weight=weight, doppler=doppler)
 

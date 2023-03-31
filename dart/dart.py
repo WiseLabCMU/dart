@@ -39,13 +39,17 @@ class DART:
     optimizer: Model optax optimizer.
     sigma: Field function generator; should close the actual field function.
     project: Projection if the field requires projected gradient descent.
+    loss: Loss function to use.
+    weight: Function to apply before loss function.
+    eps: Epsilon to use during training.
     """
 
     def __init__(
         self, sensor: VirtualRadar, optimizer: optax.GradientTransformation,
         sigma: Callable[
             [], Callable[[Float32[Array, "3"]], Float32[Array, "2"]]],
-        project: Optional[Callable[[PyTree], PyTree]] = None
+        project: Optional[Callable[[PyTree], PyTree]] = None,
+        loss: str = "l2", weight: Optional[str] = None, eps: float = 1e-5
     ) -> None:
 
         def forward_train(batch: TrainingColumn):
@@ -69,6 +73,9 @@ class DART:
         self.optimizer = optimizer
         self.project = project
         self.sensor = sensor
+        self.loss = loss
+        self.weight = weight
+        self.epsilon = eps
 
     def init(
         self, dataset, key: Union[Integer[Array, "2"], int] = 42
@@ -89,8 +96,19 @@ class DART:
         def loss_func(params, rng, batch):
             columns, y_true = batch
             y_pred = self.model_train.apply(params, rng, columns)
-            return jnp.sum(jnp.square(y_true - y_pred)) / y_true.shape[0]
-            # return jnp.sum(jnp.abs(y_true - y_pred)) / y_true.shape[0]
+
+            if self.weight == "sqrt":
+                y_pred = jnp.sqrt(y_pred + self.epsilon)
+                y_true = jnp.sqrt(y_true + self.epsilon)
+
+            if self.loss == "l2":
+                err = jnp.square(y_true - y_pred)
+            elif self.loss == "l1":
+                err = jnp.abs(y_true - y_pred)
+            else:
+                raise ValueError("Loss not implemented: {}".format(self.loss))
+
+            return jnp.sum(err) / y_true.shape[0]
 
         # Note: not putting step in a closure here (jitting grads and updates
         # separately) results in a ~100x performance penalty!

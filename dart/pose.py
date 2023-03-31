@@ -34,7 +34,7 @@ class RadarPose(NamedTuple):
     v: Float32[Array, "3"]
     p: Float32[Array, "3"]
     q: Float32[Array, "3"]
-    s: Float32[Array, "3"]
+    s: Float32[Array, ""]
     x: Float32[Array, "3"]
     A: Float32[Array, "3 3"]
 
