@@ -1,15 +1,17 @@
 close all;
 
-datadir = 'D:\dartdata';
+datadir = 'F:\dartdata';
 dataset = 'cubes';
 
 real_rad = rad;
-load(simfile, 'rad');
-sim_rad = rad;
+% load(simfile, 'rad');
+% sim_rad = rad;
 rad = real_rad;
 
 x = linspace(min_doppler, max_doppler, res_doppler);
-y = linspace(min_range, max_range/2, floor(res_range/2));
+y = linspace(min_range, max_range, res_range);
+% x = [min_doppler, max_doppler];
+% y = [min_range, max_range];
 
 fig = figure;
 subplot(2,3,[2,3,5,6]);
@@ -25,7 +27,8 @@ hold on;
 light;
 cam = plotCamera('Size',0.1,'Opacity',0.1);
 axis equal; axis vis3d;
-axis([-2,3,-2,3,0,2]);
+% axis([-2,3,-2,3,0,2]);
+axis([-3,3,-3,3,-1.5,1.5])
 xlabel('x (m)');
 ylabel('y (m)');
 zlabel('z (m)');
@@ -87,9 +90,11 @@ while true
 
         subplot(2,3,1);
         hold off;
-        c = fliplr(squeeze(real_rad(sld.Value,1:64,:)));
+%         c = fliplr(squeeze(real_rad(sld.Value,1:64,:)));
+        c = squeeze(real_rad(sld.Value,:,:));
 %         c(:,32) = 0;
-        imcomplex(x, y, c, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
+        image('XData', x, 'YData', y, 'CData', (c - min(c(:))) / (max(c(:)) - min(c(:))) * 255, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
+        axis tight;
         xlabel('Doppler (m/s)');
         ylabel('Range (m)');
         title('Real Scans');
@@ -97,9 +102,11 @@ while true
     
         subplot(2,3,4);
         hold off;
-        d = fliplr(squeeze(sim_rad(sld.Value,1:64,:)));
+%         d = fliplr(squeeze(sim_rad(sld.Value,1:64,:)));
+        d = squeeze(real_rad(sld.Value,:,:));
 %         d(:,32) = 0;
-        imcomplex(x, y, d, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
+        image(x, y, (d - min(d(:))) / (max(d(:)) - min(d(:))) * 255, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
+        axis tight; axis xy;
         xlabel('Doppler (m/s)');
         ylabel('Range (m)');
         title('Simulated Scans');
