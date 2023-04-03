@@ -1,4 +1,4 @@
-function interp_traj(infile, outfile, fs)
+function preprocess_traj(infile, outfile, fs)
 
 s = readlines(infile);
 N = size(s, 1) - 1; % Skip last line to handle EOF
