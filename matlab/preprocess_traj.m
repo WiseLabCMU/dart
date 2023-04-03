@@ -4,22 +4,40 @@ s = readlines(infile);
 N = size(s, 1) - 1; % Skip last line to handle EOF
 fprintf('Loading %s...\n', infile);
 
-pose = jsondecode(s(1)).data;
-dt = datetime(pose.ts_at_receive, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS''Z''');
-last_t = posixtime(dt);
-last_x = pose.position.x;
-last_y = pose.position.y;
-last_z = pose.position.z;
-tt = last_t;
+rt = zeros(N, 1);
+t = zeros(N, 1);
+x = zeros(N, 1);
+y = zeros(N, 1);
+z = zeros(N, 1);
+qx = zeros(N, 1);
+qy = zeros(N, 1);
+qz = zeros(N, 1);
+qw = zeros(N, 1);
+
+for i = 1:N
+    pose = jsondecode(s(i)).data;
+    dt = datetime(pose.ts_at_receive, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS''Z''');
+    rt(i) = posixtime(dt);
+    t(i) = pose.timestamp;
+    x(i) = pose.position.x;
+    y(i) = pose.position.y;
+    z(i) = pose.position.z;
+    qx(i) = pose.rotation.x;
+    qy(i) = pose.rotation.y;
+    qz(i) = pose.rotation.z;
+    qw(i) = pose.rotation.w;
+end
+
+tt = t(1);
 for i = 2:N
     pose = jsondecode(s(i)).data;
     dt = datetime(pose.ts_at_receive, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS''Z''');
-    cur_t = posixtime(dt);
+    t(i) = posixtime(dt);
     cur_x = pose.position.x;
     cur_y = pose.position.y;
     cur_z = pose.position.z;
-    while tt < cur_t
-        pct = (tt - last_t) / (cur_t - last_t);
+    while tt < t(i)
+        pct = (tt - t(i - 1)) / (t(i) - t(i - 1));
         trajjson = struct();
         trajjson.object_id = 'mmwave-radar';
         trajjson.data = struct();
@@ -39,7 +57,6 @@ for i = 2:N
         writelines(jsonstring, outfile, 'WriteMode', 'append');
         tt = tt + 1 / fs;
     end
-    last_t = cur_t;
     last_x = cur_x;
     last_y = cur_y;
     last_z = cur_z;
