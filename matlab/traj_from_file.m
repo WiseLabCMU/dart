@@ -7,7 +7,7 @@ function [pos, rot, vel, waypoint_t, waypoint_pos, waypoint_quat] = traj_from_fi
 fprintf('Loading %s...\n', filename);
 load(filename, 'rt', 't', 'x', 'y', 'z', 'qx', 'qy', 'qz', 'qw');
 
-waypoint_t = rt;
+waypoint_t = t - mean(t) + mean(rt);
 waypoint_pos = [x, -z, y];
 waypoint_quat = quaternion(qw, qx, -qz, qy);
 waypoint_vel = diff(waypoint_pos) ./ diff(waypoint_t);
