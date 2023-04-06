@@ -1,7 +1,7 @@
 close all;
 
 datadir = 'F:\dartdata';
-dataset = 'cubes';
+dataset = 'linear2';
 
 real_rad = rad;
 % load(simfile, 'rad');
@@ -28,7 +28,8 @@ light;
 cam = plotCamera('Size',0.1,'Opacity',0.1);
 axis equal; axis vis3d;
 % axis([-2,3,-2,3,0,2]);
-axis([-3,3,-3,3,-1.5,1.5])
+axis([-3,3,-3,3,-1.5,1.5]);
+view(3);
 xlabel('x (m)');
 ylabel('y (m)');
 zlabel('z (m)');
