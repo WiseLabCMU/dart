@@ -1,5 +1,5 @@
 datadir = 'F:\dartdata';
-dataset = 'linear2';
+dataset = 'linear4';
 % dataset = 'cubes';
 
 scandir = fullfile(datadir, dataset, 'frames');
@@ -11,14 +11,16 @@ dbgfile = fullfile(datadir, dataset, 'dbg.mat');
 simfile = fullfile(datadir, dataset, 'simulated.mat');
 
 range_decimation = 8;   % max_range=21m when range_decimation=1
-doppler_decimation = 4; % max_velocity=2m/s when doppler_decimation=1
-framelen = 256;         % motion during frame should <~2 range bins (.08m)
+doppler_decimation = 64; % max_velocity=2m/s when doppler_decimation=1
+% framelen = 256;         % motion during frame should <~2 range bins (.08m)
+framelen = 1024;
 
 CHIRPLEN = 512;
 % CHIRP_DT = 5e-4;
 CHIRP_DT = 1e-3;
 % DMAX = 3.7899;
-DMAX = 1.8949;
+% DMAX = 1.8949;
+DMAX = 0.4737;
 RMAX = 21.5991;
 
 interp_traj = true;

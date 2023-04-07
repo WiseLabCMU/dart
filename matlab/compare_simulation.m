@@ -1,7 +1,7 @@
 close all;
 
 datadir = 'F:\dartdata';
-dataset = 'linear2';
+dataset = 'linear4';
 
 real_rad = rad;
 % load(simfile, 'rad');
