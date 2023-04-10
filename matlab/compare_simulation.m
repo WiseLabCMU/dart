@@ -1,6 +1,6 @@
 close all;
 
-datadir = 'F:\dartdata';
+datadir = 'D:\dartdata';
 dataset = 'linear4';
 
 real_rad = rad;
@@ -92,7 +92,8 @@ while true
         subplot(2,3,1);
         hold off;
 %         c = fliplr(squeeze(real_rad(sld.Value,1:64,:)));
-        c = squeeze(real_rad(sld.Value,:,:));
+%         c = squeeze(real_rad(sld.Value,:,:));
+        c = reshape(real_rad(sld.Value,:,:),[],1);
 %         c(:,32) = 0;
         image('XData', x, 'YData', y, 'CData', (c - min(c(:))) / (max(c(:)) - min(c(:))) * 255, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
         axis tight;
@@ -104,7 +105,8 @@ while true
         subplot(2,3,4);
         hold off;
 %         d = fliplr(squeeze(sim_rad(sld.Value,1:64,:)));
-        d = squeeze(real_rad(sld.Value,:,:));
+%         d = squeeze(real_rad(sld.Value,:,:));
+        d = reshape(real_rad(sld.Value,:,:),[],1);
 %         d(:,32) = 0;
         image(x, y, (d - min(d(:))) / (max(d(:)) - min(d(:))) * 255, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
         axis tight; axis xy;

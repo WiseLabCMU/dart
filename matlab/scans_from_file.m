@@ -31,7 +31,7 @@ res_range = chirplen / range_decimation;
 
 fff = fft2(b);
 fff(:, 1, :) = fff(:, 1, :) - median(fff(:, 1, :), 3);
-fff = circshift(fff, res_doppler / 2, 2); % may have inconsistent phase without fftshift
+fff = circshift(fff, floor(res_doppler / 2), 2); % may have inconsistent phase without fftshift
 c = permute(fff, [3 1 2]);
 c = c(:, 1:res_range, 1:res_doppler);
 
