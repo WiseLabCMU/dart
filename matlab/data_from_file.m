@@ -11,11 +11,11 @@ dbgfile = fullfile(datadir, dataset, 'dbg.mat');
 simfile = fullfile(datadir, dataset, 'simulated.mat');
 
 range_decimation = 8;   % max_range=21m when range_decimation=1
-% doppler_decimation = 128; % max_velocity=2m/s when doppler_decimation=1
-doppler_decimation = 1;
+doppler_decimation = 128; % max_velocity=2m/s when doppler_decimation=1
+% doppler_decimation = 1;
 % framelen = 256;         % motion during frame should <~2 range bins (.08m)
-% framelen = 8192;
-framelen = 1;
+framelen = 8192;
+% framelen = 1;
 
 CHIRPLEN = 512;
 % CHIRP_DT = 5e-4;
@@ -25,8 +25,8 @@ DMAX = 1.8949;
 RMAX = 21.5991;
 
 interp_traj = true;
-% interp_traj_fs = 200;
-interp_traj_fs = 2000;
+interp_traj_fs = 200;
+% interp_traj_fs = 2000;
  
 bin_doppler = DMAX / framelen;
 res_doppler = framelen / doppler_decimation;
