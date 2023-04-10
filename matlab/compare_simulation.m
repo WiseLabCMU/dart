@@ -136,7 +136,7 @@ if event.Button == 1 && (sel_plots.numEntries == 0 || ~sel_plots.isKey(key))
     dnorm = d/s;
     
     psi = linspace(0,2*pi,256);
-    t = r*(sqrt(1-dnorm^2)*(p*cos(psi)+q*sin(psi))+v*dnorm);
+    t = r*(sqrt(1-dnorm^2)*(p*cos(psi)+q*sin(psi))-v*dnorm);
     tworld = pos.'+rot*t;
     
     subplot(2,3,1);
