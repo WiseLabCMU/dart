@@ -94,8 +94,11 @@ while true
         c = squeeze(real_rad(sld.Value,:,:));
 %         c = reshape(real_rad(sld.Value,:,:),[],1);
 %         c(:,32) = 0;
-        image('XData', x, 'YData', y, 'CData', (c - min(c(:))) / (max(c(:)) - min(c(:))) * 255, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
-        axis tight;
+        image(x, y, (c - min(c(:))) / (max(c(:)) - min(c(:))) * 255, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
+        hold on;
+        xline(norm(vv),'r--','LineWidth',2);
+        xline(-norm(vv),'r--','LineWidth',2);
+        axis tight; axis xy;
         xlabel('Doppler (m/s)');
         ylabel('Range (m)');
         title('Real Scans');
@@ -108,6 +111,9 @@ while true
 %         d = reshape(real_rad(sld.Value,:,:),[],1);
 %         d(:,32) = 0;
         image(x, y, (d - min(d(:))) / (max(d(:)) - min(d(:))) * 255, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
+        hold on;
+        xline(norm(vv),'r--','LineWidth',2);
+        xline(-norm(vv),'r--','LineWidth',2);
         axis tight; axis xy;
         xlabel('Doppler (m/s)');
         ylabel('Range (m)');
@@ -151,7 +157,7 @@ if event.Button == 1 && (sel_plots.numEntries == 0 || ~sel_plots.isKey(key))
     
     subplot(2,3,[2,3,5,6]);
     key.p = 3;
-    sel_plots(key) = plot3(tworld(1,:),tworld(2,:),tworld(3,:),'r','Linewidth',2);
+    sel_plots(key) = plot3(tworld(1,:),tworld(2,:),tworld(3,:),'r','LineWidth',2);
 elseif event.Button == 3 && sel_plots.numEntries > 0 && sel_plots.isKey(key)
     key.p = 1;
     delete(sel_plots(key));
