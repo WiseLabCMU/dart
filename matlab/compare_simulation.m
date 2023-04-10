@@ -9,8 +9,6 @@ rad = real_rad;
 
 x = linspace(min_doppler, max_doppler, res_doppler);
 y = linspace(min_range, max_range, res_range);
-% x = [min_doppler, max_doppler];
-% y = [min_range, max_range];
 
 fig = figure;
 subplot(2,3,[2,3,5,6]);
@@ -90,10 +88,7 @@ while true
 
         subplot(2,3,1);
         hold off;
-%         c = fliplr(squeeze(real_rad(sld.Value,1:64,:)));
         c = squeeze(real_rad(sld.Value,:,:));
-%         c = reshape(real_rad(sld.Value,:,:),[],1);
-%         c(:,32) = 0;
         image(x, y, (c - min(c(:))) / (max(c(:)) - min(c(:))) * 255, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
         hold on;
         xline(norm(vv),'r--','LineWidth',2);
@@ -106,10 +101,7 @@ while true
     
         subplot(2,3,4);
         hold off;
-%         d = fliplr(squeeze(sim_rad(sld.Value,1:64,:)));
         d = squeeze(real_rad(sld.Value,:,:));
-%         d = reshape(real_rad(sld.Value,:,:),[],1);
-%         d(:,32) = 0;
         image(x, y, (d - min(d(:))) / (max(d(:)) - min(d(:))) * 255, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
         hold on;
         xline(norm(vv),'r--','LineWidth',2);
