@@ -2,13 +2,11 @@
 
 from jaxtyping import Array, Integer, Float32, UInt8
 from beartype.typing import Union, Callable, NamedTuple
+from jax.random import PRNGKeyArray
 
-
-#: PRNGKey
-PRNGKey = Integer[Array, "2"]
 
 #: PRNGKey seed
-PRNGSeed = Union[PRNGKey, int]
+PRNGSeed = Union[PRNGKeyArray, int]
 
 #: Loss function
 LossFunc = Callable[

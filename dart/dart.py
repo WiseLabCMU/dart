@@ -11,7 +11,7 @@ from jax import numpy as jnp
 import haiku as hk
 import optax
 
-from jaxtyping import Float32, Array, PyTree, Integer
+from jaxtyping import Float32, Array, PyTree
 from beartype.typing import Callable, NamedTuple, Optional, Union
 from tensorflow.data import Dataset
 from . import types
@@ -111,13 +111,13 @@ class DART:
             return loss, ModelState(params, opt_state)
 
         train_log, val_log = [], []
-        key = to_prngkey(key)
+        k = to_prngkey(key)
         for i in range(epochs):
             with tqdm(train, unit="batch", desc="Epoch {}".format(i)) as epoch:
                 avg = 0.
                 j = 0
                 for _, batch in enumerate(epoch):
-                    key, rng = jax.random.split(key, 2)
+                    k, rng = jax.random.split(k, 2)
                     loss, _state = step(state, rng, tf_to_jax(batch))
                     if not jnp.isnan(loss):
                         state = _state
@@ -130,12 +130,12 @@ class DART:
             if val is not None:
                 losses = []
                 for j, batch in enumerate(epoch):
-                    key, rng = jax.random.split(key, 2)
+                    k, rng = jax.random.split(k, 2)
                     losses.append(
                         loss_func(state.params, rng, tf_to_jax(batch)))
-                losses = jnp.array(losses)
-                losses = losses[~jnp.isnan(losses)]
-                val_loss = np.mean(losses)
+                losses_jnp = jnp.array(losses)
+                losses_jnp = losses_jnp[~jnp.isnan(losses_jnp)]
+                val_loss = np.mean(losses_jnp)
                 print("Val: {}".format(val_loss))
                 val_log.append(float(val_loss))
 
@@ -177,11 +177,11 @@ class DART:
 
     @classmethod
     def from_config(
-        cls, sensor=None, field=None, lr=0.01, loss={}, **_
+        cls, sensor={}, field=None, lr=0.01, loss={}, **_
     ) -> "DART":
         """Create DART from config items."""
         return cls(
-            VirtualRadar(**sensor),
+            VirtualRadar.from_config(**sensor),
             sparse_adam(lr=lr),          # optax.adam(0.01),
             NGPSH.from_config(**field),  # NGP.from_config(**field)
             loss=get_loss_func(**loss)

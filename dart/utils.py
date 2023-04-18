@@ -7,8 +7,7 @@ from jax import numpy as jnp
 import numpy as np
 
 
-from jaxtyping import PyTree, Integer, Array
-from beartype.typing import Union
+from jaxtyping import PyTree
 from . import types
 
 
@@ -17,8 +16,7 @@ def tf_to_jax(batch: PyTree) -> PyTree:
     return jax.tree_util.tree_map(jnp.array, batch)
 
 
-def to_prngkey(
-        key: types.PRNGSeed = 42) -> Integer[Array, "2"]:
+def to_prngkey(key: types.PRNGSeed = 42) -> jax.random.PRNGKeyArray:
     """Accepts integer seeds or PRNGKeys."""
     if isinstance(key, int):
         return jax.random.PRNGKey(key)

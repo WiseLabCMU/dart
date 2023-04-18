@@ -30,7 +30,8 @@ if __name__ == '__main__':
 
     fig, axs = plt.subplots(6, 6, figsize=(16, 16))
 
-    for idx, pair in zip(np.arange(18) * 7, axs.reshape(-1, 2)):
+    idxs = np.random.choice(y_true.shape[0], 18, replace=False)
+    for idx, pair in zip(idxs, axs.reshape(-1, 2)):
         _show(pair[0], y_true[idx])
         _show(pair[1], y_pred[idx])
         pair[0].set_title("actual")

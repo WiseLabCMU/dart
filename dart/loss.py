@@ -26,6 +26,8 @@ def get_loss_func(
     def loss_func(y_pred, y_true):
         if weight == "sqrt":
             err = jnp.sqrt(y_pred + eps) - jnp.sqrt(y_true + eps)
+        elif weight == "log":
+            err = jnp.log(y_pred + eps) - jnp.log(y_true + eps)
         else:
             err = y_pred - y_true
 

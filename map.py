@@ -14,6 +14,9 @@ from dart import DART
 def _parse():
     p = ArgumentParser()
     p.add_argument("-p", "--path", help="File path to output base name.")
+    p.add_argument(
+        "-r", "--radius", default=0.6, type=float,
+        help="Size of area to show.")
     return p
 
 
@@ -27,7 +30,7 @@ if __name__ == '__main__':
     dart = DART.from_config(**cfg)
     state = dart.load(args.path + ".chkpt")
 
-    r = 0.6
+    r = args.radius
     x = jnp.linspace(-r, r, 100)
     y = jnp.linspace(-r, r, 100)
     z = jnp.array([0.0, 0.1, 0.2, 0.3])

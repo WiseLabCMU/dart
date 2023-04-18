@@ -22,15 +22,6 @@ def load_arrays(file: str) -> Any:
             return loadmat(file)
         except NotImplementedError:
             f = h5py.File(file, 'r')
-            if 'rad' in f:
-                #tmp = np.array(f.get('rad')[:, :64, :]).T
-                tmp = np.array(f.get('rad')[:, :, :]).T
-                return {
-                    'vel': np.array(f.get('vel')).T,
-                    'pos': np.array(f.get('pos')).T,
-                    'rot': np.array(f.get('rot')).T,
-                    'rad': tmp
-                }
             return {k: np.array(f.get(k)).T for k in f.keys()}
     else:
         raise TypeError(
@@ -57,8 +48,8 @@ def gt_map(file: str) -> GroundTruth:
 
 def trajectory(traj: str) -> Dataset:
     """Generate trajectory dataset."""
-    traj = load_arrays(traj)
-    pose = jax.vmap(make_pose)(traj["vel"], traj["pos"], traj["rot"])
+    data = load_arrays(traj)
+    pose = jax.vmap(make_pose)(data["vel"], data["pos"], data["rot"])
     return Dataset.from_tensor_slices(pose)
 
 
