@@ -43,4 +43,4 @@ if __name__ == '__main__':
         frames.append(np.asarray(dart.render(state, pose)))
 
     out = {"rad": np.concatenate(frames, axis=0)}
-    savemat(args.path + "_pred.mat", out)
+    savemat(args.path + ".mat", out)

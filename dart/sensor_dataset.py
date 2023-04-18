@@ -1,14 +1,13 @@
 """Dataset loading."""
 
-from beartype.typing import Union, Optional
+from beartype.typing import Optional
 from functools import partial
-from jaxtyping import Integer, Array
+from . import types
 
 import jax
 from jax import numpy as jnp
 import numpy as np
 from tensorflow.data import Dataset
-from scipy.io import loadmat
 
 from .pose import make_pose
 from .utils import get_size, shuffle
@@ -43,8 +42,7 @@ class VirtualRadarDatasetMixins:
     def dataset(
         self, path: str = "data/cup.mat", clip: float = 99.9,
         norm: float = 0.05, val: float = 0., iid_val: bool = False,
-        min_speed: float = 0.1,
-        key: Optional[Union[Integer[Array, "2"], int]] = 42
+        min_speed: float = 0.1, key: types.PRNGSeed = 42
     ) -> tuple[Dataset, Optional[Dataset]]:
         """Real dataset with all in one.
 
@@ -74,10 +72,9 @@ class VirtualRadarDatasetMixins:
         (train, val) datasets.
         """
         data = load_arrays(path)
+        images = data["rad"]
         if clip > 0:
-            images = data["rad"] / np.percentile(data["rad"], clip) * norm
-        else:
-            images = data["rad"]
+            images = images / np.percentile(images, clip) * norm
 
         data = (
             jax.vmap(make_pose)(data["vel"], data["pos"], data["rot"]),

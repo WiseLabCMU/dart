@@ -1,21 +1,22 @@
 """Front-end sensor utilities not used during training."""
 
-from functools import partial
-from jaxtyping import Float32, Integer, Array
-from beartype.typing import Tuple, Callable
-
 from jax import numpy as jnp
 from jax import random, vmap
 
-from .pose import RadarPose, sensor_to_world
+from functools import partial
+from jaxtyping import Float32, Integer, Array
+from beartype.typing import Tuple, Callable
+from . import types
+
+from .pose import sensor_to_world
 
 
 class VirtualRadarUtilMixin:
     """Radar utilities."""
 
     def sample_points(
-        self, key, r: Float32[Array, ""], d: Float32[Array, ""],
-        pose: RadarPose
+        self, key: types.PRNGKey, r: Float32[Array, ""], d: Float32[Array, ""],
+        pose: types.RadarPose
     ) -> Tuple[Float32[Array, "3 k"], Integer[Array, ""]]:
         """Sample points in world-space for the given (range, doppler) bin.
 
@@ -38,8 +39,8 @@ class VirtualRadarUtilMixin:
         return points_world, num_bins
 
     def render(
-        self, key, sigma: Callable[[Float32[Array, "3"]], Float32[Array, ""]],
-        pose: RadarPose
+        self, key: types.PRNGKey, sigma: types.SigmaField,
+        pose: types.RadarPose
     ) -> Float32[Array, "nr nd"]:
         """Render single (range, doppler) radar image.
 

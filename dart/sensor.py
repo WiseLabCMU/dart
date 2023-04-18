@@ -9,11 +9,12 @@ Conventions
 
 from jaxtyping import Float32, Bool, Array
 from beartype.typing import List
+from . import types
 
 from jax import numpy as jnp
 from jax import random
 
-from .pose import RadarPose, project_angle
+from .pose import project_angle
 from .sensor_utils import VirtualRadarUtilMixin
 from .sensor_column import VirtualRadarColumnMixins
 from .sensor_dataset import VirtualRadarDatasetMixins
@@ -51,7 +52,7 @@ class VirtualRadar(
         self._extents = [d[0], d[1], r[0], r[1]]
 
     def valid_mask(
-        self, d: Float32[Array, ""], pose: RadarPose
+        self, d: Float32[Array, ""], pose: types.RadarPose
     ) -> Bool[Array, "n"]:
         """Get valid psi values within field of view as a mask.
 
@@ -78,7 +79,7 @@ class VirtualRadar(
 
     def sample_rays(
             self, key, d: Float32[Array, ""],
-            valid_psi: Bool[Array, "n"], pose: RadarPose
+            valid_psi: Bool[Array, "n"], pose: types.RadarPose
     ) -> Float32[Array, "3 k"]:
         """Sample rays according to pre-computed psi mask.
 

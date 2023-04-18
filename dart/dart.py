@@ -14,13 +14,13 @@ import optax
 from jaxtyping import Float32, Array, PyTree, Integer
 from beartype.typing import Callable, NamedTuple, Optional, Union
 from tensorflow.data import Dataset
+from . import types
 
-from .pose import RadarPose
 from .sensor import VirtualRadar
-from .sensor_column import TrainingColumn
-from .fields import NGP, NGPSH
+from .fields import NGP, NGPSH, SimpleGrid
 from .utils import tf_to_jax, to_prngkey, update_avg
 from .opt import sparse_adam
+from .loss import get_loss_func
 
 
 class ModelState(NamedTuple):
@@ -46,19 +46,18 @@ class DART:
 
     def __init__(
         self, sensor: VirtualRadar, optimizer: optax.GradientTransformation,
-        sigma: Callable[
-            [], Callable[[Float32[Array, "3"]], Float32[Array, "2"]]],
+        sigma: Callable[[], types.SigmaField],
         project: Optional[Callable[[PyTree], PyTree]] = None,
-        loss: str = "l2", weight: Optional[str] = None, eps: float = 1e-5
+        loss: Optional[types.LossFunc] = None
     ) -> None:
 
-        def forward_train(batch: TrainingColumn):
+        def forward_train(batch: types.TrainingColumn):
             keys = jnp.array(
                 jax.random.split(hk.next_rng_key(), batch.doppler.shape[0]))
             vfwd = jax.vmap(partial(sensor.column_forward, sigma=sigma()))
             return vfwd(keys, column=batch)
 
-        def forward_test(batch: RadarPose):
+        def forward_test(batch: types.RadarPose):
             keys = jnp.array(
                 jax.random.split(hk.next_rng_key(), batch.x.shape[0]))
             vfwd = jax.vmap(partial(sensor.render, sigma=sigma()))
@@ -70,16 +69,13 @@ class DART:
         self.model_train = hk.transform(forward_train)
         self.model = hk.transform(forward_test)
         self.model_grid = hk.transform(forward_grid)
+
         self.optimizer = optimizer
         self.project = project
         self.sensor = sensor
-        self.loss = loss
-        self.weight = weight
-        self.epsilon = eps
+        self.loss = get_loss_func(eps=1e-4) if loss is None else loss
 
-    def init(
-        self, dataset, key: Union[Integer[Array, "2"], int] = 42
-    ) -> ModelState:
+    def init(self, dataset, key: types.PRNGSeed = 42) -> ModelState:
         """Initialize model parameters and optimizer state."""
         sample = tf_to_jax(list(dataset.take(1))[0][0])
         params = self.model_train.init(to_prngkey(key), sample)
@@ -89,26 +85,14 @@ class DART:
     def fit(
         self, train: Dataset, state: ModelState,
         val: Optional[Dataset] = None, epochs: int = 1,
-        tqdm=default_tqdm, key: Union[Integer[Array, "2"], int] = 42
+        tqdm=default_tqdm, key: types.PRNGSeed = 42
     ) -> tuple[ModelState, list, list]:
         """Train model."""
         @jax.jit
         def loss_func(params, rng, batch):
             columns, y_true = batch
             y_pred = self.model_train.apply(params, rng, columns)
-
-            if self.weight == "sqrt":
-                y_pred = jnp.sqrt(y_pred + self.epsilon)
-                y_true = jnp.sqrt(y_true + self.epsilon)
-
-            if self.loss == "l2":
-                err = jnp.square(y_true - y_pred)
-            elif self.loss == "l1":
-                err = jnp.abs(y_true - y_pred)
-            else:
-                raise ValueError("Loss not implemented: {}".format(self.loss))
-
-            return jnp.sum(err) / y_true.shape[0]
+            return self.loss(y_pred, y_true)
 
         # Note: not putting step in a closure here (jitting grads and updates
         # separately) results in a ~100x performance penalty!
@@ -171,15 +155,13 @@ class DART:
             return pickle.load(f)
 
     def render(
-        self, params: Union[ModelState, PyTree], batch: RadarPose,
-        key: Union[Integer[Array, "2"], int] = 42
+        self, params: Union[ModelState, PyTree], batch: types.RadarPose,
+        key: types.PRNGSeed = 42
     ) -> Float32[Array, "w h b"]:
         """Render images from batch of poses."""
         if isinstance(params, ModelState):
             params = params.params
-        if isinstance(key, int):
-            key = jax.random.PRNGKey(key)
-        return jax.jit(self.model.apply)(params, key, batch)
+        return jax.jit(self.model.apply)(params, to_prngkey(key), batch)
 
     def grid(
         self, params: Union[ModelState, PyTree],
@@ -194,10 +176,13 @@ class DART:
         return values.reshape(x.shape[0], y.shape[0], z.shape[0], 2)
 
     @classmethod
-    def from_config(cls, sensor=None, field=None, lr=0.01, **_):
+    def from_config(
+        cls, sensor=None, field=None, lr=0.01, loss={}, **_
+    ) -> "DART":
         """Create DART from config items."""
         return cls(
             VirtualRadar(**sensor),
-            sparse_adam(lr=0.01),       # optax.adam(0.01),
-            NGPSH.from_config(**field)  # NGP.from_config(**field),
+            sparse_adam(lr=lr),          # optax.adam(0.01),
+            NGPSH.from_config(**field),  # NGP.from_config(**field)
+            loss=get_loss_func(**loss)
         )

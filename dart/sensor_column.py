@@ -3,31 +3,10 @@
 from jax import numpy as jnp
 from jax import vmap
 
-from jaxtyping import Float32, UInt8, Array
-from beartype.typing import NamedTuple, Callable
+from jaxtyping import Float32, Array
+from . import types
 
-from .pose import RadarPose, sensor_to_world
-
-
-class TrainingColumn(NamedTuple):
-    """Single column for training.
-
-    For 256 range bins and 256 angular bins, this takes::
-
-        96 + 256 / 8 + 4 + 4 = 136 bytes.
-
-    Attributes
-    ----------
-    pose: pose for each column (96 bytes).
-    valid: validity of each angular bin; bit-packed bool array (n / 8 bytes).
-    weight: velocity-corrected weight of each bin (4 bytes).
-    doppler: doppler value for this column (4 bytes).
-    """
-
-    pose: RadarPose
-    valid: UInt8[Array, "n8"]
-    weight: Float32[Array, ""]
-    doppler: Float32[Array, ""]
+from .pose import sensor_to_world
 
 
 class VirtualRadarColumnMixins:
@@ -54,9 +33,8 @@ class VirtualRadarColumnMixins:
         ).reshape(1, -1) / 10)
 
     def render_column(
-        self, t: Float32[Array, "3 k"],
-        sigma: Callable[[Float32[Array, "3"]], Float32[Array, "2"]],
-        pose: RadarPose, weight: Float32[Array, ""]
+        self, t: Float32[Array, "3 k"], sigma: types.SigmaField,
+        pose: types.RadarPose, weight: Float32[Array, ""]
     ) -> Float32[Array, "nr"]:
         """Render a single doppler column for a radar image.
 
@@ -96,8 +74,8 @@ class VirtualRadarColumnMixins:
         return jnp.mean(amplitude, axis=1) * constant
 
     def make_column(
-        self, doppler: Float32[Array, ""], pose: RadarPose,
-    ) -> TrainingColumn:
+        self, doppler: Float32[Array, ""], pose: types.RadarPose
+    ) -> types.TrainingColumn:
         """Create column for training.
 
         Parameters
@@ -112,12 +90,12 @@ class VirtualRadarColumnMixins:
         valid = self.valid_mask(doppler, pose)
         packed = jnp.packbits(valid)
         weight = jnp.sum(valid).astype(jnp.float32) / pose.s
-        return TrainingColumn(
+        return types.TrainingColumn(
             pose=pose, valid=packed, weight=weight, doppler=doppler)
 
     def column_forward(
-        self, key, column: TrainingColumn,
-        sigma: Callable[[Float32[Array, "3"]], Float32[Array, "2"]],
+        self, key: types.PRNGKey, column: types.TrainingColumn,
+        sigma: types.SigmaField,
     ) -> Float32[Array, "nr"]:
         """Render a training column.
 

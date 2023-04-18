@@ -26,7 +26,7 @@ if __name__ == '__main__':
     dart = DART.from_config(**cfg)
     state = dart.load(args.path + ".chkpt")
 
-    r = 4
+    r = 2
     x = jnp.linspace(-r, r, 100)
     y = jnp.linspace(-r, r, 100)
     z = jnp.array([0.0, 0.1, 0.2, 0.3])
@@ -35,18 +35,24 @@ if __name__ == '__main__':
 
     fig, axs = plt.subplots(2, 4, figsize=(16, 8))
     for layer, ax in zip(steps, axs[0]):
-        ax.imshow(grid[:, :, layer, 0].T, origin='lower')
+        tmp = ax.imshow(grid[:, :, layer, 0].T, origin='lower')
 
         ax.set_xticks(np.linspace(0, 100, 6))
         ax.set_yticks(np.linspace(0, 100, 6))
         ax.set_xticklabels(["{:.1f}".format(x) for x in np.linspace(-r, r, 6)])
         ax.set_yticklabels(["{:.1f}".format(x) for x in np.linspace(-r, r, 6)])
+        ax.set_title("$\\sigma: z={:.2f}$".format(z[layer]))
+        fig.colorbar(tmp)
+
     for layer, ax in zip(steps, axs[1]):
-        ax.imshow(grid[:, :, layer, 1].T, origin='lower')
+        tmp = ax.imshow(grid[:, :, layer, 1].T, origin='lower')
 
         ax.set_xticks(np.linspace(0, 100, 6))
         ax.set_yticks(np.linspace(0, 100, 6))
         ax.set_xticklabels(["{:.1f}".format(x) for x in np.linspace(-r, r, 6)])
         ax.set_yticklabels(["{:.1f}".format(x) for x in np.linspace(-r, r, 6)])
+        ax.set_title("$\\alpha: z={:.2f}$".format(z[layer]))
+        fig.colorbar(tmp)
 
-    fig.savefig(args.path + "_map.png")
+    fig.tight_layout()
+    fig.savefig(args.path + ".map.png")

@@ -22,15 +22,15 @@ def load_arrays(file: str) -> Any:
             return loadmat(file)
         except NotImplementedError:
             f = h5py.File(file, 'r')
-            # tmp = np.array(f.get('rad')[:, :64, :]).T
-            # tmp[:, :, ]
-            # tmp[:, :, 33] = 0.
-            # return {
-            #     'vel': np.array(f.get('vel')).T,
-            #     'pos': np.array(f.get('pos')).T,
-            #     'rot': np.array(f.get('rot')).T,
-            #     'rad': tmp
-            # }
+            if 'rad' in f:
+                #tmp = np.array(f.get('rad')[:, :64, :]).T
+                tmp = np.array(f.get('rad')[:, :, :]).T
+                return {
+                    'vel': np.array(f.get('vel')).T,
+                    'pos': np.array(f.get('pos')).T,
+                    'rot': np.array(f.get('rot')).T,
+                    'rad': tmp
+                }
             return {k: np.array(f.get(k)).T for k in f.keys()}
     else:
         raise TypeError(

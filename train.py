@@ -30,10 +30,10 @@ def _parse():
     g = p.add_argument_group(title="Field")
     g.add_argument("--levels", default=8, type=int, help="Hash table levels.")
     g.add_argument(
-        "--exponent", default=0.4, type=float,
+        "--exponent", default=0.43, type=float,
         help="Hash table level exponent, in powers of 2.")
     g.add_argument(
-        "--base", default=4., type=float,
+        "--base", default=10., type=float,
         help="Size of base (most coarse) hash table level.")
     g.add_argument(
         "--size", default=16, type=int,
@@ -50,19 +50,24 @@ def _parse():
         help="Number of epochs to train.")
     g.add_argument("-b", "--batch", default=2048, type=int, help="Batch size.")
     g.add_argument("--val", default=0.2, type=float, help="Validation size.")
+    g.add_argument("--loss", default="l2", help="Loss function.")
+    g.add_argument("--weight", default=None, help="Loss weighting.")
 
     g = p.add_argument_group(title="Dataset")
     g.add_argument(
         "--clip", default=0.0, type=float,
         help="Percentile to normalize input values by.")
     g.add_argument(
-        "--norm", default=0.05, type=float,
+        "--norm", default=1.0, type=float,
         help="Percentile normalization value.")
+    g.add_argument(
+        "--min_speed", default=0.1, type=float, help="Reject frames with "
+        "insufficient (i.e. not enough doppler bins); 0 to disable.")
     g.add_argument(
         "-p", "--path", default="data/cup.mat", help="Dataset file.")
     g.add_argument(
-        "--device", default=0, type=int, help="Device index to use for computation (default 0)"
-    )
+        "--device", default=0, type=int,
+        help="Device index to use for computation (default 0).")
 
     return p
 
@@ -107,14 +112,16 @@ if __name__ == '__main__':
         "sensor": sensor_cfg,
         "shuffle_buffer": 200 * 1000, "lr": args.lr, "batch": args.batch,
         "epochs": args.epochs, "key": args.key, "out": args.out,
+        "loss": {
+            "weight": args.weight, "loss": args.loss, "eps": 1e-6
+        },
         "field": {
             "levels": args.levels, "exponent": args.exponent,
-            "base": args.base, "size": args.size,
-            "features": args.features
+            "base": args.base, "size": args.size, "features": args.features
         },
         "dataset": {
             "val": args.val, "clip": args.clip, "norm": args.norm,
-            "iid_val": True, "path": args.path
+            "iid_val": True, "path": args.path, "min_speed": args.min_speed,
         }
     }
 
