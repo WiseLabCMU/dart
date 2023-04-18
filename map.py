@@ -6,6 +6,7 @@ from argparse import ArgumentParser
 import numpy as np
 from matplotlib import pyplot as plt
 from jax import numpy as jnp
+from scipy.io import savemat
 
 from dart import DART
 
@@ -26,12 +27,13 @@ if __name__ == '__main__':
     dart = DART.from_config(**cfg)
     state = dart.load(args.path + ".chkpt")
 
-    r = 2
+    r = 0.6
     x = jnp.linspace(-r, r, 100)
     y = jnp.linspace(-r, r, 100)
     z = jnp.array([0.0, 0.1, 0.2, 0.3])
     steps = np.array([0, 1, 2, 3])
     grid = dart.grid(state.params, x, y, z)
+    savemat(args.path + ".map.mat", {"v": grid})
 
     fig, axs = plt.subplots(2, 4, figsize=(16, 8))
     for layer, ax in zip(steps, axs[0]):
@@ -39,18 +41,18 @@ if __name__ == '__main__':
 
         ax.set_xticks(np.linspace(0, 100, 6))
         ax.set_yticks(np.linspace(0, 100, 6))
-        ax.set_xticklabels(["{:.1f}".format(x) for x in np.linspace(-r, r, 6)])
-        ax.set_yticklabels(["{:.1f}".format(x) for x in np.linspace(-r, r, 6)])
+        ax.set_xticklabels(["{:.2f}".format(x) for x in np.linspace(-r, r, 6)])
+        ax.set_yticklabels(["{:.2f}".format(x) for x in np.linspace(-r, r, 6)])
         ax.set_title("$\\sigma: z={:.2f}$".format(z[layer]))
         fig.colorbar(tmp)
 
     for layer, ax in zip(steps, axs[1]):
-        tmp = ax.imshow(grid[:, :, layer, 1].T, origin='lower')
+        tmp = ax.imshow(1 - grid[:, :, layer, 1].T, origin='lower')
 
         ax.set_xticks(np.linspace(0, 100, 6))
         ax.set_yticks(np.linspace(0, 100, 6))
-        ax.set_xticklabels(["{:.1f}".format(x) for x in np.linspace(-r, r, 6)])
-        ax.set_yticklabels(["{:.1f}".format(x) for x in np.linspace(-r, r, 6)])
+        ax.set_xticklabels(["{:.2f}".format(x) for x in np.linspace(-r, r, 6)])
+        ax.set_yticklabels(["{:.2f}".format(x) for x in np.linspace(-r, r, 6)])
         ax.set_title("$\\alpha: z={:.2f}$".format(z[layer]))
         fig.colorbar(tmp)
 

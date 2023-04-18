@@ -59,7 +59,7 @@ class VirtualRadarColumnMixins:
         gain = self.gain(t)
 
         # Field steps
-        field_vals = vmap(project_rays)(self.r)
+        field_vals = 0.001 * vmap(project_rays)(self.r)
         sigma_samples = field_vals[:, :, 0]
         alpha_samples = 1 - field_vals[:, :, 1]
 

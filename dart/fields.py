@@ -123,7 +123,7 @@ class NGP:
         xscales = x.reshape(1, -1) * self.levels.reshape(-1, 1)
         grid = hk.get_parameter(
             "grid", (self.levels.shape[0], *self.size),
-            init=hk.initializers.RandomUniform(0, 0.00001))
+            init=hk.initializers.RandomUniform(0, 0.01))
 
         def interpolate_level(xscale, grid_level):
             def hash_table(c):

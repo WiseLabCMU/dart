@@ -24,6 +24,6 @@ python evaluate.py -p results/cabinets-sim; python examples.py results/cabinets-
 
 Motion Stage:
 ```sh
-python train.py -s data/linear1/linear1.json -o results/linear1.b -e 2 -p data/linear1/linear1.mat --clip 99.99 --min_speed 0.005 -b 512 -e 50 --weight sqrt
+python train.py -s data/linear1/linear1.json -o results/linear1.b -e 2 -p data/linear1/linear1.mat --clip 99.99 --min_speed 0.005 -b 512 -e 20
 python evaluate.py -p results/linear1.b; python examples.py -p results/linear1.b; python map.py -p results/linear1.b
 ```
