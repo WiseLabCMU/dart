@@ -1,7 +1,7 @@
 close all;
 
-datadir = 'D:\dartdata';
-dataset = 'linear4';
+datadir = 'F:\dartdata\cabinets-sep';
+dataset = 'cabinets-000';
 real_rad = rad;
 % load(simfile, 'rad');
 % sim_rad = rad;
@@ -24,8 +24,8 @@ hold on;
 light;
 cam = plotCamera('Size',0.1,'Opacity',0.1);
 axis equal; axis vis3d;
-% axis([-2,3,-2,3,0,2]);
-axis([-3,3,-3,3,-1.5,1.5]);
+axis([-2,3,-2,3,0,2]);
+% axis([-3,3,-3,3,-1.5,1.5]);
 view(3);
 xlabel('x (m)');
 ylabel('y (m)');
