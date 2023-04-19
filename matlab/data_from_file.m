@@ -1,4 +1,4 @@
-datadir = 'D:\dartdata';
+datadir = 'F:\dartdata';
 dataset = 'linear1';
 
 scandir = fullfile(datadir, dataset, 'frames');
@@ -12,6 +12,7 @@ simfile = fullfile(datadir, dataset, 'simulated.mat');
 range_decimation = 8;       % max_range=21m when range_decimation=1
 doppler_decimation = 64;    % max_velocity=2m/s when doppler_decimation=1
 framelen = 4096;
+stride = 410;
 
 CHIRPLEN = 512;
 CHIRP_DT = 1e-3;
@@ -20,7 +21,8 @@ RMAX = 21.5991;
 
 force_reprocess_traj = true;
 interp_traj = true;
-interp_traj_fs = 200;
+% interp_traj_fs = 200;
+interp_traj_fs = 2000;
  
 bin_doppler = DMAX / framelen;
 res_doppler = framelen / doppler_decimation;
@@ -75,7 +77,8 @@ for i = 1:length(scanfiles)
         scanfile, ...
         range_decimation, ...
         doppler_decimation, ...
-        framelen ...
+        framelen, ...
+        stride ...
     );
     
     [pos, rot, vel, wp_t, wp_pos, wp_quat] = traj_from_file( ...
