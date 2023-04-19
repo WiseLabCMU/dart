@@ -11,15 +11,13 @@ from functools import partial
 
 from jaxtyping import Float32, Bool, Array, Integer
 from beartype.typing import NamedTuple
-from . import types
 
 from jax import numpy as jnp
 from jax import random, vmap
 
-from . import types
+from . import types, antenna
 from .pose import project_angle, sensor_to_world
 from .spatial import vec_to_angle
-from .antenna import antenna_gain
 
 
 class VirtualRadar(NamedTuple):
@@ -34,6 +32,7 @@ class VirtualRadar(NamedTuple):
     n: Angular resolution; number of bins in a full circle of the
         (range sphere, doppler plane) intersection
     k: Sample size for stochastic integration
+    gain: Antenna gain pattern.
     """
 
     r: Float32[Array, "Nr"]
@@ -42,6 +41,7 @@ class VirtualRadar(NamedTuple):
     phi_lim: float
     n: int
     k: int
+    gain: types.GainPattern
 
     @property
     def bin_width(self):
@@ -56,12 +56,14 @@ class VirtualRadar(NamedTuple):
     @classmethod
     def from_config(
         cls, theta_lim: float = jnp.pi / 12, phi_lim: float = jnp.pi / 3,
-        n: int = 256, k: int = 128, r: list = [], d: list = []
+        n: int = 256, k: int = 128, r: list = [], d: list = [],
+        gain: str = "awr1843boost"
     ) -> "VirtualRadar":
         """Create from configuration parameters."""
         return cls(
             r=jnp.linspace(*r), d=jnp.linspace(*d),
-            theta_lim=theta_lim, phi_lim=phi_lim, n=n, k=k)
+            theta_lim=theta_lim, phi_lim=phi_lim, n=n, k=k,
+            gain=getattr(antenna, gain))
 
     def sample_rays(
             self, key, d: Float32[Array, ""],
@@ -115,9 +117,6 @@ class VirtualRadar(NamedTuple):
             dx_norm = dx / jnp.linalg.norm(dx, axis=0)
             return vmap(sigma)(t_world.T, dx=dx_norm.T)
 
-        # Antenna Gain
-        gain = antenna_gain(*vec_to_angle(t))
-
         # Field steps
         sigma_samples, alpha_samples = vmap(project_rays)(self.r)
 
@@ -126,6 +125,7 @@ class VirtualRadar(NamedTuple):
             jnp.zeros((1, t.shape[1])),
             jnp.cumsum(alpha_samples[:-1], axis=0)
         ], axis=0)
+        gain = self.gain(*vec_to_angle(t))
         amplitude = sigma_samples * jnp.exp(transmitted * 0.1) * gain
 
         constant = weight / self.n * self.r

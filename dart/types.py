@@ -15,6 +15,10 @@ LossFunc = Callable[
 #: Reflectance field
 SigmaField = Callable[[Float32[Array, "3"]], Float32[Array, "2"]]
 
+#: Antenna gain pattern
+GainPattern = Callable[
+    [Float32[Array, "k"], Float32[Array, "k"]], Float32[Array, "k"]]
+
 
 class CameraPose(NamedTuple):
     """Camera pose parameters for simple ray rendering.
