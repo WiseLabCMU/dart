@@ -166,14 +166,15 @@ class DART:
     def grid(
         self, params: Union[ModelState, PyTree],
         x: Float32[Array, "x"], y: Float32[Array, "y"], z: Float32[Array, "z"]
-    ) -> Float32[Array, "x y z"]:
+    ) -> tuple[Float32[Array, "x y z"], Float32[Array, "x y z"]]:
         """Evaluate model as a fixed grid."""
         if isinstance(params, ModelState):
             params = params.params
         xyz = jnp.stack(
             jnp.meshgrid(x, y, z, indexing='ij'), axis=-1).reshape(-1, 3)
-        values = jax.jit(self.model_grid.apply)(params, None, xyz)
-        return values.reshape(x.shape[0], y.shape[0], z.shape[0], 2)
+        sigma, alpha = jax.jit(self.model_grid.apply)(params, None, xyz)
+        shape = (x.shape[0], y.shape[0], z.shape[0])
+        return sigma.reshape(shape), alpha.reshape(shape)
 
     @classmethod
     def from_config(
@@ -183,6 +184,6 @@ class DART:
         return cls(
             VirtualRadar.from_config(**sensor),
             sparse_adam(lr=lr),          # optax.adam(0.01),
-            NGPSH.from_config(**field),  # NGP.from_config(**field)
+            NGP.from_config(**field),  # NGP.from_config(**field)
             loss=get_loss_func(**loss)
         )

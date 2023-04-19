@@ -1,5 +1,6 @@
 """Evaluate model."""
 
+import os
 import json
 from tqdm import tqdm
 from argparse import ArgumentParser
@@ -25,11 +26,11 @@ if __name__ == '__main__':
 
     args = _parse().parse_args()
 
-    with open(args.path + ".json") as f:
+    with open(os.path.join(args.path, "metadata.json")) as f:
         cfg = json.load(f)
 
     dart = DART.from_config(**cfg)
-    state = dart.load(args.path + ".chkpt")
+    state = dart.load(os.path.join(args.path, "model.chkpt"))
 
     traj = dataset.trajectory(cfg["dataset"]["path"])
 
@@ -43,4 +44,4 @@ if __name__ == '__main__':
         frames.append(np.asarray(dart.render(state, pose)))
 
     out = {"rad": np.concatenate(frames, axis=0)}
-    savemat(args.path + ".mat", out)
+    savemat(os.path.join(args.path, "pred.mat"), out)

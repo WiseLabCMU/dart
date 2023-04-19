@@ -13,9 +13,8 @@ from jaxtyping import Float32, Bool, Array, Integer
 from beartype.typing import NamedTuple, Optional
 from . import types
 
-import numpy as np
 from jax import numpy as jnp
-from jax import random, vmap
+from jax import random, vmap, nn
 from jax.tree_util import tree_map
 from tensorflow.data import Dataset
 
@@ -143,25 +142,23 @@ class VirtualRadar(NamedTuple):
             t_world = sensor_to_world(r=r, t=t, pose=pose)
             dx = pose.x.reshape(-1, 1) - t_world
             dx_norm = dx / jnp.linalg.norm(dx, axis=0)
-            return jnp.nan_to_num(vmap(sigma)(t_world.T, dx=dx_norm.T))
+            return vmap(sigma)(t_world.T, dx=dx_norm.T)
 
         # Antenna Gain
         gain = antenna_gain(*vec_to_angle(t))
 
         # Field steps
-        field_vals = vmap(project_rays)(self.r)
-        sigma_samples = 0.001 * field_vals[:, :, 0]
-        alpha_samples = 1 - 0.001 * field_vals[:, :, 1]
+        sigma_samples, alpha_samples = vmap(project_rays)(self.r)
 
         # Return signal
         transmitted = jnp.concatenate([
-            jnp.ones((1, t.shape[1])),
-            jnp.cumprod(alpha_samples[:-1], axis=0)
+            jnp.zeros((1, t.shape[1])),
+            jnp.cumsum(alpha_samples[:-1], axis=0)
         ], axis=0)
-        amplitude = sigma_samples * transmitted * gain
+        amplitude = sigma_samples * jnp.exp(transmitted * 0.1) * gain
 
         constant = weight / self.n * self.r
-        return jnp.mean(amplitude, axis=1) * constant
+        return jnp.sum(amplitude, axis=1) * constant
 
     def make_column(
         self, doppler: Float32[Array, ""], pose: types.RadarPose
@@ -299,7 +296,7 @@ class VirtualRadar(NamedTuple):
     def dataset(
         self, path: str = "data/cup.mat", clip: float = 99.9,
         norm: float = 0.05, val: float = 0., iid_val: bool = False,
-        min_speed: float = 0.1, key: types.PRNGSeed = 42
+        min_speed: float = 0.1, key: types.PRNGSeed = 42, repeat: int = 0
     ) -> tuple[Dataset, Optional[Dataset]]:
         """Real dataset trajectory and images.
 
@@ -324,18 +321,23 @@ class VirtualRadar(NamedTuple):
         min_speed: Minimum speed for usable samples. Images with lower
             velocities are rejected.
         key: Random key to shuffle dataset frames. Does not shuffle columns.
+        repeat: Repeat dataset within each epoch to reduce overhead.
 
         Returns
         -------
         (train, val) datasets.
         """
         data = load_arrays(path)
-        images = data["rad"]
-        if clip > 0:
-            images = images / np.percentile(images, clip) * norm
-        images = images[:, :len(self.r)]
+        # images = data["rad"]
+        # if clip > 0:
+        #     print(np.percentile(images, clip))
+        #     images = images / np.percentile(images, clip) * norm
+        # images = images[:, :len(self.r)]
 
-        data = vmap(make_pose)(data["vel"], data["pos"], data["rot"]), images
+        data = (
+            vmap(make_pose)(data["vel"], data["pos"], data["rot"]),
+            data["rad"][:, :len(self.r)] / norm)
+
         valid_speed = data[0].s > min_speed
 
         print("Loaded dataset: {} valid frames (speed > {}) / {}".format(
@@ -366,4 +368,6 @@ class VirtualRadar(NamedTuple):
         print("Train split : {} images --> {} valid columns".format(
             data[1].shape[0] - int(nval), train[1].shape))
 
+        if repeat > 0:
+            trainset = trainset.repeat(repeat)
         return trainset, valset

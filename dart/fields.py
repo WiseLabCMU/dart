@@ -34,12 +34,14 @@ class GroundTruth:
 
     def __call__(
         self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None
-    ) -> Float32[Array, "2"]:
+    ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
         """Index into reflectance map."""
         index = (x - self.lower) * self.resolution
         valid = jnp.all(
             (0 <= index) & (index <= jnp.array(self.grid.shape[:-1]) - 1))
-        return jnp.where(valid, interpolate(index, self.grid), jnp.zeros((2,)))
+        sigma, alpha = jnp.where(
+            valid, interpolate(index, self.grid), jnp.zeros((2,)))
+        return sigma, alpha
 
 
 class SimpleGrid(hk.Module):
@@ -64,12 +66,14 @@ class SimpleGrid(hk.Module):
 
     def __call__(
         self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None
-    ) -> Float32[Array, "2"]:
+    ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
         """Index into learned reflectance map."""
         grid = hk.get_parameter("grid", (*self.size, 2), init=jnp.zeros)
         index = (x - self.lower) * self.resolution
         valid = jnp.all((0 <= index) & (index <= jnp.array(self.size) - 1))
-        return jnp.where(valid, interpolate(index, grid), jnp.zeros((2,)))
+        sigma, alpha = jnp.where(
+            valid, interpolate(index, grid), jnp.zeros((2,)))
+        return sigma, alpha
 
     @staticmethod
     def project(params):
@@ -134,13 +138,11 @@ class NGP:
 
     def __call__(
         self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None
-    ) -> Float32[Array, "2"]:
+    ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
         """Index into learned reflectance map."""
         table_out = self.lookup(x)
-        mlp_out = self.head(table_out.reshape(-1))
-        alpha = jax.nn.sigmoid(mlp_out[0])
-        sigma = jax.nn.relu(mlp_out[1])
-        return jnp.array([sigma, alpha])
+        alpha, sigma = self.head(table_out.reshape(-1))
+        return alpha, sigma
 
     @classmethod
     def from_config(cls, levels=8, exponent=0.5, base=4, size=16, features=2):
@@ -178,16 +180,16 @@ class NGPSH(NGP):
 
     def __call__(
         self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None
-    ) -> Float32[Array, "2"]:
+    ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
         """Index into learned reflectance map."""
         table_out = self.lookup(x)
         mlp_out = self.head(table_out.reshape(-1))
-        alpha = jax.nn.sigmoid(mlp_out[-1])
+        alpha = mlp_out[-1]
 
         if dx is None:
-            sigma = (jnp.sum(mlp_out[0]) - 5)
+            sigma = mlp_out[0]
         else:
             sh = spherical_harmonics(dx, self.harmonics)
-            sigma = (jnp.sum(mlp_out[:-1] * sh) - 5)
+            sigma = jnp.sum(mlp_out[:-1] * sh)
 
-        return jnp.array([sigma, alpha])
+        return sigma, alpha
