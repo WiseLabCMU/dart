@@ -13,6 +13,6 @@ with install_import_hook("foo", ("beartype", "beartype")):
     from dart import types
 
 __all__ = [
-    "DART", "ModelState", "VirtualRadar" "make_pose", "interpolate",
+    "DART", "ModelState", "VirtualRadar", "make_pose", "interpolate",
     "dataset", "types", "fields"
 ]

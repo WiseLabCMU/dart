@@ -68,3 +68,10 @@ class TrainingColumn(NamedTuple):
     valid: UInt8[Array, "n8"]
     weight: Float32[Array, ""]
     doppler: Float32[Array, ""]
+
+
+#: Image data
+RangeDopplerData = tuple[RadarPose, Float32[Array, "N Nr Nd"]]
+
+#: Doppler column data
+DopplerColumnData = tuple[RadarPose, Float32[Array, "N Nr"]]

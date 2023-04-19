@@ -2,15 +2,13 @@
 
 from functools import partial
 from jaxtyping import Float32, Integer, Array
-from beartype.typing import Union, Optional
+from beartype.typing import Union, Optional, Callable
 
 from jax import numpy as jnp
 import jax
 import haiku as hk
 
 from .spatial import interpolate, spherical_harmonics
-
-from jax import custom_jvp
 
 
 class GroundTruth:
@@ -108,7 +106,7 @@ class NGP:
             size: tuple[int, int] = (16384, 2), units: list[int] = [64, 32]):
         self.size = size
         self.levels = levels
-        mlp = []
+        mlp: list[Callable] = []
         for u in units:
             mlp += [hk.Linear(u), jax.nn.leaky_relu]
         mlp.append(hk.Linear(_head))
@@ -173,7 +171,7 @@ class NGPSH(NGP):
 
     def __init__(
             self, levels: Float32[Array, "n"], harmonics: int = 25,
-            size: tuple[int, int] = (16384, 2), units: tuple = [64, 32]):
+            size: tuple[int, int] = (16384, 2), units: list[int] = [64, 32]):
         assert harmonics in {1, 4, 9, 16, 25}
         self.harmonics = harmonics
         self._init(levels=levels, size=size, units=units, _head=harmonics + 1)

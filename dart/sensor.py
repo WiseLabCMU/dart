@@ -10,20 +10,16 @@ Conventions
 from functools import partial
 
 from jaxtyping import Float32, Bool, Array, Integer
-from beartype.typing import NamedTuple, Optional
+from beartype.typing import NamedTuple
 from . import types
 
 from jax import numpy as jnp
-from jax import random, vmap, nn
-from jax.tree_util import tree_map
-from tensorflow.data import Dataset
+from jax import random, vmap
 
 from . import types
-from .pose import project_angle, sensor_to_world, make_pose
+from .pose import project_angle, sensor_to_world
 from .spatial import vec_to_angle
 from .antenna import antenna_gain
-from .utils import get_size, shuffle
-from .dataset import load_arrays
 
 
 class VirtualRadar(NamedTuple):
@@ -66,31 +62,6 @@ class VirtualRadar(NamedTuple):
         return cls(
             r=jnp.linspace(*r), d=jnp.linspace(*d),
             theta_lim=theta_lim, phi_lim=phi_lim, n=n, k=k)
-
-    def valid_mask(
-        self, d: Float32[Array, ""], pose: types.RadarPose
-    ) -> Bool[Array, "n"]:
-        """Get valid psi values within field of view as a mask.
-
-        Computes a mask for bins::
-
-            jnp.arange(n) * bin_width
-
-        Parameters
-        ----------
-        d: Doppler bin.
-        pose: Sensor pose parameters.
-
-        Returns
-        -------
-        Output mask for each bin.
-        """
-        t = project_angle(d, jnp.arange(self.n) * self.bin_width, pose)
-        theta, phi = vec_to_angle(t)
-        return (
-            (theta < self.theta_lim) & (theta > -self.theta_lim)
-            & (phi < self.phi_lim) & (phi > -self.phi_lim)
-            & (t[0] > 0))
 
     def sample_rays(
             self, key, d: Float32[Array, ""],
@@ -160,26 +131,6 @@ class VirtualRadar(NamedTuple):
         constant = weight / self.n * self.r
         return jnp.sum(amplitude, axis=1) * constant
 
-    def make_column(
-        self, doppler: Float32[Array, ""], pose: types.RadarPose
-    ) -> types.TrainingColumn:
-        """Create column for training.
-
-        Parameters
-        ----------
-        d: doppler value.
-        pose: sensor pose.
-
-        Returns
-        -------
-        Training point with per-computed valid bins.
-        """
-        valid = self.valid_mask(doppler, pose)
-        packed = jnp.packbits(valid)
-        weight = jnp.sum(valid).astype(jnp.float32) / pose.s
-        return types.TrainingColumn(
-            pose=pose, valid=packed, weight=weight, doppler=doppler)
-
     def column_forward(
         self, key: random.PRNGKeyArray, column: types.TrainingColumn,
         sigma: types.SigmaField,
@@ -201,6 +152,31 @@ class VirtualRadar(NamedTuple):
             key, d=column.doppler, valid_psi=valid, pose=column.pose)
         return self.render_column(
             t=t, sigma=sigma, pose=column.pose, weight=column.weight)
+
+    def valid_mask(
+        self, d: Float32[Array, ""], pose: types.RadarPose
+    ) -> Bool[Array, "n"]:
+        """Get valid psi values within field of view as a mask.
+
+        Computes a mask for bins::
+
+            jnp.arange(n) * bin_width
+
+        Parameters
+        ----------
+        d: Doppler bin.
+        pose: Sensor pose parameters.
+
+        Returns
+        -------
+        Output mask for each bin.
+        """
+        t = project_angle(d, jnp.arange(self.n) * self.bin_width, pose)
+        theta, phi = vec_to_angle(t)
+        return (
+            (theta < self.theta_lim) & (theta > -self.theta_lim)
+            & (phi < self.phi_lim) & (phi > -self.phi_lim)
+            & (t[0] > 0))
 
     def sample_points(
         self, key: random.PRNGKeyArray, r: Float32[Array, ""],
@@ -272,102 +248,3 @@ class VirtualRadar(NamedTuple):
             ax[0].set_title("Actual")
             ax[1].set_title("Predicted")
         ax[1].set_yticks([])
-
-    def _make_dataset(self, data):
-        """Split poses/images into columns."""
-        def process_image(pose):
-            return vmap(
-                partial(self.make_column, pose=pose))(doppler=self.d)
-
-        poses, images = data
-        columns = vmap(process_image)(poses)
-        images_col = jnp.swapaxes(images, 1, 2)
-        dataset = (columns, images_col)
-
-        # Flatten (index, doppler) order
-        flattened = tree_map(lambda x: x.reshape(-1, *x.shape[2:]), dataset)
-
-        # Remove invalid doppler columns
-        not_empty = flattened[0].weight > 0
-        dataset_valid = tree_map(lambda x: x[not_empty], flattened)
-
-        return dataset_valid
-
-    def dataset(
-        self, path: str = "data/cup.mat", clip: float = 99.9,
-        norm: float = 0.05, val: float = 0., iid_val: bool = False,
-        min_speed: float = 0.1, key: types.PRNGSeed = 42, repeat: int = 0
-    ) -> tuple[Dataset, Optional[Dataset]]:
-        """Real dataset trajectory and images.
-
-        The dataset is ordered by::
-
-            (image/pose index, doppler)
-
-        With the image/pose shuffled. If the sensor has fewer range bins than
-        are provided in the dataset, only the closest are used, and further
-        bins are cropped out and removed.
-
-        Parameters
-        ----------
-        path: Path to file containing data.
-        clip: Percentile to normalize input values by.
-        norm: Normalization factor.
-        val: Proportion of dataset to hold as a validation set. If val=0,
-            Then no validation datset is returned.
-        iid_val: If True, then shuffles the dataset before training so that the
-            validation split is drawn randomly from the dataset instead of just
-            from the end.
-        min_speed: Minimum speed for usable samples. Images with lower
-            velocities are rejected.
-        key: Random key to shuffle dataset frames. Does not shuffle columns.
-        repeat: Repeat dataset within each epoch to reduce overhead.
-
-        Returns
-        -------
-        (train, val) datasets.
-        """
-        data = load_arrays(path)
-        # images = data["rad"]
-        # if clip > 0:
-        #     print(np.percentile(images, clip))
-        #     images = images / np.percentile(images, clip) * norm
-        # images = images[:, :len(self.r)]
-
-        data = (
-            vmap(make_pose)(data["vel"], data["pos"], data["rot"]),
-            data["rad"][:, :len(self.r)] / norm)
-
-        valid_speed = data[0].s > min_speed
-
-        print("Loaded dataset: {} valid frames (speed > {}) / {}".format(
-            jnp.sum(valid_speed), min_speed, data[1].shape[0]))
-        data = tree_map(lambda x: x[valid_speed], data)
-
-        if iid_val:
-            data = shuffle(data, key=key)
-
-        nval = 0 if val <= 0 else int(get_size(data) * val)
-        if nval > 0:
-            train = tree_map(lambda x: x[:-nval], data)
-            val = tree_map(lambda x: x[-nval:], data)
-
-            val = self._make_dataset(val)
-            print("Test split  : {} images --> {} valid columns".format(
-                nval, val[1].shape))
-            valset = Dataset.from_tensor_slices(val)
-        else:
-            train = data
-            valset = None
-
-        if not iid_val:
-            train = shuffle(train, key=key)
-
-        train = self._make_dataset(train)
-        trainset = Dataset.from_tensor_slices(train)
-        print("Train split : {} images --> {} valid columns".format(
-            data[1].shape[0] - int(nval), train[1].shape))
-
-        if repeat > 0:
-            trainset = trainset.repeat(repeat)
-        return trainset, valset

@@ -8,6 +8,7 @@ import numpy as np
 
 
 from jaxtyping import PyTree
+from beartype.typing import TypeVar
 from . import types
 
 
@@ -41,7 +42,10 @@ def get_size(tree: PyTree) -> int:
         return size[0]
 
 
-def shuffle(ordered: PyTree, key: types.PRNGSeed = 42) -> PyTree:
+T = TypeVar("T")
+
+
+def shuffle(ordered: T, key: types.PRNGSeed = 42) -> T:
     """Shuffle arrays."""
     indices = jax.random.permutation(to_prngkey(key), get_size(ordered))
     return jax.tree_util.tree_map(lambda x: x[indices], ordered)
