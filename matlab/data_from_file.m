@@ -1,5 +1,5 @@
-datadir = 'D:\dartdata';
-dataset = 'linear1';
+datadir = 'F:\dartdata\cabinets-sep';
+dataset = 'cabinets-019';
 
 scandir = fullfile(datadir, dataset, 'frames');
 trajdir = fullfile(datadir, dataset, 'traj');
@@ -9,17 +9,18 @@ mapfile = fullfile(datadir, dataset, 'map.mat');
 dbgfile = fullfile(datadir, dataset, 'dbg.mat');
 simfile = fullfile(datadir, dataset, 'simulated.mat');
 
-range_decimation = 8;       % max_range=21m when range_decimation=1
-doppler_decimation = 64;    % max_velocity=2m/s when doppler_decimation=1
-framelen = 4096;
+range_decimation = 4;      % max_range=21m when range_decimation=1
+doppler_decimation = 4;    % max_velocity=2m/s when doppler_decimation=1
+framelen = 256;
+stride = 64;
 
 CHIRPLEN = 512;
-CHIRP_DT = 1e-3;
-DMAX = 1.8949;
+CHIRP_DT = 5e-4;
+DMAX = 3.7899;
 RMAX = 21.5991;
 
-force_reprocess_traj = true;
-interp_traj = true;
+force_reprocess_traj = false;
+interp_traj = false;
 interp_traj_fs = 200;
  
 bin_doppler = DMAX / framelen;
@@ -44,7 +45,7 @@ radarjson.d = [min_doppler, max_doppler, res_doppler];
 jsonstring = jsonencode(radarjson, 'PrettyPrint', true);
 writelines(jsonstring, jsonfile);
 
-map = gen_map_linear();
+map = gen_map();
 x = map.x;
 y = map.y;
 z = map.z;
@@ -75,7 +76,8 @@ for i = 1:length(scanfiles)
         scanfile, ...
         range_decimation, ...
         doppler_decimation, ...
-        framelen ...
+        framelen, ...
+        stride ...
     );
     
     [pos, rot, vel, wp_t, wp_pos, wp_quat] = traj_from_file( ...
