@@ -6,14 +6,13 @@ from dart import fields
 from jaxtyping import install_import_hook
 with install_import_hook("foo", ("beartype", "beartype")):
     from dart.spatial import interpolate
-    from dart.sensor import VirtualRadar, RadarPose
+    from dart.sensor import VirtualRadar
     from dart.pose import make_pose
-    from dart.sensor_column import TrainingColumn
     from dart.dart import DART, ModelState
     from dart import dataset
+    from dart import types
 
 __all__ = [
-    "DART", "ModelState",
-    "VirtualRadar", "RadarPose", "TrainingColumn",
-    "make_pose", "interpolate", "dataset", "fields"
+    "DART", "ModelState", "VirtualRadar", "make_pose", "interpolate",
+    "dataset", "types", "fields"
 ]

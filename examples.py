@@ -1,24 +1,39 @@
+"""Plot examples."""
+
+import json
+import os
+from argparse import ArgumentParser
+
 from matplotlib import pyplot as plt
 import numpy as np
 
 from dart import dataset
 
 
-sim = dataset.load_arrays("data/cubes/simulated.mat")
-# obs = dataset.load_arrays("data/cabinets/cabinets.mat")
-pred = dataset.load_arrays("results/cubes_pred.mat")
+def _parse():
+    p = ArgumentParser()
+    p.add_argument("-p", "--path", help="Path to output base name.")
+    return p
 
-def _show(ax, im):
-    ax.imshow(im)
 
-fig, axs = plt.subplots(4, 4, figsize=(16, 16))
+if __name__ == '__main__':
+    args = _parse().parse_args()
 
-for idx, (ax1, ax2) in zip(np.arange(8) * 600, axs.reshape(-1, 2)):
-    _show(ax1, sim["rad"][idx])
-    # _show(ax2, obs["rad"][idx])
-    _show(ax2, pred["rad"][idx])
-    ax1.set_title("sim")
-    # ax2.set_title("obs")
-    ax2.set_title("pred")
+    with open(os.path.join(args.path, "metadata.json")) as f:
+        cfg = json.load(f)
 
-fig.savefig("results/cubes_comparison.png")
+    y_pred = dataset.load_arrays(os.path.join(args.path, "pred.mat"))["rad"]
+    y_true = dataset.load_arrays(cfg["dataset"]["path"])["rad"]
+    y_true = y_true[:, :y_pred.shape[1]]
+
+    fig, axs = plt.subplots(6, 6, figsize=(16, 16))
+
+    idxs = np.random.choice(y_true.shape[0], 18, replace=False)
+    for idx, pair in zip(idxs, axs.reshape(-1, 2)):
+        pair[0].imshow(y_true[idx])
+        pair[1].imshow(y_pred[idx])
+        pair[0].set_title("actual")
+        pair[1].set_title("predicted")
+
+    fig.tight_layout()
+    fig.savefig(os.path.join(args.path, "pred.png"))

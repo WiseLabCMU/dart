@@ -19,7 +19,7 @@ class ScaleByAdamState(NamedTuple):
     nu: Second moment exponential moving average.
     """
 
-    count: PyTree[Int32[Array, "*"]]
+    count: PyTree[Int32[Array, "*"]]  # type: ignore
     mu: PyTree[Float32[Array, "*"]]
     nu: PyTree[Float32[Array, "*"]]
 

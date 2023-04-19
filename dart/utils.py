@@ -7,8 +7,9 @@ from jax import numpy as jnp
 import numpy as np
 
 
-from jaxtyping import PyTree, Integer, Array
-from beartype.typing import Union
+from jaxtyping import PyTree
+from beartype.typing import TypeVar
+from . import types
 
 
 def tf_to_jax(batch: PyTree) -> PyTree:
@@ -16,8 +17,7 @@ def tf_to_jax(batch: PyTree) -> PyTree:
     return jax.tree_util.tree_map(jnp.array, batch)
 
 
-def to_prngkey(
-        key: Union[Integer[Array, "2"], int] = 42) -> Integer[Array, "2"]:
+def to_prngkey(key: types.PRNGSeed = 42) -> jax.random.PRNGKeyArray:
     """Accepts integer seeds or PRNGKeys."""
     if isinstance(key, int):
         return jax.random.PRNGKey(key)
@@ -42,8 +42,10 @@ def get_size(tree: PyTree) -> int:
         return size[0]
 
 
-def shuffle(
-        ordered: PyTree, key: Union[Integer[Array, "2"], int] = 42) -> PyTree:
+T = TypeVar("T")
+
+
+def shuffle(ordered: T, key: types.PRNGSeed = 42) -> T:
     """Shuffle arrays."""
     indices = jax.random.permutation(to_prngkey(key), get_size(ordered))
     return jax.tree_util.tree_map(lambda x: x[indices], ordered)
