@@ -1,5 +1,5 @@
-datadir = 'F:\dartdata\cabinets-sep';
-dataset = 'cabinets-019';
+datadir = 'D:\dartdata\cabinets-sep';
+% dataset = 'cabinets-000';
 
 scandir = fullfile(datadir, dataset, 'frames');
 trajdir = fullfile(datadir, dataset, 'traj');
