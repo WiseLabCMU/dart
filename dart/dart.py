@@ -13,7 +13,6 @@ import optax
 
 from jaxtyping import Float32, Array, PyTree
 from beartype.typing import Callable, NamedTuple, Optional, Union
-from tensorflow.data import Dataset
 from . import types
 
 from .sensor import VirtualRadar
@@ -75,7 +74,9 @@ class DART:
         self.sensor = sensor
         self.loss = get_loss_func(eps=1e-4) if loss is None else loss
 
-    def init(self, dataset, key: types.PRNGSeed = 42) -> ModelState:
+    def init(
+        self, dataset: types.Dataset, key: types.PRNGSeed = 42
+    ) -> ModelState:
         """Initialize model parameters and optimizer state."""
         sample = tf_to_jax(list(dataset.take(1))[0][0])
         params = self.model_train.init(to_prngkey(key), sample)
@@ -83,8 +84,8 @@ class DART:
         return ModelState(params=params, opt_state=opt_state)
 
     def fit(
-        self, train: Dataset, state: ModelState,
-        val: Optional[Dataset] = None, epochs: int = 1,
+        self, train: types.Dataset, state: ModelState,
+        val: Optional[types.Dataset] = None, epochs: int = 1,
         tqdm=default_tqdm, key: types.PRNGSeed = 42
     ) -> tuple[ModelState, list, list]:
         """Train model."""
@@ -178,7 +179,8 @@ class DART:
 
     @classmethod
     def from_config(
-        cls, sensor={}, field=None, lr=0.01, loss={}, **_
+        cls, sensor: dict = {}, field: dict = {}, lr: float = 0.01,
+        loss: dict = {}, **_
     ) -> "DART":
         """Create DART from config items."""
         return cls(

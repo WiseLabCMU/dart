@@ -1,9 +1,15 @@
 """Common DART types."""
 
-from jaxtyping import Array, Integer, Float32, UInt8
+import tensorflow as tf
+
+from jaxtyping import Array, Float32, UInt8
 from beartype.typing import Union, Callable, NamedTuple
 from jax.random import PRNGKeyArray
 
+
+#: Dataset needs to be manually "imported"
+#: https://github.com/microsoft/pylance-release/issues/1066
+Dataset = tf.data.Dataset
 
 #: PRNGKey seed
 PRNGSeed = Union[PRNGKeyArray, int]

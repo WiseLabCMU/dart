@@ -1,7 +1,7 @@
 """Sensor pose utilities."""
 
 from jaxtyping import Float32, Array
-from beartype.typing import NamedTuple, Union
+from beartype.typing import Union
 from . import types
 
 from jax import numpy as jnp

@@ -81,7 +81,7 @@ class SimpleGrid(hk.Module):
 
 
 class NGP:
-    """NGP field.
+    """NGP field [1].
 
     Parameters
     ----------
@@ -153,7 +153,7 @@ class NGP:
 
 
 class NGPSH(NGP):
-    """NGP field with spherical harmonics.
+    """NGP [1] field with spherical harmonics [2].
 
     Parameters
     ----------
@@ -167,6 +167,8 @@ class NGPSH(NGP):
     ----------
     [1] Muller et al, "Instant Neural Graphics Primitives with a
         Multiresolution Hash Encoding," 2022.
+    [2] Yu et al, "PlenOctrees For Real-time Rendering of Neural Radiance
+        Fields," 2021.
     """
 
     def __init__(
