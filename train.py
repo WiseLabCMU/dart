@@ -29,6 +29,8 @@ def _parse():
         help="Override on stochastic integration number of samples (k).")
 
     g = p.add_argument_group(title="Field")
+    g.add_argument(
+        "--field", default="NGP", type=str, help="Field network architecture.")
     g.add_argument("--levels", default=8, type=int, help="Hash table levels.")
     g.add_argument(
         "--exponent", default=0.43, type=float,
@@ -55,6 +57,9 @@ def _parse():
         help="Validation data holdout proportion.")
     g.add_argument("--loss", default="l2", help="Loss function.")
     g.add_argument("--weight", default=None, help="Loss weighting.")
+    g.add_argument(
+        "--device", default=0, type=int,
+        help="GPU index to use for computation (default 0).")
 
     g = p.add_argument_group(title="Dataset")
     g.add_argument(
@@ -65,9 +70,6 @@ def _parse():
         "insufficient (i.e. not enough doppler bins); 0 to disable.")
     g.add_argument(
         "-p", "--path", default="data/cup.mat", help="Dataset file.")
-    g.add_argument(
-        "--device", default=0, type=int,
-        help="Device index to use for computation (default 0).")
     g.add_argument(
         "--repeat", default=0, type=int,
         help="Repeat dataset within each epoch to cut down on overhead.")
@@ -119,13 +121,14 @@ if __name__ == '__main__':
         "loss": {
             "weight": args.weight, "loss": args.loss, "eps": 1e-6
         },
+        "field_name": args.field,
         "field": {
             "levels": args.levels, "exponent": args.exponent,
             "base": args.base, "size": args.size, "features": args.features
         },
         "dataset": {
-            "pval": args.pval, "norm": args.norm,
-            "iid_val": True, "path": args.path, "min_speed": args.min_speed,
+            "pval": args.pval, "norm": args.norm, "iid_val": True,
+            "path": args.path, "min_speed": args.min_speed,
             "repeat": args.repeat
         }
     }

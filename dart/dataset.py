@@ -4,7 +4,6 @@ import jax
 from jax import numpy as jnp
 import numpy as np
 
-from tensorflow.data import Dataset
 from scipy.io import loadmat
 import h5py
 
@@ -49,14 +48,16 @@ def gt_map(file: str) -> GroundTruth:
         grid, lower=lower, resolution=resolution)
 
 
-def trajectory(traj: str) -> Dataset:
+def trajectory(traj: str) -> types.Dataset:
     """Generate trajectory dataset."""
     data = load_arrays(traj)
     pose = jax.vmap(make_pose)(data["vel"], data["pos"], data["rot"])
-    return Dataset.from_tensor_slices(pose)
+    return types.Dataset.from_tensor_slices(pose)
 
 
-def image_traj(path: str, clip: float = 99.9, norm: float = 0.05) -> Dataset:
+def image_traj(
+    path: str, clip: float = 99.9, norm: float = 0.05
+) -> types.Dataset:
     """Dataset with trajectory and images."""
     data = load_arrays(path)
     poses = jax.vmap(make_pose)(data["vel"], data["pos"], data["rot"])
@@ -66,7 +67,7 @@ def image_traj(path: str, clip: float = 99.9, norm: float = 0.05) -> Dataset:
     else:
         images = data["rad"]
 
-    return Dataset.from_tensor_slices((poses, images))
+    return types.Dataset.from_tensor_slices((poses, images))
 
 
 def _make_dataset(
@@ -102,7 +103,7 @@ def doppler_columns(
     sensor: VirtualRadar, path: str = "data/cup.mat", norm: float = 0.05,
     pval: float = 0., iid_val: bool = False, min_speed: float = 0.1,
     repeat: int = 0, key: types.PRNGSeed = 42
-) -> tuple[Dataset, Optional[Dataset]]:
+) -> tuple[types.Dataset, Optional[types.Dataset]]:
     """Load dataset trajectory and images.
 
     The dataset is ordered by::
@@ -154,7 +155,7 @@ def doppler_columns(
         val = _make_dataset(sensor, val)
         print("Test split  : {} images --> {} valid columns".format(
             nval, val[1].shape))
-        valset = Dataset.from_tensor_slices(val)
+        valset = types.Dataset.from_tensor_slices(val)
     else:
         train = data
         valset = None
@@ -163,7 +164,7 @@ def doppler_columns(
         train = utils.shuffle(train, key=key)
 
     train = _make_dataset(sensor, train)
-    trainset = Dataset.from_tensor_slices(train)
+    trainset = types.Dataset.from_tensor_slices(train)
     print("Train split : {} images --> {} valid columns".format(
         data[1].shape[0] - int(nval), train[1].shape))
 

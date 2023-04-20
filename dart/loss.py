@@ -3,13 +3,13 @@
 from jax import numpy as jnp
 
 from beartype.typing import Optional
-from .types import LossFunc
+from . import types
 
 
 def get_loss_func(
     loss: str = "l2", weight: Optional[str] = None, eps: float = 1e-8,
     delta: float = 0.1
-) -> LossFunc:
+) -> types.LossFunc:
     """Create loss function (as closure).
 
     Parameters
