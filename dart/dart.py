@@ -16,7 +16,7 @@ from beartype.typing import Callable, NamedTuple, Optional, Union
 from . import types
 
 from .sensor import VirtualRadar
-from .fields import NGP, NGPSH, SimpleGrid
+from . import fields
 from .utils import tf_to_jax, to_prngkey, update_avg
 from .opt import sparse_adam
 from .loss import get_loss_func
@@ -179,13 +179,14 @@ class DART:
 
     @classmethod
     def from_config(
-        cls, sensor: dict = {}, field: dict = {}, lr: float = 0.01,
-        loss: dict = {}, **_
+        cls, sensor: dict = {}, field_name: str = "NGP", field: dict = {},
+        lr: float = 0.01, loss: dict = {}, **_
     ) -> "DART":
         """Create DART from config items."""
         return cls(
             VirtualRadar.from_config(**sensor),
-            sparse_adam(lr=lr),          # optax.adam(0.01),
-            NGP.from_config(**field),  # NGP.from_config(**field)
+            # sparse_adam(lr=lr),
+            optax.adam(lr),
+            getattr(fields, field_name).from_config(**field),
             loss=get_loss_func(**loss)
         )
