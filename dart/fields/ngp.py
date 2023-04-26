@@ -11,7 +11,7 @@ from dart.spatial import interpolate, spherical_harmonics
 from dart import types
 
 
-class NGP:
+class NGP(hk.Module):
     """NGP field [1].
 
     Parameters
@@ -20,6 +20,7 @@ class NGP:
         number of hash tables.
     size: Hash table size (and feature dimension).
     units: MLP network parameters.
+    _head: MLP output dimensionality (should always be 2).
 
     References
     ----------
@@ -30,13 +31,9 @@ class NGP:
     _description = "NGP (instant Neural Graphics Primitive) architecture."
 
     def __init__(
-            self, levels: Float32[Array, "n"],
-            size: tuple[int, int] = (16384, 2), units: list[int] = [64, 32]):
-        self._init(levels=levels, size=size, units=units, _head=2)
-
-    def _init(
             self, levels: Float32[Array, "n"], _head: int = 2,
             size: tuple[int, int] = (16384, 2), units: list[int] = [64, 32]):
+        super().__init__()
         self.size = size
         self.levels = levels
         mlp: list[Callable] = []
@@ -76,7 +73,9 @@ class NGP:
         return alpha, sigma
 
     @classmethod
-    def from_config(cls, levels=8, exponent=0.5, base=4, size=16, features=2):
+    def from_config(
+        cls, levels=8, exponent=0.5, base=4, size=16, features=2
+    ) -> Callable[[], "NGP"]:
         """Create NGP haiku closure from config items."""
         def closure():
             return cls(
@@ -140,7 +139,8 @@ class NGPSH(NGP):
             size: tuple[int, int] = (16384, 2), units: list[int] = [64, 32]):
         assert harmonics in {1, 4, 9, 16, 25}
         self.harmonics = harmonics
-        self._init(levels=levels, size=size, units=units, _head=harmonics + 1)
+        super().__init__(
+            levels=levels, size=size, units=units, _head=harmonics + 1)
 
     def __call__(
         self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None

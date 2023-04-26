@@ -23,6 +23,7 @@ def train_dart(cfg: dict) -> None:
 
     dart = DART.from_config(**cfg)
     train, val = doppler_columns(dart.sensor, key=k1, **cfg["dataset"])
+    assert val is not None
     train = train.shuffle(cfg["shuffle_buffer"], reshuffle_each_iteration=True)
 
     print("Done setting up ({:.1f}s).".format(time.time() - start))

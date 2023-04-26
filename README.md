@@ -61,7 +61,7 @@ python evaluate.py -p results/cabinets-sim; python examples.py results/cabinets-
 
 Cabinets (real):
 ```sh
-python train.py ngp -s data/cabinets/cabinets-fixed.json -o results/cabinets.000 -p data/cabinets-sep/cabinets-000/cabinets-000.mat --norm 1e4 --min_speed 0.25 -e 25; TARGET=results/cabinets.000 RADIUS=4 make eval```
+python train.py ngp -s data/cabinets/cabinets-fixed.json -o results/cabinets.000 -p data/cabinets-sep/cabinets-000/cabinets-000.mat --norm 1e4 --min_speed 0.25 -e 25; TARGET=results/cabinets.000 RADIUS=4 make eval
 ```
 
 Motion Stage:

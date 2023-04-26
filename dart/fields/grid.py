@@ -1,7 +1,7 @@
 """Basic Plenoxels-inspired Grid."""
 
 from jaxtyping import Float32, Array
-from beartype.typing import Union, Optional
+from beartype.typing import Union, Optional, Callable
 
 from jax import numpy as jnp
 import haiku as hk
@@ -48,7 +48,7 @@ class SimpleGrid(hk.Module):
         cls, size: list[int] = [512, 512, 256],
         lower: list[float] = [-4, -4, -1],
         resolution: Union[list[float], float] = [64.0, 64.0, 64.0]
-    ) -> "SimpleGrid":
+    ) -> Callable[[], "SimpleGrid"]:
         """Create simple grid haiku closure from config items."""
         def closure():
             return cls(
