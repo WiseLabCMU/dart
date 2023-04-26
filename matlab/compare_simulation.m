@@ -1,7 +1,7 @@
 close all;
 
-datadir = 'F:\dartdata\cabinets-sep';
-dataset = 'cabinets-000';
+datadir = 'D:\dartdata\cabinets-sep';
+dataset = 'cabinets-018';
 real_rad = rad;
 % load(simfile, 'rad');
 % sim_rad = rad;
