@@ -1,48 +1,15 @@
 """Sensor pose utilities."""
 
 from jaxtyping import Float32, Array
-from beartype.typing import NamedTuple, Union
+from beartype.typing import Union
+from . import types
 
 from jax import numpy as jnp
 
 
-class CameraPose(NamedTuple):
-    """Camera pose parameters for simple ray rendering.
-
-    x: sensor location in global coordinates.
-    A: 3D rotation matrix for sensor pose; should transform sensor-space to
-        world-space.
-    """
-
-    x: Float32[Array, "3"]
-    A: Float32[Array, "3 3"]
-
-
-class RadarPose(NamedTuple):
-    """Radar pose parameters (24 x 4 = 96 bytes).
-
-    Attributes
-    ----------
-    v: normalized velocity direction (``||v||_2=1``).
-    p, q: orthonormal basis along with ``v``.
-    s: speed (magnitude of un-normalized velocity).
-    x: sensor location in global coordinates.
-    A: 3D rotation matrix for sensor pose; should transform sensor-space to
-        world-space.
-    """
-
-    v: Float32[Array, "3"]
-    p: Float32[Array, "3"]
-    q: Float32[Array, "3"]
-    s: Float32[Array, "3"]
-    x: Float32[Array, "3"]
-    A: Float32[Array, "3 3"]
-
-
 def make_pose(
-    v: Float32[Array, "3"], x: Float32[Array, "3"],
-    A: Float32[Array, "3 3"],
-) -> RadarPose:
+    v: Float32[Array, "3"], x: Float32[Array, "3"], A: Float32[Array, "3 3"],
+) -> types.RadarPose:
     """Create pose data namedtuple.
 
     Parameters
@@ -66,12 +33,12 @@ def make_pose(
     _, _, _V = jnp.linalg.svd(jnp.eye(3) - jnp.outer(v, v))
     p, q = _V[:2]
 
-    return RadarPose(v=v, s=s, p=p, q=q, x=x, A=A)
+    return types.RadarPose(v=v, s=s, p=p, q=q, x=x, A=A)
 
 
 def sensor_to_world(
     r: Float32[Array, ""], t: Float32[Array, "3 k"],
-    pose: Union[CameraPose, RadarPose]
+    pose: Union[types.CameraPose, types.RadarPose]
 ) -> Float32[Array, "3 k"]:
     """Project points to world-space.
 
@@ -89,7 +56,7 @@ def sensor_to_world(
 
 
 def project_angle(
-    d: Float32[Array, ""], psi: Float32[Array, "n"], pose: RadarPose
+    d: Float32[Array, ""], psi: Float32[Array, "n"], pose: types.RadarPose
 ) -> Float32[Array, "3 n"]:
     """Project angles to intersection circle on a unit sphere.
 
@@ -104,8 +71,9 @@ def project_angle(
     Projected (x, y, z) coordinates.
     """
     d_norm = d / pose.s
-    return (
-        jnp.sqrt(1 - d_norm**2) * (
+    return jnp.where(jnp.abs(d_norm) > 1, 0, (
+        jnp.sqrt(1 - jnp.minimum(1, d_norm**2)) * (
             jnp.outer(pose.p, jnp.cos(psi))
             + jnp.outer(pose.q, jnp.sin(psi)))
-        + pose.v.reshape(3, 1) * d_norm)
+        - pose.v.reshape(3, 1) * d_norm)
+    )

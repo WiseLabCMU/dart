@@ -1,28 +1,41 @@
-function [pos, rot, vel] = traj_from_file(filename, scan_t)
+function [pos, rot, vel, waypoint_t, waypoint_pos, waypoint_quat] = traj_from_file( ...
+    filename, ...
+    scan_t, ...
+    scan_window, ...
+    do_interp, ...
+    interp_fs ...
+)
 
-traj = jsondecode(fileread(filename));
-N = size(traj, 1);
+T_OFFSET = 1674069448.98683;
 
-waypoint_ts = zeros(N, 1);
-waypoints = zeros(N, 3);
-dirs = zeros(3, 3, N);
+fprintf('Loading %s...\n', filename);
+load(filename, 'rt', 't', 'x', 'y', 'z', 'qx', 'qy', 'qz', 'qw');
 
-f = waitbar(0, 'Loading trajectory');
-for p = 1:N
-    pose = traj(p).data;
-    dt = datetime(pose.timestamp, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS''Z''');
-    waypoint_ts(p) = posixtime(dt);
-    waypoints(p, 1) = pose.position.x;
-    waypoints(p, 2) = -pose.position.z;
-    waypoints(p, 3) = pose.position.y;
-    dirs(:, :, p) = quat2rotm(quaternion(pose.rotation.w, pose.rotation.x, -pose.rotation.z, pose.rotation.y));
-    f = waitbar(p/N, f, 'Loading trajectory');
+waypoint_t = t + T_OFFSET;
+waypoint_pos = [x, -z, y];
+waypoint_quat = quaternion(qw, qx, -qz, qy);
+
+if do_interp
+    interp_t = (waypoint_t(1) : 1 / interp_fs : waypoint_t(end)).';
+    waypoint_pos = interp1(waypoint_t, waypoint_pos, interp_t);
+    waypoint_t = interp_t;
+    n = size(waypoint_pos, 1);
+    % Don't support orientation when doing interpolation
+    waypoint_quat = quaternion(ones(n, 1), zeros(n, 1), zeros(n, 1), zeros(n, 1));    
 end
-close(f);
+waypoint_vel = diff(waypoint_pos) ./ diff(waypoint_t);
 
-traj = waypointTrajectory(waypoints, waypoint_ts, Orientation=dirs, ReferenceFrame='ENU');
-
-[pos, rot, vel, ~, ~] = traj.lookupPose(scan_t);
-rot = permute(quat2rotm(rot), [3 2 1]); % lookupPose provides world->body, so we need to invert
+M = size(scan_t, 1);
+pos = zeros(M, 3);
+rot = zeros(M, 3, 3);
+vel = zeros(M, 3);
+fprintf('Processing %s...\n', filename);
+for i = 1:M
+    w_pos = (scan_t(i)-scan_window/2) <= waypoint_t & waypoint_t <= (scan_t(i)+scan_window/2);
+    w_vel = (scan_t(i)-scan_window) <= waypoint_t & waypoint_t <= (scan_t(i)+scan_window);
+    pos(i, :) = mean(waypoint_pos(w_pos, :));
+    rot(i, :, :) = quat2rotm(meanrot(waypoint_quat(w_pos, :)));
+    vel(i, :) = mean(waypoint_vel(w_vel(1:end-1), :));
+end
 
 end

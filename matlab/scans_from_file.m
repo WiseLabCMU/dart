@@ -3,49 +3,40 @@ function [timestamps, scans] = scans_from_file( ...
     range_decimation, ...
     doppler_decimation, ...
     framelen, ...
-    doplot)
+    stride ...
+)
 
-if ~exist('doplot', 'var')
-    doplot = false;
-end
+fprintf('Loading %s...\n', filename);
+load(filename, 'frames_real', 'frames_imag', 'start_time', 'end_time');
+frames = complex(frames_real, frames_imag);
 
-load(filename, 'frames', 'start_time', 'end_time');
-
+fprintf('Processing %s...\n', filename);
 chirplen = size(frames, 4); % before decmiation
-numframes = floor(size(frames, 1) / framelen);
-numsamples = numframes * framelen;
+numchirps_in = size(frames, 1);
 
 t_start = posixtime(datetime(start_time, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS''Z'''));
 t_start = t_start - 5*60*60;
 t_end = posixtime(datetime(end_time, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS''Z'''));
 t_end = t_end - 5*60*60;
-ts = (t_end - t_start) / numframes;
+chirp_dt = (t_end - t_start) / (numchirps_in - 1);
 
-timestamps = (t_start : ts : t_end-ts).';
+timestamps = (t_start + chirp_dt * (framelen - 1) / 2 : chirp_dt * stride : t_end - chirp_dt * (framelen - 1) / 2).';
+numframes = size(timestamps, 1);
+assert(numframes == floor((numchirps_in - framelen) / stride) + 1);
 
-a = squeeze(frames(1:numsamples, 1, 1, :));
-b = reshape(a.', chirplen, framelen, []);
-
-framelen_dec = framelen / doppler_decimation;
-chirplen_dec = chirplen / range_decimation;
-u = framelen/2 + (-framelen_dec/2 : framelen_dec/2-1);
-v = 1:chirplen_dec;
-x = (u-1-framelen/2) * 0.0156;
-y = (v-1) * 0.04;
-c = permute(fftshift(fft2(b), 2), [3 1 2]);
-c = c(:, v, u);
-
-scans = abs(c);
-
-if doplot
-    f = waitbar(0, 'Plotting frames');
-    for i = 1:numframes
-        imcomplex(x, y, abs(c(i, :, :)));
-        f = waitbar(i/numframes, f, 'Plotting frames');
-        pause(ts);
-    end
-    close(f);
+b = zeros(chirplen, framelen, numframes);
+for i = 1:numframes
+    startchirp = stride * (i - 1) + 1;
+    b(:, :, i) = squeeze(frames(startchirp : startchirp + framelen - 1, 1, 1, :)).';
 end
+fff = fft2(b);
+fff(:, 1, :) = fff(:, 1, :) - median(fff(:, 1, :), 3);
 
+res_doppler = framelen / doppler_decimation;
+res_range = chirplen / range_decimation;
+fff = circshift(fff, floor(res_doppler / 2), 2); % may have inconsistent phase without fftshift
+fff = permute(fff, [3 1 2]);
+
+scans = abs(fff(:, 1:res_range, 1:res_doppler));
 
 end

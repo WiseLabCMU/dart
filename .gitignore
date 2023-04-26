@@ -1,5 +1,6 @@
 *.code-workspace
 *.npz
+results*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -163,4 +164,6 @@ codegen/
 # Octave session info
 octave-workspace
 
-/data/frames.mat
+# dart data
+/data/
+/results/
