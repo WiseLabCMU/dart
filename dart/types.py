@@ -1,11 +1,18 @@
 """Common DART types."""
 
+from argparse import ArgumentParser, _ArgumentGroup, Namespace
+
 import tensorflow as tf
 
 from jaxtyping import Array, Float32, UInt8
 from beartype.typing import Union, Callable, NamedTuple
 from jax.random import PRNGKeyArray
 
+#: Argument parser or parser group
+ParserLike = Union[ArgumentParser, _ArgumentGroup]
+
+#: Parsed arguments
+ParsedArgs = Namespace
 
 #: Dataset needs to be manually "imported"
 #: https://github.com/microsoft/pylance-release/issues/1066
