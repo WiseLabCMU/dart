@@ -1,19 +1,15 @@
 """Train DART model."""
 
 import json
-import time
-from tqdm import tqdm
-import os
 from argparse import ArgumentParser
 
 import jax
 
-from dart import DART, dataset
+from dart import train_dart
+from dart import fields
 
 
-def _parse():
-
-    p = ArgumentParser()
+def _parse_common(p: ArgumentParser) -> ArgumentParser:
 
     p.add_argument("-o", "--out", default="result", help="Output base name.")
 
@@ -27,23 +23,6 @@ def _parse():
     g.add_argument(
         "-k", default=128, type=int,
         help="Override on stochastic integration number of samples (k).")
-
-    g = p.add_argument_group(title="Field")
-    g.add_argument(
-        "--field", default="NGP", type=str, help="Field network architecture.")
-    g.add_argument("--levels", default=8, type=int, help="Hash table levels.")
-    g.add_argument(
-        "--exponent", default=0.43, type=float,
-        help="Hash table level exponent, in powers of 2.")
-    g.add_argument(
-        "--base", default=10., type=float,
-        help="Size of base (most coarse) hash table level.")
-    g.add_argument(
-        "--size", default=16, type=int,
-        help="Hash table size, in powers of 2.")
-    g.add_argument(
-        "--features", default=2, type=int,
-        help="Number of features per hash table level.")
 
     g = p.add_argument_group(title="Training")
     g.add_argument("-r", "--key", default=42, type=int, help="Random key.")
@@ -77,37 +56,19 @@ def _parse():
     return p
 
 
-def _main(cfg):
-
-    os.makedirs(cfg["out"], exist_ok=True)
-    print(json.dumps(cfg))
-    print("Setting up...")
-    start = time.time()
-
-    root = jax.random.PRNGKey(cfg["key"])
-    k1, k2, k3 = jax.random.split(root, 3)
-
-    dart = DART.from_config(**cfg)
-    train, val = dataset.doppler_columns(dart.sensor, key=k1, **cfg["dataset"])
-    train = train.shuffle(cfg["shuffle_buffer"], reshuffle_each_iteration=True)
-
-    print("Done setting up ({:.1f}s).".format(time.time() - start))
-
-    state = dart.init(train.batch(2), key=k2)
-    state, train_log, val_log = dart.fit(
-        train.batch(cfg["batch"]), state, epochs=cfg["epochs"], tqdm=tqdm,
-        key=k3, val=val.batch(cfg["batch"]))
-    dart.save(os.path.join(cfg["out"], "model.chkpt"), state)
-
-    cfg["train_log"] = train_log
-    cfg["val_log"] = val_log
-    with open(os.path.join(cfg["out"], "metadata.json"), 'w') as f:
-        json.dump(cfg, f, indent=4)
-
-
 if __name__ == '__main__':
 
-    args = _parse().parse_args()
+    parser = ArgumentParser(
+        description="Train Doppler-Aided Radar Tomography Model.")
+    subparsers = parser.add_subparsers()
+    for k, v in fields._fields.items():
+        p = subparsers.add_parser(
+            k, help=v._description, description=v._description)
+        _parse_common(p)
+        v.to_parser(p.add_argument_group("Field"))
+        p.set_defaults(field=v)
+    args = parser.parse_args()
+
     jax.default_device(jax.devices("gpu")[args.device])
 
     with open(args.sensor) as f:
@@ -121,16 +82,11 @@ if __name__ == '__main__':
         "loss": {
             "weight": args.weight, "loss": args.loss, "eps": 1e-6
         },
-        "field_name": args.field,
-        "field": {
-            "levels": args.levels, "exponent": args.exponent,
-            "base": args.base, "size": args.size, "features": args.features
-        },
         "dataset": {
             "pval": args.pval, "norm": args.norm, "iid_val": True,
             "path": args.path, "min_speed": args.min_speed,
             "repeat": args.repeat
         }
     }
-
-    _main(cfg)
+    cfg.update(args.field.args_to_config(args))
+    train_dart(cfg)

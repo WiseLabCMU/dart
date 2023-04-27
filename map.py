@@ -33,7 +33,7 @@ if __name__ == '__main__':
     r = args.radius
     x = jnp.linspace(-r, r, 100)
     y = jnp.linspace(-r, r, 100)
-    z = jnp.array([-0.1, 0.0, 0.2, 0.4])
+    z = jnp.array([0.0, 0.2, 0.4, 0.8])
     steps = np.array([0, 1, 2, 3])
     sigma, alpha = dart.grid(state.params, x, y, z)
 
