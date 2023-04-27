@@ -19,7 +19,21 @@ def _parse():
     p.add_argument(
         "-r", "--key", default=42, type=int, help="Random seed.")
     p.add_argument("-b", "--batch", default=32, type=int, help="Batch size")
+    p.add_argument(
+        "-a", "--all", default=False, action="store_true",
+        help="Render all images instead of only the validation set.")
     return p
+
+
+def _render_dataset(args, traj):
+    root_key = jax.random.PRNGKey(args.key)
+    frames = []
+    for batch in tqdm(traj.batch(args.batch)):
+        root_key, key = jax.random.split(root_key, 2)
+        pose = jax.tree_util.tree_map(jnp.array, batch)
+        keys = jnp.array(jax.random.split(key, batch.x.shape[0]))
+        frames.append(np.asarray(dart.render(state, pose)))
+    return {"rad": np.concatenate(frames, axis=0)}
 
 
 if __name__ == '__main__':
@@ -32,16 +46,12 @@ if __name__ == '__main__':
     dart = DART.from_config(**cfg)
     state = dart.load(os.path.join(args.path, "model.chkpt"))
 
-    traj = dataset.trajectory(cfg["dataset"]["path"])
-
-    root_key = jax.random.PRNGKey(args.key)
-    frames = []
-    for batch in tqdm(traj.batch(args.batch)):
-        root_key, key = jax.random.split(root_key, 2)
-        pose = jax.tree_util.tree_map(jnp.array, batch)
-        keys = jnp.array(jax.random.split(key, batch.x.shape[0]))
-
-        frames.append(np.asarray(dart.render(state, pose)))
-
-    out = {"rad": np.concatenate(frames, axis=0)}
-    savemat(os.path.join(args.path, "pred.mat"), out)
+    if args.all:
+        traj = dataset.trajectory(cfg["dataset"]["path"])
+        out = _render_dataset(args, traj)
+        savemat(os.path.join(args.path, "pred_all.mat"), out)
+    else:
+        subset = np.load(os.path.join(args.path, "metadata.npz"))["validx"]
+        traj = dataset.trajectory(cfg["dataset"]["path"], subset=subset)
+        out = _render_dataset(args, traj)
+        savemat(os.path.join(args.path, "pred.mat"), out)

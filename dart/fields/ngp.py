@@ -1,86 +1,17 @@
-"""Reflectance field functions."""
+"""Instant Neural Graphics Primitive (NGP) based fields."""
 
-from functools import partial
 from jaxtyping import Float32, Integer, Array
-from beartype.typing import Union, Optional, Callable
+from beartype.typing import Optional, Callable
 
 from jax import numpy as jnp
 import jax
 import haiku as hk
 
-from .spatial import interpolate, spherical_harmonics
+from dart.spatial import interpolate, spherical_harmonics
+from dart import types
 
 
-class GroundTruth:
-    """Ground truth reflectance map.
-
-    Parameters
-    ----------
-    grid: (reflectance, transmittance) grid; is trilinearly interpolated.
-    lower: Lower corner of the grid.
-    resolution: Resolution in units per grid cell. Can have the same resolution
-        for each axis or different resolutions.
-    """
-
-    def __init__(
-        self, grid: Float32[Array, "nx ny nz 2"], lower: Float32[Array, "3"],
-        resolution: Union[Float32[Array, "3"], Float32[Array, ""]]
-    ) -> None:
-        self.lower = lower
-        self.resolution = resolution
-        self.grid = grid
-
-    def __call__(
-        self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None
-    ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
-        """Index into reflectance map."""
-        index = (x - self.lower) * self.resolution
-        valid = jnp.all(
-            (0 <= index) & (index <= jnp.array(self.grid.shape[:-1]) - 1))
-        sigma, alpha = jnp.where(
-            valid, interpolate(index, self.grid), jnp.zeros((2,)))
-        return sigma, alpha
-
-
-class SimpleGrid(hk.Module):
-    """Simple reflectance grid.
-
-    Parameters
-    ----------
-    size: Grid size (x, y, z) dimensions.
-    lower: Lower corner of the grid.
-    resolution: Resolution in units per grid cell. Can have the same resolution
-        for each axis or different resolutions.
-    """
-
-    def __init__(
-        self, size: tuple[int, int, int], lower: Float32[Array, "3"],
-        resolution: Union[Float32[Array, "3"], Float32[Array, ""]],
-    ) -> None:
-        super().__init__()
-        self.lower = lower
-        self.resolution = resolution
-        self.size = size
-
-    def __call__(
-        self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None
-    ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
-        """Index into learned reflectance map."""
-        grid = hk.get_parameter("grid", (*self.size, 2), init=jnp.zeros)
-        index = (x - self.lower) * self.resolution
-        valid = jnp.all((0 <= index) & (index <= jnp.array(self.size) - 1))
-        sigma, alpha = jnp.where(
-            valid, interpolate(index, grid), jnp.zeros((2,)))
-        return sigma, alpha
-
-    @staticmethod
-    def project(params):
-        """Project grid parameters to [0, 1]."""
-        return jax.tree_util.tree_map(
-            partial(jnp.clip, a_min=0.0, a_max=1.0), params)
-
-
-class NGP:
+class NGP(hk.Module):
     """NGP field [1].
 
     Parameters
@@ -89,6 +20,7 @@ class NGP:
         number of hash tables.
     size: Hash table size (and feature dimension).
     units: MLP network parameters.
+    _head: MLP output dimensionality (should always be 2).
 
     References
     ----------
@@ -96,14 +28,12 @@ class NGP:
         Multiresolution Hash Encoding," 2022.
     """
 
-    def __init__(
-            self, levels: Float32[Array, "n"],
-            size: tuple[int, int] = (16384, 2), units: list[int] = [64, 32]):
-        self._init(levels=levels, size=size, units=units, _head=2)
+    _description = "NGP (instant Neural Graphics Primitive) architecture"
 
-    def _init(
+    def __init__(
             self, levels: Float32[Array, "n"], _head: int = 2,
             size: tuple[int, int] = (16384, 2), units: list[int] = [64, 32]):
+        super().__init__()
         self.size = size
         self.levels = levels
         mlp: list[Callable] = []
@@ -143,13 +73,44 @@ class NGP:
         return alpha, sigma
 
     @classmethod
-    def from_config(cls, levels=8, exponent=0.5, base=4, size=16, features=2):
+    def from_config(
+        cls, levels=8, exponent=0.5, base=4, size=16, features=2
+    ) -> Callable[[], "NGP"]:
         """Create NGP haiku closure from config items."""
         def closure():
             return cls(
                 levels=base * 2**(exponent * jnp.arange(levels)),
                 size=(2**size, features))
         return closure
+
+    @staticmethod
+    def to_parser(p: types.ParserLike) -> None:
+        """Create NGP command line arguments."""
+        p.add_argument(
+            "--levels", default=8, type=int, help="Hash table levels.")
+        p.add_argument(
+            "--exponent", default=0.43, type=float,
+            help="Hash table level exponent, in powers of 2.")
+        p.add_argument(
+            "--base", default=10., type=float,
+            help="Size of base (most coarse) hash table level.")
+        p.add_argument(
+            "--size", default=16, type=int,
+            help="Hash table size, in powers of 2.")
+        p.add_argument(
+            "--features", default=2, type=int,
+            help="Number of features per hash table level.")
+
+    @classmethod
+    def args_to_config(cls, args: types.Namespace) -> dict:
+        """Create configuration dictionary."""
+        return {
+            "field_name": cls.__name__,
+            "field": {
+                "levels": args.levels, "exponent": args.exponent,
+                "base": args.base, "size": args.size, "features": args.features
+            }
+        }
 
 
 class NGPSH(NGP):
@@ -171,12 +132,15 @@ class NGPSH(NGP):
         Fields," 2021.
     """
 
+    _description = "NGP with view dependence using spherical harmonics"
+
     def __init__(
             self, levels: Float32[Array, "n"], harmonics: int = 25,
             size: tuple[int, int] = (16384, 2), units: list[int] = [64, 32]):
         assert harmonics in {1, 4, 9, 16, 25}
         self.harmonics = harmonics
-        self._init(levels=levels, size=size, units=units, _head=harmonics + 1)
+        super().__init__(
+            levels=levels, size=size, units=units, _head=harmonics + 1)
 
     def __call__(
         self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None

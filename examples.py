@@ -13,6 +13,9 @@ from dart import dataset
 def _parse():
     p = ArgumentParser()
     p.add_argument("-p", "--path", help="Path to output base name.")
+    p.add_argument(
+        "-k", "--key", type=int, default=42,
+        help="Random seed for choosing samples to plot.")
     return p
 
 
@@ -23,17 +26,26 @@ if __name__ == '__main__':
         cfg = json.load(f)
 
     y_pred = dataset.load_arrays(os.path.join(args.path, "pred.mat"))["rad"]
-    y_true = dataset.load_arrays(cfg["dataset"]["path"])["rad"]
+    validx = np.load(os.path.join(args.path, "metadata.npz"))["validx"]
+    y_true = dataset.load_arrays(cfg["dataset"]["path"])["rad"][validx]
     y_true = y_true[:, :y_pred.shape[1]]
 
-    fig, axs = plt.subplots(6, 6, figsize=(16, 16))
+    rng = np.random.default_rng(args.key)
+    idxs = np.sort(rng.choice(y_true.shape[0], 18, replace=False))
 
-    idxs = np.random.choice(y_true.shape[0], 18, replace=False)
-    for idx, pair in zip(idxs, axs.reshape(-1, 2)):
+    fig = plt.figure(figsize=(16, 16))
+    gridspecs = fig.add_gridspec(6, 3, hspace=0.03, wspace=0.03)
+    for idx, gs in zip(idxs, gridspecs):
+        pair = gs.subgridspec(1, 2, wspace=0.0).subplots()
         pair[0].imshow(y_true[idx])
         pair[1].imshow(y_pred[idx])
-        pair[0].set_title("actual")
-        pair[1].set_title("predicted")
+        pair[0].text(1, 5, "#{} Measured".format(idx), color='white')
+        pair[1].text(1, 5, "#{} Predicted".format(idx), color='white')
 
-    fig.tight_layout()
-    fig.savefig(os.path.join(args.path, "pred.png"))
+        for ax in pair:
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+    fig.savefig(
+        os.path.join(args.path, "pred.png"), bbox_inches='tight',
+        pad_inches=0.2, dpi=200)

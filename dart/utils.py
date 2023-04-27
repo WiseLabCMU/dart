@@ -8,7 +8,7 @@ import numpy as np
 
 
 from jaxtyping import PyTree
-from beartype.typing import TypeVar
+from beartype.typing import TypeVar, Optional
 from . import types
 
 
@@ -49,3 +49,13 @@ def shuffle(ordered: T, key: types.PRNGSeed = 42) -> T:
     """Shuffle arrays."""
     indices = jax.random.permutation(to_prngkey(key), get_size(ordered))
     return jax.tree_util.tree_map(lambda x: x[indices], ordered)
+
+
+def split(data: PyTree, nval: int = 0) -> tuple[PyTree, Optional[PyTree]]:
+    """Create train and val splits."""
+    if nval > 0:
+        train = jax.tree_util.tree_map(lambda x: x[:-nval], data)
+        val = jax.tree_util.tree_map(lambda x: x[-nval:], data)
+        return train, val
+    else:
+        return data, None

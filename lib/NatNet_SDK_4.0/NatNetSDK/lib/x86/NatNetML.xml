@@ -1,0 +1,631 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        "NatNetML"
+    </assembly>
+    <members>
+        <member name="M:NatNetML.NatNetClientML.DecodeID(System.Int32,System.Int32@,System.Int32@)">
+            <summary>
+Decompose ID into entity and member
+</summary>
+            <returns>True if successful, false otherwise</returns>
+        </member>
+        <member name="M:NatNetML.NatNetClientML.DecodeTimecode(System.UInt32,System.UInt32,System.Int32@,System.Int32@,System.Int32@,System.Int32@,System.Int32@)">
+            <summary>
+Decodes OptiTrack timecode values into individual components (hh:mm:ss:ff.subframe)
+</summary>
+            <returns>True if successful, false otherwise</returns>
+        </member>
+        <member name="M:NatNetML.NatNetClientML.QuatToEuler(System.Single[],NatNetML.NATEulerOrder)">
+            <summary>
+Convert a quaternion to euler angles in the specified order/convention.
+</summary>
+        </member>
+        <member name="M:NatNetML.NatNetClientML.SecondsSinceHostTimestamp(System.UInt64)">
+            <summary>
+Returns the number of seconds that have elapsed since <paramref name="hostTimestamp" />.
+</summary>
+            <param name="hostTimestamp">
+An integer timestamp in the host clock domain, e.g. <see cref="F:NatNetML.FrameOfMocapData.TransmitTimestamp" /></param>
+        </member>
+        <member name="M:NatNetML.NatNetClientML.GetLastFrameOfData">
+            <summary>
+Retrieves a copy of the most recently received frame of mocap data.
+</summary>
+            <returns>Frame of Mocap Data if available and able to lock, null otherwise</returns>
+        </member>
+        <member name="M:NatNetML.NatNetClientML.GetDataDescriptions(System.Collections.Generic.List`1{NatNetML.DataDescriptor}@)">
+            <summary>
+Retrieves a list of data object descriptions (markers,rigid bodies) the server is streaming
+</summary>
+            <param name="Descriptions">List of description to be filled in.</param>
+            <returns>true if successful, false otherwise.</returns>
+        </member>
+        <member name="M:NatNetML.NatNetClientML.GetDataDescriptions">
+            <summary>
+Retrieves a list of data object descriptions (markers,rigid bodies) the server is streaming
+</summary>
+            <returns />
+        </member>
+        <member name="M:NatNetML.NatNetClientML.GetServerDescription(NatNetML.ServerDescription)">
+            <summary>
+Retrieves descriptive information about the server applications 
+</summary>
+            <param name="Desc">server description to be filled in</param>
+            <returns>0 if successful, error code otherwise.</returns>
+        </member>
+        <member name="M:NatNetML.NatNetClientML.SendMessageAndWait(System.String,System.Int32,System.Int32,System.Byte[]@,System.Int32@)">
+            <summary>
+Sends a message to the server and waits for a response.
+</summary>
+            <param name="Message">application defined message string</param>
+            <param name="Tries">Number of times to try and send the message</param>
+            <param name="Timeout">time to wait for response (in milliseconds) before timing out</param>
+            <param name="ServerResponse">application defined response data</param>
+            <param name="ResponseSize">Number of bytes in response</param>
+            <returns>0 if successful, error code otherwise.</returns>
+        </member>
+        <member name="M:NatNetML.NatNetClientML.SendMessageAndWait(System.String,System.Byte[]@,System.Int32@)">
+            <summary>
+Sends a message to the server and waits for a response.
+</summary>
+            <param name="Message">application defined message string</param>
+            <param name="ServerResponse">application defined response data</param>
+            <param name="ResponseSize">Number of bytes in response</param>
+            <returns>0 if successful, error code otherwise.</returns>
+        </member>
+        <member name="M:NatNetML.NatNetClientML.NatNetVersion">
+            <summary>
+Retrieves the version of the NatNet library the client is using
+</summary>
+            <returns>version array (form: major.minor.build.revision)</returns>
+        </member>
+        <member name="M:NatNetML.NatNetClientML.Uninitialize">
+            <summary>
+Disconnects from the current NatNet server and closes the socket.
+</summary>
+            <returns>0 if successful, error code otherwise.</returns>
+        </member>
+        <member name="M:NatNetML.NatNetClientML.Initialize(System.String,System.String,System.Int32)">
+            <summary>
+Initialize client socket and connect to server
+</summary>
+            <param name="LocalAddress">IP Address of client machine.</param>
+            <param name="ServerAddress">IP Address of server application machine.</param>
+            <param name="Port">port of server application machine.</param>
+            <returns>0 is successful, error code otherwise.</returns>
+        </member>
+        <member name="M:NatNetML.NatNetClientML.Initialize(System.String,System.String)">
+            <summary>
+Initialize client socket and connect to server
+</summary>
+            <param name="LocalAddress">IP Address of client machine.</param>
+            <param name="ServerAddress">IP Address of server application machine.</param>
+            <returns>0 is successful, error code otherwise.</returns>
+        </member>
+        <member name="E:NatNetML.NatNetClientML.OnFrameReady2">
+            <summary>
+Called by NatNet when a frame of data is received from the server.
+</summary>
+            <returns />
+        </member>
+        <member name="E:NatNetML.NatNetClientML.OnFrameReady">
+            <summary>
+Called by NatNet when a frame of data is received from the server.
+</summary>
+            <returns />
+        </member>
+        <member name="M:NatNetML.NatNetClientML.#ctor(System.Int32)">
+            <summary>
+Creates a new instance of a NatNet client
+</summary>
+            <returns />
+        </member>
+        <member name="M:NatNetML.NatNetClientML.#ctor">
+            <summary>
+Creates a new instance of a NatNet client
+</summary>
+            <returns />
+        </member>
+        <member name="T:NatNetML.NatNetClientML">
+            <summary>
+NatNetClientML encapsulates all functionality required to receive data 
+from a NatNet Server application, Motive.
+</summary>
+        </member>
+        <member name="F:NatNetML.NatNetPacket.Payload">
+            <summary>Message payload.</summary>
+        </member>
+        <member name="F:NatNetML.NatNetPacket.MessageId">
+            <summary>Message type.</summary>
+        </member>
+        <member name="T:NatNetML.NatNetPacket">
+            <summary>
+A NatNet message packet.
+</summary>
+        </member>
+        <member name="F:NatNetML.ServerDescription.ConnectionMulticastAddress">
+            <summary>The multicast group address to use for a multicast connection.</summary>
+        </member>
+        <member name="F:NatNetML.ServerDescription.ConnectionMulticast">
+            <summary>Whether this server is streaming in multicast. If false, connect in unicast instead.</summary>
+        </member>
+        <member name="F:NatNetML.ServerDescription.ConnectionDataPort">
+            <summary>The data port this server is configured to use.</summary>
+        </member>
+        <member name="F:NatNetML.ServerDescription.bConnectionInfoValid">
+            <summary>If the server predates NatNet 3.0, this will be false, and the other Connection* fields below will be invalid.</summary>
+        </member>
+        <member name="F:NatNetML.ServerDescription.HighResClockFrequency">
+            <summary>Host high resolution clock ticks per second.</summary>
+        </member>
+        <member name="F:NatNetML.ServerDescription.NatNetVersion">
+            <summary>host app's version of NatNet</summary>
+        </member>
+        <member name="F:NatNetML.ServerDescription.HostAppVersion">
+            <summary>version of host app</summary>
+        </member>
+        <member name="F:NatNetML.ServerDescription.HostApp">
+            <summary>name of host app</summary>
+        </member>
+        <member name="F:NatNetML.ServerDescription.HostComputerAddress">
+            <summary>host IP address</summary>
+        </member>
+        <member name="F:NatNetML.ServerDescription.HostComputerName">
+            <summary>host computer name</summary>
+        </member>
+        <member name="F:NatNetML.ServerDescription.HostPresent">
+            <summary>host is present and accounted for</summary>
+        </member>
+        <member name="T:NatNetML.ServerDescription">
+            <summary>
+Description of the server application.
+</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.Devices">
+            <summary>Force Plate data</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.ForcePlates">
+            <summary>Force Plate data</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.LabeledMarkers">
+            <summary>Labeled Marker data</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.Skeletons">
+            <summary>Skeleton data</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.RigidBodies">
+            <summary>Rigid body data</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.OtherMarkers">
+            <summary>Unidentified marker data</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.MarkerSets">
+            <summary>MarkerSet data</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.nDevices">
+            <summary>number of Devices in this frame</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.nForcePlates">
+            <summary>number of Force Plates in this frame</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.nMarkers">
+            <summary>number of labeled markers in this frame</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.nSkeletons">
+            <summary>number of Skeletons in this frame</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.nRigidBodies">
+            <summary>number of RigidBodies in this frame</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.nOtherMarkers">
+            <summary>number of unidentified markers in this frame</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.nMarkerSets">
+            <summary>number of marker sets in this frame</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.TimecodeSubframe">
+            <summary>SMPTE timecode sub-frame (if available)</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.Timecode">
+            <summary>SMPTE timecode (if available)</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.bTrackingModelsChanged">
+            <summary>tracking models changed for this frame</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.bRecording">
+            <summary>recording in Motive</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.TransmitTimestamp">
+            <summary>Host high resolution timestamp of NatNet data transmission.</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.CameraDataReceivedTimestamp">
+            <summary>Host high resolution timestamp of camera data aggregation.</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.CameraMidExposureTimestamp">
+            <summary>Host high resolution timestamp of estimated camera exposure midpoint.</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.fTimestamp">
+            <summary>Timestamp since software start (software timestamp).</summary>
+        </member>
+        <member name="F:NatNetML.FrameOfMocapData.iFrame">
+            <summary>host defined frame number</summary>
+        </member>
+        <member name="T:NatNetML.FrameOfMocapData">
+            <summary>
+A single frame of all data (Markers, RigidBodies, etc) captured by the server.
+</summary>
+        </member>
+        <member name="F:NatNetML.DeviceData.ChannelData">
+            <summary>Channel-sliced data (ChannelData[channel].Values[subframe]</summary>
+        </member>
+        <member name="F:NatNetML.DeviceData.params">
+            <summary>unused</summary>
+        </member>
+        <member name="F:NatNetML.DeviceData.nChannels">
+            <summary>number of analog channels (signals)</summary>
+        </member>
+        <member name="F:NatNetML.DeviceData.ID">
+            <summary>used for order, and for identification in the data stream</summary>
+        </member>
+        <member name="T:NatNetML.DeviceData">
+            <summary>
+Frame(s) of Device data.  Device data typically has multiple frames (subframes) of data per mocap frame
+</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlateData.ChannelData">
+            <summary>Channel-sliced data (ChannelData[channel].Values[subframe]</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlateData.params">
+            <summary>unused</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlateData.nChannels">
+            <summary>number of analog channels (signals)</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlateData.ID">
+            <summary>used for order, and for identification in the data stream</summary>
+        </member>
+        <member name="T:NatNetML.ForcePlateData">
+            <summary>
+Frame(s) of ForcePlate data.  Force plate data typically has multiple frames (subframes) of data per mocap frame
+</summary>
+        </member>
+        <member name="F:NatNetML.AnalogChannelData.Values">
+            <summary>Array of n subframes of values for a specific channel</summary>
+        </member>
+        <member name="F:NatNetML.AnalogChannelData.nFrames">
+            <summary># of analog frames of data in this channel data packet (typically # of subframes per mocap frame)</summary>
+        </member>
+        <member name="T:NatNetML.AnalogChannelData">
+            <summary>
+Recorded analog data measured from an enabled channel on force plates or DAQ devices.
+</summary>
+        </member>
+        <member name="F:NatNetML.SkeletonData.RigidBodies">
+            <summary>array marker data</summary>
+        </member>
+        <member name="F:NatNetML.SkeletonData.nRigidBodies">
+            <summary>number of markers associated with this rigid body</summary>
+        </member>
+        <member name="F:NatNetML.SkeletonData.ID">
+            <summary>Unique identifier of RigidBody</summary>
+        </member>
+        <member name="T:NatNetML.SkeletonData">
+            <summary>
+Recorded rigid body data for a single RigidBody for a single frame
+</summary>
+        </member>
+        <member name="F:NatNetML.RigidBodyData.Tracked">
+            <summary>Actively tracked</summary>
+        </member>
+        <member name="F:NatNetML.RigidBodyData.MeanError">
+            <summary>mean measure-to-solve deviation</summary>
+        </member>
+        <member name="F:NatNetML.RigidBodyData.qw">
+            <summary>w orientation (quaternion)</summary>
+        </member>
+        <member name="F:NatNetML.RigidBodyData.qz">
+            <summary>z orientation (quaternion)</summary>
+        </member>
+        <member name="F:NatNetML.RigidBodyData.qy">
+            <summary>y orientation (quaternion)</summary>
+        </member>
+        <member name="F:NatNetML.RigidBodyData.qx">
+            <summary>x orientation (quaternion)</summary>
+        </member>
+        <member name="F:NatNetML.RigidBodyData.z">
+            <summary>z position</summary>
+        </member>
+        <member name="F:NatNetML.RigidBodyData.y">
+            <summary>y position</summary>
+        </member>
+        <member name="F:NatNetML.RigidBodyData.x">
+            <summary>x position</summary>
+        </member>
+        <member name="F:NatNetML.RigidBodyData.ID">
+            <summary>Unique identifier of RigidBody</summary>
+        </member>
+        <member name="T:NatNetML.RigidBodyData">
+            <summary>
+Recorded rigid body data for a single RigidBody for a single frame
+</summary>
+        </member>
+        <member name="F:NatNetML.MarkerSetData.nMarkers">
+            <summary>Number of marker in current frame of data</summary>
+        </member>
+        <member name="F:NatNetML.MarkerSetData.Markers">
+            <summary>Array of Marker positions</summary>
+        </member>
+        <member name="F:NatNetML.MarkerSetData.MarkerSetName">
+            <summary>Name of the MarkerSet</summary>
+        </member>
+        <member name="T:NatNetML.MarkerSetData">
+            <summary>
+Recorded optical marker data for a single Markerset (MarkerSet, RigidBody, Skeleton) on a single frame. This data is model-filled where occluded.
+</summary>
+        </member>
+        <member name="F:NatNetML.Skeleton.RigidBodies">
+            <summary>Array of MarkerNames</summary>
+        </member>
+        <member name="F:NatNetML.Skeleton.nRigidBodies">
+            <summary>Unique identifier of Rigid Body's parent RigidBody</summary>
+        </member>
+        <member name="F:NatNetML.Skeleton.ID">
+            <summary>Unique identifier of Rigid Body</summary>
+        </member>
+        <member name="F:NatNetML.Skeleton.Name">
+            <summary>App defined name for the Rigid Body name</summary>
+        </member>
+        <member name="T:NatNetML.Skeleton">
+            <summary>
+Describes a Skeleton 
+</summary>
+        </member>
+        <member name="F:NatNetML.Camera.qw">
+            <summary>Camera Ori W</summary>
+        </member>
+        <member name="F:NatNetML.Camera.qz">
+            <summary>Camera Ori Z</summary>
+        </member>
+        <member name="F:NatNetML.Camera.qy">
+            <summary>Camera Ori Y</summary>
+        </member>
+        <member name="F:NatNetML.Camera.qx">
+            <summary>Camera Ori X</summary>
+        </member>
+        <member name="F:NatNetML.Camera.z">
+            <summary>Camera Pos Z</summary>
+        </member>
+        <member name="F:NatNetML.Camera.y">
+            <summary>Camera Pos Y</summary>
+        </member>
+        <member name="F:NatNetML.Camera.x">
+            <summary>Camera Pos X</summary>
+        </member>
+        <member name="F:NatNetML.Camera.Name">
+            <summary>App defined name for the Camera</summary>
+        </member>
+        <member name="T:NatNetML.Camera">
+            <summary>
+Describes a Camera with position and orientation
+</summary>
+        </member>
+        <member name="F:NatNetML.Device.ChannelNames">
+            <summary>Array of channel names</summary>
+        </member>
+        <member name="F:NatNetML.Device.ChannelCount">
+            <summary># of channels (signals)</summary>
+        </member>
+        <member name="F:NatNetML.Device.ChannelDataType">
+            <summary>channel data type code</summary>
+        </member>
+        <member name="F:NatNetML.Device.DeviceType">
+            <summary>device 'type'</summary>
+        </member>
+        <member name="F:NatNetML.Device.ID">
+            <summary>used for order, and for identification in the data stream</summary>
+        </member>
+        <member name="F:NatNetML.Device.Name">
+            <summary>Device name</summary>
+        </member>
+        <member name="F:NatNetML.Device.Serial">
+            <summary>Device serial number</summary>
+        </member>
+        <member name="T:NatNetML.Device">
+            <summary>
+Describes a Device - A named object with channel data
+</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlate.ChannelNames">
+            <summary>Array of channel names</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlate.ChannelCount">
+            <summary># of channels (signals)</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlate.ChannelDataType">
+            <summary>0=Calibrated force data, 1=Raw analog voltages</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlate.PlateType">
+            <summary>force plate 'type' (refer to C3D spec for details) </summary>
+        </member>
+        <member name="F:NatNetML.ForcePlate.Corners">
+            <summary>plate corners, in plate coordinates, clockwise from plate +x,+y (refer to C3D spec for details)</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlate.CalMatrix">
+            <summary>force plate calibration matrix (for raw analog voltage channel type only)</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlate.OriginZ">
+            <summary>electrical center offset (from electrical center to geometric center-top of force plate) (manufacturer supplied)</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlate.OriginY">
+            <summary>electrical center offset (from electrical center to geometric center-top of force plate) (manufacturer supplied)</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlate.OriginX">
+            <summary>electrical center offset (from electrical center to geometric center-top of force plate) (manufacturer supplied)</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlate.Length">
+            <summary>plate physical length (manufacturer supplied)</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlate.Width">
+            <summary>plate physical width (manufacturer supplied)</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlate.ID">
+            <summary>used for order, and for identification in the data stream</summary>
+        </member>
+        <member name="F:NatNetML.ForcePlate.Serial">
+            <summary>Force plate serial number</summary>
+        </member>
+        <member name="T:NatNetML.ForcePlate">
+            <summary>
+Describes a ForcePlate - A named object with position and orientation, typically defined by 3 or more markers
+</summary>
+        </member>
+        <member name="F:NatNetML.RigidBody.MarkerRequiredLabels">
+            <summary>Array of Marker positions</summary>
+        </member>
+        <member name="F:NatNetML.RigidBody.nMarkers">
+            <summary>Number of marker in current frame of data</summary>
+        </member>
+        <member name="F:NatNetML.RigidBody.MarkerPositions">
+            <summary>Array of Marker positions</summary>
+        </member>
+        <member name="F:NatNetML.RigidBody.offsetz">
+            <summary>Z Origin offset from Parent origin</summary>
+        </member>
+        <member name="F:NatNetML.RigidBody.offsety">
+            <summary>Y Origin offset from Parent origin</summary>
+        </member>
+        <member name="F:NatNetML.RigidBody.offsetx">
+            <summary>X Origin offset from Parent origin</summary>
+        </member>
+        <member name="F:NatNetML.RigidBody.parentID">
+            <summary>Unique identifier of Rigid Body's parent RigidBody</summary>
+        </member>
+        <member name="F:NatNetML.RigidBody.ID">
+            <summary>Unique identifier of Rigid Body</summary>
+        </member>
+        <member name="F:NatNetML.RigidBody.Name">
+            <summary>App defined name for the Rigid Body name</summary>
+        </member>
+        <member name="T:NatNetML.RigidBody">
+            <summary>
+Describes a RigidBody - A named object with position and orientation, typically defined by 3 or more markers
+</summary>
+        </member>
+        <member name="F:NatNetML.MarkerSet.MarkerNames">
+            <summary>Array of MarkerNames</summary>
+        </member>
+        <member name="F:NatNetML.MarkerSet.nMarkers">
+            <summary>Number of markers in the MarkerSet</summary>
+        </member>
+        <member name="F:NatNetML.MarkerSet.Name">
+            <summary>MarkerSet name</summary>
+        </member>
+        <member name="T:NatNetML.MarkerSet">
+            <summary>
+Describes a MarkerSet - a named collection of named markers
+</summary>
+        </member>
+        <member name="T:NatNetML.DataDescriptor">
+            <summary>
+Base class for data types
+</summary>
+        </member>
+        <member name="F:NatNetML.Marker.residual">
+            <summary>Marker residual</summary>
+        </member>
+        <member name="F:NatNetML.Marker.parameters">
+            <summary>Marker parameters</summary>
+        </member>
+        <member name="F:NatNetML.Marker.size">
+            <summary>Unique Identifier</summary>
+        </member>
+        <member name="F:NatNetML.Marker.z">
+            <summary>Z position</summary>
+        </member>
+        <member name="F:NatNetML.Marker.y">
+            <summary>Y position</summary>
+        </member>
+        <member name="F:NatNetML.Marker.x">
+            <summary>X position</summary>
+        </member>
+        <member name="F:NatNetML.Marker.ID">
+            <summary>Unique Identifier</summary>
+        </member>
+        <member name="T:NatNetML.Marker">
+            <summary>
+A single 3D point
+</summary>
+        </member>
+        <member name="M:NatNet_FreeAsyncServerDiscovery(NatNetDiscovery_t*)">
+            <summary>
+    Ends a previously created asynchronous server discovery process, and cleans up the associated resources.
+</summary>
+            <param name="discovery">
+    The handle representing the asynchronous discovery process. Returned by
+    <see cref="M:NatNet_CreateAsyncServerDiscovery(NatNetDiscovery_t**,=FUNC:System.Void(sNatNetDiscoveredServer!System.Runtime.CompilerServices.IsConst*,System.Void*),System.Void*)" />.
+</param>
+        </member>
+        <member name="M:NatNet_CreateAsyncServerDiscovery(NatNetDiscovery_t**,=FUNC:System.Void(sNatNetDiscoveredServer!System.Runtime.CompilerServices.IsConst*,System.Void*),System.Void*)">
+            <summary>
+    Begins sending periodic broadcast messages to discover active NatNet servers in the background.
+</summary>
+            <param name="pOutDiscovery">
+    Out pointer that will receive a handle representing the asynchronous discovery process. The handle returned
+    should be passed to <see cref="!:NatNet_FreeAsyncServerDiscovery" /> later for cleanup.
+</param>
+            <param name="pfnCallback">
+    A <see cref="D:NatNetServerDiscoveryCallback" /> function pointer that will be invoked once for every new server
+    that's discovered by the asynchronous search. The callback will also be passed the provided
+    <paramref name="pUserContext" /> argument.
+</param>
+            <param name="pUserContext">
+    User-specified context data to be passed to the provided <paramref name="pfnCallback" /> when invoked.
+</param>
+        </member>
+        <member name="M:NatNet_BroadcastServerDiscovery(sNatNetDiscoveredServer*,System.Int32*,System.UInt32)">
+            <summary>
+    Sends broadcast messages to discover active NatNet servers and blocks for a specified time to gather responses.
+</summary>
+            <param name="outServers">
+    Array of length equal to the input value of <paramref name="pInOutNumServers" />. This array will receive the
+    details of all servers discovered by the broadcast.
+</param>
+            <param name="pInOutNumServers">
+    Pointer to an integer containing the length of the array <paramref name="outServers" />. After this function
+    returns, the integer is modified to contain the total number of servers that responded to the broadcast
+    inquiry. If the modified number is larger than the original number passed to the function, there was
+    insufficient space for those additional servers.
+</param>
+            <param name="timeoutMillisec">
+    Amount of time, in milliseconds, to wait for responses to the broadcast before returning.
+</param>
+        </member>
+        <member name="M:NatNet_FreeDescriptions(sDataDescriptions*)">
+            <summary>
+    Deallocates <paramref name="pDesc" /> and all of its members; after this call, the object is no longer valid.
+</summary>
+        </member>
+        <member name="M:NatNet_FreeFrame(sFrameOfMocapData*)">
+            <summary>
+    Frees the dynamically allocated members of a frame copy created using <see cref="M:NatNet_CopyFrame(sFrameOfMocapData*,sFrameOfMocapData*)" />.
+</summary>
+            <remarks>
+    The object pointed to by <paramref name="pFrame" /> itself is NOT de-allocated, only its nested members which
+    were dynamically allocated.
+
+    Warning: Do not call this on any <paramref name="pFrame" /> that was not the destination of a call to
+             <see cref="M:NatNet_CopyFrame(sFrameOfMocapData*,sFrameOfMocapData*)" />.
+</remarks>
+        </member>
+        <member name="M:NatNet_CopyFrame(sFrameOfMocapData*,sFrameOfMocapData*)">
+            <summary>
+    Helper that performs a deep copy from <paramref name="pSrc" /> into <paramref name="pDst" />.
+</summary>
+            <remarks>
+    Some members of <paramref name="pDst" /> will be dynamically allocated. Call <see cref="!:NatNet_FreeFrame" /> to
+    deallocate them.
+</remarks>
+        </member>
+    </members>
+</doc>

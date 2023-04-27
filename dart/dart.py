@@ -36,18 +36,13 @@ class DART:
     ----------
     sensor: Sensor model parameters.
     optimizer: Model optax optimizer.
-    sigma: Field function generator; should close the actual field function.
-    project: Projection if the field requires projected gradient descent.
+    sigma: Field function closure.
     loss: Loss function to use.
-    weight: Function to apply before loss function.
-    eps: Epsilon to use during training.
     """
 
     def __init__(
         self, sensor: VirtualRadar, optimizer: optax.GradientTransformation,
-        sigma: Callable[[], types.SigmaField],
-        project: Optional[Callable[[PyTree], PyTree]] = None,
-        loss: Optional[types.LossFunc] = None
+        sigma: Callable[[], types.SigmaField], loss: types.LossFunc
     ) -> None:
 
         def forward_train(batch: types.TrainingColumn):
@@ -56,23 +51,22 @@ class DART:
             vfwd = jax.vmap(partial(sensor.column_forward, sigma=sigma()))
             return vfwd(keys, column=batch)
 
+        def forward_grid(batch: Float32[Array, "n 2"]):
+            return jax.vmap(sigma())(batch)
+
         def forward_test(batch: types.RadarPose):
             keys = jnp.array(
                 jax.random.split(hk.next_rng_key(), batch.x.shape[0]))
             vfwd = jax.vmap(partial(sensor.render, sigma=sigma()))
             return vfwd(keys, pose=batch)
 
-        def forward_grid(batch: Float32[Array, "n 2"]):
-            return jax.vmap(sigma())(batch)
-
         self.model_train = hk.transform(forward_train)
-        self.model = hk.transform(forward_test)
         self.model_grid = hk.transform(forward_grid)
+        self.model = hk.transform(forward_test)
 
         self.optimizer = optimizer
-        self.project = project
         self.sensor = sensor
-        self.loss = get_loss_func(eps=1e-4) if loss is None else loss
+        self.loss = loss
 
     def init(
         self, dataset: types.Dataset, key: types.PRNGSeed = 42
@@ -107,8 +101,6 @@ class DART:
                 clip, state.opt_state, state.params)
             params = optax.apply_updates(state.params, updates)
 
-            if self.project:
-                params = self.project(params)
             return loss, ModelState(params, opt_state)
 
         train_log, val_log = [], []
@@ -184,9 +176,9 @@ class DART:
     ) -> "DART":
         """Create DART from config items."""
         return cls(
-            VirtualRadar.from_config(**sensor),
+            sensor=VirtualRadar.from_config(**sensor),
             # sparse_adam(lr=lr),
-            optax.adam(lr),
-            getattr(fields, field_name).from_config(**field),
+            optimizer=optax.adam(lr),
+            sigma=getattr(fields, field_name).from_config(**field),
             loss=get_loss_func(**loss)
         )

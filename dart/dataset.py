@@ -7,6 +7,7 @@ import numpy as np
 from scipy.io import loadmat
 import h5py
 
+from jaxtyping import Integer, Array
 from beartype.typing import Any, Optional
 
 from .fields import GroundTruth
@@ -33,9 +34,7 @@ def load_arrays(file: str) -> Any:
 def gt_map(file: str) -> GroundTruth:
     """Load ground truth reflectance map."""
     data = load_arrays(file)
-    x = data['x']
-    y = data['y']
-    z = data['z']
+    x, y, z = data['x'], data['y'], data['z']
 
     lower = jnp.array([np.min(x), np.min(y), np.min(z)])
     upper = jnp.array([np.max(x), np.max(y), np.max(z)])
@@ -44,33 +43,45 @@ def gt_map(file: str) -> GroundTruth:
     occupancy = jnp.array(data['v'], dtype=float)
     grid = jnp.stack([occupancy, occupancy], axis=-1)
 
-    return GroundTruth(
-        grid, lower=lower, resolution=resolution)
+    return GroundTruth(grid, lower=lower, resolution=resolution)
 
 
-def trajectory(traj: str) -> types.Dataset:
+def trajectory(
+    traj: str, subset: Optional[Integer[Array, "nval"]] = None
+) -> types.Dataset:
     """Generate trajectory dataset."""
     data = load_arrays(traj)
     pose = jax.vmap(make_pose)(data["vel"], data["pos"], data["rot"])
+    if subset is not None:
+        pose = jax.tree_util.tree_map(lambda x: x[subset], pose)
     return types.Dataset.from_tensor_slices(pose)
 
 
+def __raw_image_traj(
+    path: str, norm: float = 1e4, sensor: Optional[VirtualRadar] = None
+) -> tuple[types.RadarPose, types.RangeDopplerData]:
+    """Load image-trajectory data."""
+    src = load_arrays(path)
+    pose = jax.vmap(make_pose)(src["vel"], src["pos"], src["rot"])
+    image = src["rad"] / norm
+    if sensor is not None:
+        # Copy to garbage-collect the initial (larger) array
+        image = jnp.copy(image[:, :len(sensor.r)])
+    return pose, image
+
+
 def image_traj(
-    path: str, clip: float = 99.9, norm: float = 0.05
+    path: str, norm: float = 1e4,
+    subset: Optional[Integer[Array, "nval"]] = None
 ) -> types.Dataset:
     """Dataset with trajectory and images."""
-    data = load_arrays(path)
-    poses = jax.vmap(make_pose)(data["vel"], data["pos"], data["rot"])
-
-    if clip > 0:
-        images = data["rad"] / np.percentile(data["rad"], clip) * norm
-    else:
-        images = data["rad"]
-
-    return types.Dataset.from_tensor_slices((poses, images))
+    data = __raw_image_traj(path, norm=norm, sensor=None)
+    if subset is not None:
+        data = jax.tree_util.tree_map(lambda x: x[subset], (data))
+    return types.Dataset.from_tensor_slices(data)
 
 
-def _make_dataset(
+def __make_dataset(
     sensor: VirtualRadar, data: types.RangeDopplerData
 ) -> types.DopplerColumnData:
     """Split poses/images into columns."""
@@ -100,10 +111,10 @@ def _make_dataset(
 
 
 def doppler_columns(
-    sensor: VirtualRadar, path: str = "data/cup.mat", norm: float = 0.05,
+    sensor: VirtualRadar, path: str = "data/cup.mat", norm: float = 1e4,
     pval: float = 0., iid_val: bool = False, min_speed: float = 0.1,
     repeat: int = 0, key: types.PRNGSeed = 42
-) -> tuple[types.Dataset, Optional[types.Dataset]]:
+) -> tuple[types.Dataset, Optional[types.Dataset], Integer[Array, "nval"]]:
     """Load dataset trajectory and images.
 
     The dataset is ordered by::
@@ -131,43 +142,37 @@ def doppler_columns(
 
     Returns
     -------
-    (train, val) datasets.
+    train: Train dataset.
+    val: Val dataset.
+    validx: Indices of original images corresponding to the validation set.
     """
-    src = load_arrays(path)
-
-    data = (
-        jax.vmap(make_pose)(src["vel"], src["pos"], src["rot"]),
-        src["rad"][:, :len(sensor.r)] / norm)
-
-    valid_speed = data[0].s > min_speed
+    pose, image = __raw_image_traj(path, norm=norm, sensor=sensor)
+    idx = jnp.arange(image.shape[0])
+    valid_speed = pose.s > min_speed
 
     print("Loaded dataset: {} valid frames (speed > {}) / {}".format(
-        jnp.sum(valid_speed), min_speed, data[1].shape[0]))
-    data = jax.tree_util.tree_map(lambda x: x[valid_speed], data)
+        jnp.sum(valid_speed), min_speed, image.shape[0]))
+    data = jax.tree_util.tree_map(
+        lambda x: x[valid_speed], (pose, image, idx))
 
     if iid_val:
         data = utils.shuffle(data, key=key)
 
+    pose, image, idx = data
     nval = 0 if pval <= 0 else int(utils.get_size(data) * pval)
-    if nval > 0:
-        train = jax.tree_util.tree_map(lambda x: x[:-nval], data)
-        val = jax.tree_util.tree_map(lambda x: x[-nval:], data)
-        val = _make_dataset(sensor, val)
-        print("Test split  : {} images --> {} valid columns".format(
-            nval, val[1].shape))
-        valset = types.Dataset.from_tensor_slices(val)
-    else:
-        train = data
-        valset = None
+    train, val = utils.split((pose, image), nval=nval)
 
     if not iid_val:
         train = utils.shuffle(train, key=key)
 
-    train = _make_dataset(sensor, train)
-    trainset = types.Dataset.from_tensor_slices(train)
     print("Train split : {} images --> {} valid columns".format(
-        data[1].shape[0] - int(nval), train[1].shape))
-
+        len(idx) - int(nval), train[1].shape))
+    train = types.Dataset.from_tensor_slices(__make_dataset(sensor, train))
+    if val is not None:
+        print("Test split  : {} images --> {} valid columns".format(
+            nval, val[1].shape))
+        val = types.Dataset.from_tensor_slices(__make_dataset(sensor, val))
     if repeat > 0:
-        trainset = trainset.repeat(repeat)
-    return trainset, valset
+        train = train.repeat(repeat)
+
+    return train, val, idx[-nval:]
