@@ -1,27 +1,9 @@
-﻿/* 
-Copyright © 2016 NaturalPoint Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License. */
-
-
-using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections;
 
 using NatNetML;
 
 
-/* SampleClientML.cs
+/* DartDataCollect.cs
  * 
  * This program is a sample console application which uses the managed NatNet assembly (NatNetML.dll) for receiving NatNet data
  * from a tracking server (e.g. Motive) and outputting them in every 200 mocap frames. This is provided mainly for demonstration purposes,
@@ -44,30 +26,27 @@ using NatNetML;
  */
 
 
-SampleClientML.SampleClientML.Main(Array.Empty<string>());
+DartDataCollect.DartDataCollect.Main(args);
 
 
-namespace SampleClientML
+namespace DartDataCollect
 {
-    public class SampleClientML
+    public class DartDataCollect
     {
         /*  [NatNet] Network connection configuration    */
-        private static NatNetML.NatNetClientML mNatNet;    // The client instance
-        private static string mStrLocalIP = "127.0.0.1";   // Local IP address (string)
-        private static string mStrServerIP = "127.0.0.1";  // Server IP address (string)
-        private static NatNetML.ConnectionType mConnectionType = ConnectionType.Multicast; // Multicast or Unicast mode
+        private static NatNetClientML? mNatNet;    // The client instance
 
 
         /*  List for saving each of datadescriptors */
-        private static List<NatNetML.DataDescriptor> mDataDescriptor = new List<NatNetML.DataDescriptor>();
+        private static List<DataDescriptor> mDataDescriptor = new();
 
         /*  Lists and Hashtables for saving data descriptions   */
-        private static Hashtable mHtSkelRBs = new Hashtable();
-        private static List<RigidBody> mRigidBodies = new List<RigidBody>();
-        private static List<Skeleton> mSkeletons = new List<Skeleton>();
-        private static List<ForcePlate> mForcePlates = new List<ForcePlate>();
-        private static List<Device> mDevices = new List<Device>();
-        private static List<Camera> mCameras = new List<Camera>();
+        private static readonly Hashtable mHtSkelRBs = new();
+        private static readonly List<RigidBody> mRigidBodies = new();
+        private static readonly List<Skeleton> mSkeletons = new();
+        private static readonly List<ForcePlate> mForcePlates = new();
+        private static readonly List<Device> mDevices = new();
+        private static readonly List<Camera> mCameras = new();
 
         /*  boolean value for detecting change in asset */
         private static bool mAssetChanged = false;
@@ -78,16 +57,16 @@ namespace SampleClientML
             bool debug = true;
             string strLocalIP = "127.0.0.1";   // Local IP address (string)
             string strServerIP = "127.0.0.1";  // Server IP address (string)
-            NatNetML.ConnectionType connectionType = ConnectionType.Multicast; // Multicast or Unicast mode
+            ConnectionType connectionType = ConnectionType.Multicast; // Multicast or Unicast mode
 
-            Console.WriteLine("SampleClientML managed client application starting...\n");
+            Console.WriteLine("DartDataCollect managed client application starting...\n");
             if (args.Length == 0)
             {
                 Console.WriteLine("  command line options: \n");
-                Console.WriteLine("  SampleClientML [server_ip_address [client_ip_address [Unicast/Multicast]]] \n");
+                Console.WriteLine("  DartDataCollect [server_ip_address [client_ip_address [Unicast/Multicast]]] \n");
                 Console.WriteLine("  Examples: \n");
-                Console.WriteLine("    SampleClientML 127.0.0.1 127.0.0.1 Unicast \n");
-                Console.WriteLine("    SampleClientML 127.0.0.1 127.0.0.1 m \n");
+                Console.WriteLine("    DartDataCollect 127.0.0.1 127.0.0.1 Unicast \n");
+                Console.WriteLine("    DartDataCollect 127.0.0.1 127.0.0.1 m \n");
                 Console.WriteLine("\n");
             }
             else
@@ -99,7 +78,7 @@ namespace SampleClientML
                     if (args.Length > 2)
                     {
                         connectionType = ConnectionType.Multicast; // Multicast or Unicast mode
-                        string res = args[2].Substring(0, 1);
+                        string res = args[2][..1];
                         string res2 = res.ToLower();
                         if (res2 == "u")
                         {
@@ -110,7 +89,7 @@ namespace SampleClientML
             }
             if (debug == true)
             {
-                string cmdline = "SampleClientML " + strServerIP + " " + strLocalIP + " ";
+                string cmdline = "DartDataCollect " + strServerIP + " " + strLocalIP + " ";
                 if (connectionType == ConnectionType.Multicast)
                 {
                     cmdline += "Multicast";
@@ -123,24 +102,24 @@ namespace SampleClientML
             }
             /*  [NatNet] Initialize client object and connect to the server  */
             // Initialize a NatNetClient object and connect to a server.
-            connectToServer(strServerIP, strLocalIP, connectionType);
+            ConnectToServer(strServerIP, strLocalIP, connectionType);
 
 
             Console.WriteLine("============================ SERVER DESCRIPTOR ================================\n");
             /*  [NatNet] Confirming Server Connection. Instantiate the server descriptor object and obtain the server description. */
-            bool connectionConfirmed = fetchServerDescriptor();    // To confirm connection, request server description data
+            bool connectionConfirmed = FetchServerDescriptor();    // To confirm connection, request server description data
 
             if (connectionConfirmed)                         // Once the connection is confirmed.
             {
                 Console.WriteLine("============================= DATA DESCRIPTOR =================================\n");
                 Console.WriteLine("Now Fetching the Data Descriptor.\n");
-                fetchDataDescriptor();                  //Fetch and parse data descriptor
+                FetchDataDescriptor();                  //Fetch and parse data descriptor
 
                 Console.WriteLine("============================= FRAME OF DATA ===================================\n");
                 Console.WriteLine("Now Fetching the Frame Data\n");
 
                 /*  [NatNet] Assigning a event handler function for fetching frame data each time a frame is received   */
-                mNatNet.OnFrameReady += new NatNetML.FrameReadyEventHandler(fetchFrameData);
+                mNatNet!.OnFrameReady += new FrameReadyEventHandler(FetchFrameData);
 
                 Console.WriteLine("Success: Data Port Connected \n");
 
@@ -167,13 +146,13 @@ namespace SampleClientML
                     mForcePlates.Clear();
 
                     /* [NatNet] Re-fetch the updated list of descriptors  */
-                    fetchDataDescriptor();
+                    FetchDataDescriptor();
                     Console.WriteLine("===============================================================================\n");
                     mAssetChanged = false;
                 }
             }
             /*  [NatNet] Disabling data handling function   */
-            mNatNet.OnFrameReady -= fetchFrameData;
+            mNatNet!.OnFrameReady -= FetchFrameData;
 
             /*  Clearing Saved Descriptions */
             mRigidBodies.Clear();
@@ -201,7 +180,7 @@ namespace SampleClientML
         /// </summary>
         /// <param name="data">The actual frame of mocap data</param>
         /// <param name="client">The NatNet client instance</param>
-        static void fetchFrameData(NatNetML.FrameOfMocapData data, NatNetML.NatNetClientML client)
+        private static void FetchFrameData(FrameOfMocapData data, NatNetClientML client)
         {
 
             /*  Exception handler for cases where assets are added or removed.
@@ -221,11 +200,11 @@ namespace SampleClientML
                 else if (data.bRecording == true)
                     Console.WriteLine("[Recording] Frame #{0} Received:", data.iFrame);
 
-                processFrameData(data);
+                ProcessFrameData(data);
             }
         }
 
-        static void processFrameData(NatNetML.FrameOfMocapData data)
+        private static void ProcessFrameData(FrameOfMocapData data)
         {
             /*  Parsing Rigid Body Frame Data   */
             for (int i = 0; i < mRigidBodies.Count; i++)
@@ -236,8 +215,8 @@ namespace SampleClientML
                 {
                     if (rbID == data.RigidBodies[j].ID)      // When rigid body ID of the descriptions matches rigid body ID of the frame data.
                     {
-                        NatNetML.RigidBody rb = mRigidBodies[i];                // Saved rigid body descriptions
-                        NatNetML.RigidBodyData rbData = data.RigidBodies[j];    // Received rigid body descriptions
+                        RigidBody rb = mRigidBodies[i];                // Saved rigid body descriptions
+                        RigidBodyData rbData = data.RigidBodies[j];    // Received rigid body descriptions
 
                         if (rbData.Tracked == true)
                         {
@@ -246,9 +225,7 @@ namespace SampleClientML
 
                             // Rigid Body Euler Orientation
                             float[] quat = new float[4] { rbData.qx, rbData.qy, rbData.qz, rbData.qw };
-                            float[] eulers = new float[3];
-
-                            eulers = NatNetClientML.QuatToEuler(quat, NATEulerOrder.NAT_XYZr); //Converting quat orientation into XYZ Euler representation.
+                            float[] eulers = NatNetClientML.QuatToEuler(quat, NATEulerOrder.NAT_XYZr);
                             double xrot = RadiansToDegrees(eulers[0]);
                             double yrot = RadiansToDegrees(eulers[1]);
                             double zrot = RadiansToDegrees(eulers[2]);
@@ -272,8 +249,8 @@ namespace SampleClientML
                 {
                     if (sklID == data.Skeletons[j].ID)      // When skeleton ID of the description matches skeleton ID of the frame data.
                     {
-                        NatNetML.Skeleton skl = mSkeletons[i];              // Saved skeleton descriptions
-                        NatNetML.SkeletonData sklData = data.Skeletons[j];  // Received skeleton frame data
+                        Skeleton skl = mSkeletons[i];              // Saved skeleton descriptions
+                        SkeletonData sklData = data.Skeletons[j];  // Received skeleton frame data
 
                         Console.WriteLine("\tSkeleton ({0}):", skl.Name);
                         Console.WriteLine("\t\tSegment count: {0}", sklData.nRigidBodies);
@@ -281,7 +258,7 @@ namespace SampleClientML
                         /*  Now, for each of the skeleton segments  */
                         for (int k = 0; k < sklData.nRigidBodies; k++)
                         {
-                            NatNetML.RigidBodyData boneData = sklData.RigidBodies[k];
+                            RigidBodyData boneData = sklData.RigidBodies[k];
 
                             /*  Decoding skeleton bone ID   */
                             int skeletonID = HighWord(boneData.ID);
@@ -289,11 +266,11 @@ namespace SampleClientML
                             int uniqueID = skeletonID * 1000 + rigidBodyID;
                             int key = uniqueID.GetHashCode();
 
-                            NatNetML.RigidBody bone = (RigidBody)mHtSkelRBs[key];   //Fetching saved skeleton bone descriptions
+                            RigidBody? bone = (RigidBody?)mHtSkelRBs[key];   //Fetching saved skeleton bone descriptions
 
                             //Outputting only the hip segment data for the purpose of this sample.
                             if (k == 0)
-                                Console.WriteLine("\t\t{0:N3}: pos({1:N3}, {2:N3}, {3:N3})", bone.Name, boneData.x, boneData.y, boneData.z);
+                                Console.WriteLine("\t\t{0:N3}: pos({1:N3}, {2:N3}, {3:N3})", bone!.Name, boneData.x, boneData.y, boneData.z);
                         }
                     }
                 }
@@ -308,8 +285,8 @@ namespace SampleClientML
                 {
                     if (fpID == data.ForcePlates[j].ID)         // When force plate ID of the descriptions matches force plate ID of the frame data.
                     {
-                        NatNetML.ForcePlate fp = mForcePlates[i];                // Saved force plate descriptions
-                        NatNetML.ForcePlateData fpData = data.ForcePlates[i];    // Received forceplate frame data
+                        ForcePlate fp = mForcePlates[i];                // Saved force plate descriptions
+                        ForcePlateData fpData = data.ForcePlates[i];    // Received forceplate frame data
 
                         Console.WriteLine("\tForce Plate ({0}):", fp.Serial);
 
@@ -324,22 +301,23 @@ namespace SampleClientML
             Console.WriteLine("\n");
         }
 
-        static void connectToServer(string serverIPAddress, string localIPAddress, NatNetML.ConnectionType connectionType)
+        private static void ConnectToServer(string serverIPAddress, string localIPAddress, ConnectionType connectionType)
         {
             /*  [NatNet] Instantiate the client object  */
-            mNatNet = new NatNetML.NatNetClientML();
+            mNatNet = new NatNetClientML();
 
             /*  [NatNet] Checking verions of the NatNet SDK library  */
-            int[] verNatNet = new int[4];           // Saving NatNet SDK version number
-            verNatNet = mNatNet.NatNetVersion();
+            int[] verNatNet = mNatNet.NatNetVersion(); // Saving NatNet SDK version number
             Console.WriteLine("NatNet SDK Version: {0}.{1}.{2}.{3}", verNatNet[0], verNatNet[1], verNatNet[2], verNatNet[3]);
 
             /*  [NatNet] Connecting to the Server    */
 
-            NatNetClientML.ConnectParams connectParams = new NatNetClientML.ConnectParams();
-            connectParams.ConnectionType = connectionType;
-            connectParams.ServerAddress = serverIPAddress;
-            connectParams.LocalAddress = localIPAddress;
+            NatNetClientML.ConnectParams connectParams = new()
+            {
+                ConnectionType = connectionType,
+                ServerAddress = serverIPAddress,
+                LocalAddress = localIPAddress
+            };
 
             Console.WriteLine("\nConnecting...");
             Console.WriteLine("\tServer IP Address: {0}", serverIPAddress);
@@ -350,15 +328,15 @@ namespace SampleClientML
             mNatNet.Connect(connectParams);
         }
 
-        static bool fetchServerDescriptor()
+        private static bool FetchServerDescriptor()
         {
-            NatNetML.ServerDescription m_ServerDescriptor = new NatNetML.ServerDescription();
-            int errorCode = mNatNet.GetServerDescription(m_ServerDescriptor);
+            ServerDescription m_ServerDescriptor = new();
+            int errorCode = mNatNet!.GetServerDescription(m_ServerDescriptor);
 
             if (errorCode == 0)
             {
                 Console.WriteLine("Success: Connected to the server\n");
-                parseSeverDescriptor(m_ServerDescriptor);
+                ParseSeverDescriptor(m_ServerDescriptor);
                 return true;
             }
             else
@@ -369,7 +347,7 @@ namespace SampleClientML
             }
         }
 
-        static void parseSeverDescriptor(NatNetML.ServerDescription server)
+        private static void ParseSeverDescriptor(ServerDescription server)
         {
             Console.WriteLine("Server Info:");
             Console.WriteLine("\tHost               : {0}", server.HostComputerName);
@@ -378,14 +356,14 @@ namespace SampleClientML
             Console.WriteLine("\tNatNet Version     : {0}.{1}.{2}.{3}\n", server.NatNetVersion[0], server.NatNetVersion[1], server.NatNetVersion[2], server.NatNetVersion[3]);
         }
 
-        static void fetchDataDescriptor()
+        private static void FetchDataDescriptor()
         {
             /*  [NatNet] Fetch Data Descriptions. Instantiate objects for saving data descriptions and frame data    */
-            bool result = mNatNet.GetDataDescriptions(out mDataDescriptor);
+            bool result = mNatNet!.GetDataDescriptions(out mDataDescriptor);
             if (result)
             {
                 Console.WriteLine("Success: Data Descriptions obtained from the server.");
-                parseDataDescriptor(mDataDescriptor);
+                ParseDataDescriptor(mDataDescriptor);
             }
             else
             {
@@ -394,7 +372,7 @@ namespace SampleClientML
             Console.WriteLine("\n");
         }
 
-        static void parseDataDescriptor(List<NatNetML.DataDescriptor> description)
+        private static void ParseDataDescriptor(List<DataDescriptor> description)
         {
             //  [NatNet] Request a description of the Active Model List from the server. 
             //  This sample will list only names of the data sets, but you can access 
@@ -408,13 +386,13 @@ namespace SampleClientML
                 switch (dataSetType)
                 {
                     case ((int)NatNetML.DataDescriptorType.eMarkerSetData):
-                        NatNetML.MarkerSet mkset = (NatNetML.MarkerSet)description[i];
+                        MarkerSet mkset = (MarkerSet)description[i];
                         Console.WriteLine("\tMarkerSet ({0})", mkset.Name);
                         break;
 
 
                     case ((int)NatNetML.DataDescriptorType.eRigidbodyData):
-                        NatNetML.RigidBody rb = (NatNetML.RigidBody)description[i];
+                        RigidBody rb = (RigidBody)description[i];
                         Console.WriteLine("\tRigidBody ({0})", rb.Name);
 
                         // Saving Rigid Body Descriptions
@@ -423,7 +401,7 @@ namespace SampleClientML
 
 
                     case ((int)NatNetML.DataDescriptorType.eSkeletonData):
-                        NatNetML.Skeleton skl = (NatNetML.Skeleton)description[i];
+                        Skeleton skl = (Skeleton)description[i];
                         Console.WriteLine("\tSkeleton ({0}), Bones:", skl.Name);
 
                         //Saving Skeleton Descriptions
@@ -442,7 +420,7 @@ namespace SampleClientML
 
 
                     case ((int)NatNetML.DataDescriptorType.eForcePlateData):
-                        NatNetML.ForcePlate fp = (NatNetML.ForcePlate)description[i];
+                        ForcePlate fp = (ForcePlate)description[i];
                         Console.WriteLine("\tForcePlate ({0})", fp.Serial);
 
                         // Saving Force Plate Channel Names
@@ -455,7 +433,7 @@ namespace SampleClientML
                         break;
 
                     case ((int)NatNetML.DataDescriptorType.eDeviceData):
-                        NatNetML.Device dd = (NatNetML.Device)description[i];
+                        Device dd = (Device)description[i];
                         Console.WriteLine("\tDeviceData ({0})", dd.Serial);
 
                         // Saving Device Data Channel Names
@@ -469,7 +447,7 @@ namespace SampleClientML
 
                     case ((int)NatNetML.DataDescriptorType.eCameraData):
                         // Saving Camera Names
-                        NatNetML.Camera camera = (NatNetML.Camera)description[i];
+                        Camera camera = (Camera)description[i];
                         Console.WriteLine("\tCamera: ({0})", camera.Name);
 
                         // Saving Force Plate Channel Names
@@ -485,17 +463,17 @@ namespace SampleClientML
             }
         }
 
-        static double RadiansToDegrees(double dRads)
+        private static double RadiansToDegrees(double dRads)
         {
             return dRads * (180.0f / Math.PI);
         }
 
-        static int LowWord(int number)
+        private static int LowWord(int number)
         {
             return number & 0xFFFF;
         }
 
-        static int HighWord(int number)
+        private static int HighWord(int number)
         {
             return ((number >> 16) & 0xFFFF);
         }
