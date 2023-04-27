@@ -37,26 +37,32 @@ if __name__ == '__main__':
     steps = np.array([0, 1, 2, 3])
     sigma, alpha = dart.grid(state.params, x, y, z)
 
-    fig, axs = plt.subplots(2, 4, figsize=(16, 8))
-    for layer, ax in zip(steps, axs[0]):
-        tmp = ax.imshow(sigma[:, :, layer].T, origin='lower')
+    s_args = {"origin": "lower", "vmin": np.min(sigma), "vmax": np.max(sigma)}
+    a_args = {"origin": "lower", "vmin": np.min(alpha), "vmax": np.max(alpha)}
 
+    fig, axs = plt.subplots(2, 4, figsize=(12, 6))
+    for iz, col in zip(steps, axs.T):
+        col[0].imshow(sigma[:, :, iz].T, **s_args)
+        col[1].imshow(alpha[:, :, iz].T, **a_args)
+        col[0].text(1, 95, "$\\sigma: z={:.1f}$".format(z[iz]), color='white')
+        col[1].text(1, 95, "$\\alpha: z={:.1f}$".format(z[iz]), color='white')
+
+    for ax in axs.reshape(-1):
         ax.set_xticks(np.linspace(0, 100, 5))
         ax.set_yticks(np.linspace(0, 100, 5))
-        ax.set_xticklabels(["{:.2f}".format(x) for x in np.linspace(-r, r, 5)])
-        ax.set_yticklabels(["{:.2f}".format(x) for x in np.linspace(-r, r, 5)])
-        ax.set_title("$\\sigma: z={:.2f}$".format(z[layer]))
-        fig.colorbar(tmp)
+        ax.set_yticklabels([])
+        ax.set_xticklabels([])
+        ax.tick_params(axis=u'both', which=u'both', length=0)
+        ax.grid()
 
-    for layer, ax in zip(steps, axs[1]):
-        tmp = ax.imshow(alpha[:, :, layer].T, origin='lower')
+    _labels = ["{:.1f}".format(x) for x in np.linspace(-r, r, 5)[1:-1]]
+    labels = [""] + _labels + [""]
+    for ax in axs[:, 0]:
+        ax.set_yticklabels(labels)
+    for ax in axs[1]:
+        ax.set_xticklabels(labels)
 
-        ax.set_xticks(np.linspace(0, 100, 5))
-        ax.set_yticks(np.linspace(0, 100, 5))
-        ax.set_xticklabels(["{:.2f}".format(x) for x in np.linspace(-r, r, 5)])
-        ax.set_yticklabels(["{:.2f}".format(x) for x in np.linspace(-r, r, 5)])
-        ax.set_title("$\\alpha: z={:.2f}$".format(z[layer]))
-        fig.colorbar(tmp)
-
-    fig.tight_layout()
-    fig.savefig(os.path.join(args.path, "map.png"))
+    fig.tight_layout(pad=1.0)
+    fig.savefig(
+        os.path.join(args.path, "map.png"), bbox_inches='tight',
+        pad_inches=0.1, dpi=200)

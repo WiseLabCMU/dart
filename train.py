@@ -5,13 +5,16 @@ from argparse import ArgumentParser
 
 import jax
 
-from dart import train_dart
-from dart import fields
+from dart import fields, script_train
 
 
 def _parse_common(p: ArgumentParser) -> ArgumentParser:
 
-    p.add_argument("-o", "--out", default="result", help="Output base name.")
+    p.add_argument("-o", "--out", default="result", help="Output directory.")
+    p.add_argument("-r", "--key", default=42, type=int, help="Random key.")
+    p.add_argument(
+        "--device", default=0, type=int,
+        help="GPU index to use for computation (default 0).")
 
     g = p.add_argument_group(title="Sensor")
     g.add_argument(
@@ -25,7 +28,6 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
         help="Override on stochastic integration number of samples (k).")
 
     g = p.add_argument_group(title="Training")
-    g.add_argument("-r", "--key", default=42, type=int, help="Random key.")
     g.add_argument("--lr", default=0.01, type=float, help="Learning Rate.")
     g.add_argument(
         "-e", "--epochs", default=1, type=int,
@@ -34,11 +36,11 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
     g.add_argument(
         "--pval", default=0.2, type=float,
         help="Validation data holdout proportion.")
+    g.add_argument(
+        "--iid", default=False, action='store_true',
+        help="Use IID validation split.")
     g.add_argument("--loss", default="l2", help="Loss function.")
     g.add_argument("--weight", default=None, help="Loss weighting.")
-    g.add_argument(
-        "--device", default=0, type=int,
-        help="GPU index to use for computation (default 0).")
 
     g = p.add_argument_group(title="Dataset")
     g.add_argument(
@@ -62,8 +64,8 @@ if __name__ == '__main__':
         description="Train Doppler-Aided Radar Tomography Model.")
     subparsers = parser.add_subparsers()
     for k, v in fields._fields.items():
-        p = subparsers.add_parser(
-            k, help=v._description, description=v._description)
+        desc = "Train {} (fields.{}).".format(v._description, v.__name__)
+        p = subparsers.add_parser(k, help=desc, description=desc)
         _parse_common(p)
         v.to_parser(p.add_argument_group("Field"))
         p.set_defaults(field=v)
@@ -83,10 +85,10 @@ if __name__ == '__main__':
             "weight": args.weight, "loss": args.loss, "eps": 1e-6
         },
         "dataset": {
-            "pval": args.pval, "norm": args.norm, "iid_val": True,
+            "pval": args.pval, "norm": args.norm, "iid_val": args.iid,
             "path": args.path, "min_speed": args.min_speed,
             "repeat": args.repeat
         }
     }
     cfg.update(args.field.args_to_config(args))
-    train_dart(cfg)
+    script_train(cfg)

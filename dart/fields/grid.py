@@ -21,7 +21,7 @@ class SimpleGrid(hk.Module):
         for each axis or different resolutions.
     """
 
-    _description = "Simple grid with trilinear interpolation."
+    _description = "voxel grid with trilinear interpolation"
 
     def __init__(
         self, size: tuple[int, int, int], lower: Float32[Array, "3"],
