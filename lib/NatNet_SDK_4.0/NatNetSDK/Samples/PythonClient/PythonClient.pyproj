@@ -14,7 +14,7 @@
     <TestFramework>pytest</TestFramework>
     <UnitTestPattern>test*.py</UnitTestPattern>
     <UnitTestRootDirectory>.</UnitTestRootDirectory>
-    <CommandLineArguments>"127.0.0.1" "127.0.0.1" u</CommandLineArguments>
+    <CommandLineArguments>"192.168.1.120" "192.168.1.77" Multicast</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
