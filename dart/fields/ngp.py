@@ -28,7 +28,7 @@ class NGP(hk.Module):
         Multiresolution Hash Encoding," 2022.
     """
 
-    _description = "NGP (instant Neural Graphics Primitive) architecture."
+    _description = "NGP (instant Neural Graphics Primitive) architecture"
 
     def __init__(
             self, levels: Float32[Array, "n"], _head: int = 2,
@@ -132,7 +132,7 @@ class NGPSH(NGP):
         Fields," 2021.
     """
 
-    _description = "NGP with Spherical Harmonics."
+    _description = "NGP with view dependence using spherical harmonics"
 
     def __init__(
             self, levels: Float32[Array, "n"], harmonics: int = 25,

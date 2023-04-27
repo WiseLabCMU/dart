@@ -5,13 +5,14 @@ import time
 import os
 from tqdm import tqdm
 
+import numpy as np
 import jax
 
 from .dart import DART
 from .dataset import doppler_columns
 
 
-def train_dart(cfg: dict) -> None:
+def script_train(cfg: dict) -> None:
     """Train DART model from configuration dictionary."""
     os.makedirs(cfg["out"], exist_ok=True)
     print(json.dumps(cfg))
@@ -22,7 +23,7 @@ def train_dart(cfg: dict) -> None:
     k1, k2, k3 = jax.random.split(root, 3)
 
     dart = DART.from_config(**cfg)
-    train, val = doppler_columns(dart.sensor, key=k1, **cfg["dataset"])
+    train, val, validx = doppler_columns(dart.sensor, key=k1, **cfg["dataset"])
     assert val is not None
     train = train.shuffle(cfg["shuffle_buffer"], reshuffle_each_iteration=True)
 
@@ -38,3 +39,5 @@ def train_dart(cfg: dict) -> None:
     cfg["val_log"] = val_log
     with open(os.path.join(cfg["out"], "metadata.json"), 'w') as f:
         json.dump(cfg, f, indent=4)
+
+    np.savez(os.path.join(cfg["out"], "metadata.npz"), validx=validx)
