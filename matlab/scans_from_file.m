@@ -9,6 +9,7 @@ function [timestamps, scans] = scans_from_file( ...
 fprintf('Loading %s...\n', filename);
 load(filename, 'frames_real', 'frames_imag', 'start_time', 'end_time');
 frames = complex(frames_real, frames_imag);
+clear frames_real frames_imag
 
 fprintf('Processing %s...\n', filename);
 chirplen = size(frames, 4); % before decmiation
@@ -24,19 +25,19 @@ timestamps = (t_start + chirp_dt * (framelen - 1) / 2 : chirp_dt * stride : t_en
 numframes = size(timestamps, 1);
 assert(numframes == floor((numchirps_in - framelen) / stride) + 1);
 
-b = zeros(chirplen, framelen, numframes);
+scans = zeros(chirplen, framelen, numframes);
 for i = 1:numframes
     startchirp = stride * (i - 1) + 1;
-    b(:, :, i) = squeeze(frames(startchirp : startchirp + framelen - 1, 1, 1, :)).';
+    scans(:, :, i) = squeeze(frames(startchirp : startchirp + framelen - 1, 1, 1, :)).';
 end
-fff = fft2(b);
-fff(:, 1, :) = fff(:, 1, :) - median(fff(:, 1, :), 3);
+scans = fft2(scans);
+scans(:, 1, :) = scans(:, 1, :) - median(scans(:, 1, :), 3);
 
 res_doppler = framelen / doppler_decimation;
 res_range = chirplen / range_decimation;
-fff = circshift(fff, floor(res_doppler / 2), 2); % may have inconsistent phase without fftshift
-fff = permute(fff, [3 1 2]);
+scans = circshift(scans, floor(res_doppler / 2), 2); % may have inconsistent phase without fftshift
+scans = permute(scans, [3 1 2]);
 
-scans = abs(fff(:, 1:res_range, 1:res_doppler));
+scans = abs(scans(:, 1:res_range, 1:res_doppler));
 
 end
