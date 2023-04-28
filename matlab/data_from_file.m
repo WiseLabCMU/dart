@@ -1,15 +1,15 @@
-datadir = 'D:\dartdata\cabinets-sep';
-% dataset = 'cabinets-000';
+datadir = 'D:\dartdata';
+dataset = 'cubes';
 
 scandir = fullfile(datadir, dataset, 'frames');
 trajdir = fullfile(datadir, dataset, 'traj');
 outfile = fullfile(datadir, dataset, append(dataset, '.mat'));
 jsonfile = fullfile(datadir, dataset, append(dataset, '.json'));
-mapfile = fullfile(datadir, dataset, 'map.mat');
+% mapfile = fullfile(datadir, dataset, 'map.mat');
 dbgfile = fullfile(datadir, dataset, 'dbg.mat');
 simfile = fullfile(datadir, dataset, 'simulated.mat');
 
-range_decimation = 4;      % max_range=21m when range_decimation=1
+range_decimation = 8;      % max_range=21m when range_decimation=1
 doppler_decimation = 4;    % max_velocity=2m/s when doppler_decimation=1
 framelen = 256;
 stride = 64;
@@ -45,14 +45,14 @@ radarjson.d = [min_doppler, max_doppler, res_doppler];
 jsonstring = jsonencode(radarjson, 'PrettyPrint', true);
 writelines(jsonstring, jsonfile);
 
-map = gen_map();
-x = map.x;
-y = map.y;
-z = map.z;
-v = map.v;
-cx = map.cx;
-cy = map.cy;
-cz = map.cz;
+% map = gen_map();
+% x = map.x;
+% y = map.y;
+% z = map.z;
+% v = map.v;
+% cx = map.cx;
+% cy = map.cy;
+% cz = map.cz;
 
 all_t = [];
 all_rad = [];
@@ -107,5 +107,5 @@ wp_pos = all_wp_pos;
 wp_quat = all_wp_quat;
 clear all_t all_rad all_pos all_rot all_vel all_wp_t all_wp_pos all_wp_quat;
 save(outfile, 't', 'rad', 'pos', 'rot', 'vel', '-v7.3');
-save(mapfile, 'x', 'y', 'z', 'v', 'cx', 'cy', 'cz', '-v7.3');
+% save(mapfile, 'x', 'y', 'z', 'v', 'cx', 'cy', 'cz', '-v7.3');
 save(dbgfile, '-v7.3');
