@@ -222,7 +222,7 @@ class VirtualRadar(NamedTuple):
         rendered as 0.
         """
         valid_psi = vmap(partial(self.valid_mask, pose=pose))(self.d)
-        num_bins = jnp.sum(valid_psi, axis=1)
+        weight = jnp.sum(valid_psi, axis=1).astype(jnp.float32) / pose.s
 
         keys = jnp.array(random.split(key, self.d.shape[0]))
 
@@ -230,21 +230,4 @@ class VirtualRadar(NamedTuple):
             keys, d=self.d, valid_psi=valid_psi)
         return vmap(
             partial(self.render_column, sigma=sigma, pose=pose)
-        )(t_sensor, weight=num_bins.astype(float)).T
-
-    def plot_image(self, ax, image, labels=False):
-        """Plot range-doppler image using matplotlib.imshow."""
-        ax.imshow(
-            image, extent=self._extents, aspect='auto', origin='lower')
-        if labels:
-            ax.set_ylabel("Range")
-            ax.set_xlabel("Doppler")
-
-    def plot_images(self, axs, images, predicted):
-        """Plot predicted and actual images side by side."""
-        for y_true, y_pred, ax in zip(images, predicted, axs.reshape(-1, 2)):
-            self.plot_image(ax[0], y_true)
-            self.plot_image(ax[1], y_pred)
-            ax[0].set_title("Actual")
-            ax[1].set_title("Predicted")
-        ax[1].set_yticks([])
+        )(t_sensor, weight=weight).T

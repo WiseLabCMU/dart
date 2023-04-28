@@ -41,7 +41,7 @@ def gt_map(file: str) -> GroundTruth:
     resolution = jnp.array(data['v'].shape) / (upper - lower)
 
     occupancy = jnp.array(data['v'], dtype=float)
-    grid = jnp.stack([occupancy, occupancy], axis=-1)
+    grid = jnp.stack([occupancy, -10 * occupancy], axis=-1)
 
     return GroundTruth(grid, lower=lower, resolution=resolution)
 
@@ -165,13 +165,15 @@ def doppler_columns(
     if not iid_val:
         train = utils.shuffle(train, key=key)
 
+    train = __make_dataset(sensor, train)
     print("Train split : {} images --> {} valid columns".format(
         len(idx) - int(nval), train[1].shape))
-    train = types.Dataset.from_tensor_slices(__make_dataset(sensor, train))
+    train = types.Dataset.from_tensor_slices(train)
     if val is not None:
+        val = __make_dataset(sensor, val)
         print("Test split  : {} images --> {} valid columns".format(
             nval, val[1].shape))
-        val = types.Dataset.from_tensor_slices(__make_dataset(sensor, val))
+        val = types.Dataset.from_tensor_slices(val)
     if repeat > 0:
         train = train.repeat(repeat)
 

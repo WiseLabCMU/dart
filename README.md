@@ -55,16 +55,26 @@ results/
 
 Cabinets (sim):
 ```sh
-python train.py ngp -s data/cabinets/cabinets.json -o results/cabinets-sim -e 2 -p data/cabinets/sim.mat --weight sqrt --min_speed 0.25
-python evaluate.py -p results/cabinets-sim; python examples.py results/cabinets-sim; python map.py -p results/cabinets-sim
+python simulate.py -s data/cabinets/cabinets.json -o data/cabinets-000/sim.mat -g data/cabinets/map.mat -j data/cabinets-000/cabinets-000.mat
+python train.py ngp -s data/cabinets/cabinets.json -o results/cabinets.sim -e 5 --repeat 5 -p data/cabinets-000/sim.mat --min_speed 0.25
+TARGET=results/cabinets.sim RADIUS=2 make eval
 ```
 
 Cabinets (real):
 ```sh
-python train.py ngp -s data/cabinets/cabinets-fixed.json -o results/cabinets.000 -p data/cabinets-sep/cabinets-000/cabinets-000.mat --norm 1e4 --min_speed 0.25 -e 25; TARGET=results/cabinets.000 RADIUS=4 make eval
+python train.py ngp -s data/cabinets/cabinets.json -o results/cabinets.000 -p data/cabinets-000/cabinets-000.mat --norm 1e4 --min_speed 0.25 -e 5 --repeat 5
+TARGET=results/cabinets.000 RADIUS=2 make eval
 ```
 
-Motion Stage:
+Motion Stage (sim):
 ```sh
-python train.py ngp -s data/linear1/linear1-fixed.json -o results/linear1 -p data/linear1/linear1.mat --norm 1e6 --min_speed 0.005 -b 512 -e 10 --repeat 5; TARGET=results/linear1 RADIUS=0.6 make eval
+python simulate.py -s data/linear1/linear1.json -o data/linear1/sim.mat -g data/linear1/map.mat -j data/linear1/linear1.mat
+python train.py ngp -s data/linear1/linear1-fixed.json -o results/linear1.sim -p data/linear1/sim.mat --min_speed 0.005 -b 512 -e 5 --repeat 10
+TARGET=results/linear1.sim RADIUS=0.5 make eval
+```
+
+Motion Stage (real):
+```sh
+python train.py ngp -s data/linear1/linear1-fixed.json -o results/linear1 -p data/linear1/linear1.mat --norm 1e6 --min_speed 0.005 -b 512 -e 5 --repeat 10
+TARGET=results/linear1 RADIUS=0.5 make eval
 ```

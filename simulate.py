@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
     with open(args.sensor) as f:
         cfg = json.load(f)
-    sensor = VirtualRadar(**cfg)
+    sensor = VirtualRadar.from_config(**cfg)
 
     gt = dataset.gt_map(args.gt)
     traj = dataset.trajectory(args.traj)

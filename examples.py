@@ -28,7 +28,7 @@ if __name__ == '__main__':
     y_pred = dataset.load_arrays(os.path.join(args.path, "pred.mat"))["rad"]
     validx = np.load(os.path.join(args.path, "metadata.npz"))["validx"]
     y_true = dataset.load_arrays(cfg["dataset"]["path"])["rad"][validx]
-    y_true = y_true[:, :y_pred.shape[1]]
+    y_true = y_true[:, :y_pred.shape[1]] / cfg["dataset"]["norm"]
 
     rng = np.random.default_rng(args.key)
     idxs = np.sort(rng.choice(y_true.shape[0], 18, replace=False))
@@ -37,8 +37,10 @@ if __name__ == '__main__':
     gridspecs = fig.add_gridspec(6, 3, hspace=0.03, wspace=0.03)
     for idx, gs in zip(idxs, gridspecs):
         pair = gs.subgridspec(1, 2, wspace=0.0).subplots()
-        pair[0].imshow(y_true[idx])
-        pair[1].imshow(y_pred[idx])
+        vmin = min(np.min(y_true[idx]), np.min(y_pred[idx]))
+        vmax = max(np.max(y_true[idx]), np.max(y_pred[idx]))
+        pair[0].imshow(y_true[idx], vmin=vmin, vmax=vmax)
+        pair[1].imshow(y_pred[idx], vmin=vmin, vmax=vmax)
         pair[0].text(1, 5, "#{} Measured".format(idx), color='white')
         pair[1].text(1, 5, "#{} Predicted".format(idx), color='white')
 
