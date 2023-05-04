@@ -2,7 +2,7 @@
   "profiles": {
     "DartDataCollect": {
       "commandName": "Project",
-      "commandLineArgs": "192.168.1.120\r\n192.168.1.77\r\nMulticast"
+      "commandLineArgs": "192.168.1.120\r\n192.168.1.77\r\nMulticast\r\nD:\\dartdata\\dataset0"
     }
   }
 }

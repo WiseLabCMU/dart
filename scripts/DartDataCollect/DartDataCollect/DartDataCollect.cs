@@ -1,5 +1,6 @@
 ﻿using System.Collections;
-
+using System.Data.Common;
+using System.Text.Json;
 using NatNetML;
 
 
@@ -36,7 +37,6 @@ namespace DartDataCollect
         /*  [NatNet] Network connection configuration    */
         private static NatNetClientML? mNatNet;    // The client instance
 
-
         /*  List for saving each of datadescriptors */
         private static List<DataDescriptor> mDataDescriptor = new();
 
@@ -51,22 +51,24 @@ namespace DartDataCollect
         /*  boolean value for detecting change in asset */
         private static bool mAssetChanged = false;
 
+        /*  for writing to output files */
+        private static StreamWriter? mTrajWriter;
 
         public static void Main(string[] args)
         {
-            bool debug = true;
             string strLocalIP = "127.0.0.1";   // Local IP address (string)
             string strServerIP = "127.0.0.1";  // Server IP address (string)
+            string strDataDir = @".\";
             ConnectionType connectionType = ConnectionType.Multicast; // Multicast or Unicast mode
 
             Console.WriteLine("DartDataCollect managed client application starting...\n");
             if (args.Length == 0)
             {
                 Console.WriteLine("  command line options: \n");
-                Console.WriteLine("  DartDataCollect [server_ip_address [client_ip_address [Unicast/Multicast]]] \n");
+                Console.WriteLine("  DartDataCollect [server_ip_address [client_ip_address [Unicast/Multicast [output_dir]]]] \n");
                 Console.WriteLine("  Examples: \n");
-                Console.WriteLine("    DartDataCollect 127.0.0.1 127.0.0.1 Unicast \n");
-                Console.WriteLine("    DartDataCollect 127.0.0.1 127.0.0.1 m \n");
+                Console.WriteLine(@"    DartDataCollect 127.0.0.1 127.0.0.1 Unicast D:\dartdata\dataset0 \n");
+                Console.WriteLine(@"    DartDataCollect 127.0.0.1 127.0.0.1 m D:\dartdata\dataset0 \n");
                 Console.WriteLine("\n");
             }
             else
@@ -81,29 +83,23 @@ namespace DartDataCollect
                         string res = args[2][..1];
                         string res2 = res.ToLower();
                         if (res2 == "u")
-                        {
                             connectionType = ConnectionType.Unicast;
-                        }
+                        if (args.Length > 3)
+                            strDataDir = args[3];
                     }
                 }
             }
-            if (debug)
-            {
-                string cmdline = "DartDataCollect " + strServerIP + " " + strLocalIP + " ";
-                if (connectionType == ConnectionType.Multicast)
-                {
-                    cmdline += "Multicast";
-                }
-                else
-                {
-                    cmdline += "Unicast";
-                }
-                Console.WriteLine("Using: " + cmdline + "\n");
-            }
+
+            string cmdline = "DartDataCollect " + strServerIP + " " + strLocalIP + " ";
+            if (connectionType == ConnectionType.Multicast)
+                cmdline += "Multicast";
+            else
+                cmdline += "Unicast";
+            Console.WriteLine("Using: " + cmdline + "\n");
+
             /*  [NatNet] Initialize client object and connect to the server  */
             // Initialize a NatNetClient object and connect to a server.
             ConnectToServer(strServerIP, strLocalIP, connectionType);
-
 
             Console.WriteLine("============================ SERVER DESCRIPTOR ================================\n");
             /*  [NatNet] Confirming Server Connection. Instantiate the server descriptor object and obtain the server description. */
@@ -126,43 +122,45 @@ namespace DartDataCollect
                 Console.WriteLine("======================== STREAMING IN (PRESS ESC TO EXIT) =====================\n");
             }
 
-
-            while (!(Console.KeyAvailable && Console.ReadKey().Key == ConsoleKey.Escape))
+            /*  Open files for writing output */
+            Directory.CreateDirectory(strDataDir);
+            using (mTrajWriter = File.CreateText(Path.Combine(strDataDir, "traj.json")))
             {
-                // Continuously listening for Frame data
-                // Enter ESC to exit
-
-                // Exception handler for updated assets list.
-                if (mAssetChanged)
+                while (!(Console.KeyAvailable && Console.ReadKey().Key == ConsoleKey.Escape))
                 {
-                    Console.WriteLine("\n===============================================================================\n");
-                    Console.WriteLine("Change in the list of the assets. Refetching the descriptions");
+                    // Continuously listening for Frame data
+                    // Enter ESC to exit
 
-                    /*  Clear out existing lists */
-                    mDataDescriptor.Clear();
-                    mHtSkelRBs.Clear();
-                    mRigidBodies.Clear();
-                    mSkeletons.Clear();
-                    mForcePlates.Clear();
+                    // Exception handler for updated assets list.
+                    if (mAssetChanged)
+                    {
+                        Console.WriteLine("\n===============================================================================\n");
+                        Console.WriteLine("Change in the list of the assets. Refetching the descriptions");
 
-                    /* [NatNet] Re-fetch the updated list of descriptors  */
-                    FetchDataDescriptor();
-                    Console.WriteLine("===============================================================================\n");
-                    mAssetChanged = false;
+                        /*  Clear out existing lists */
+                        mDataDescriptor.Clear();
+                        mHtSkelRBs.Clear();
+                        mRigidBodies.Clear();
+                        mSkeletons.Clear();
+                        mForcePlates.Clear();
+
+                        /* [NatNet] Re-fetch the updated list of descriptors  */
+                        FetchDataDescriptor();
+                        Console.WriteLine("===============================================================================\n");
+                        mAssetChanged = false;
+                    }
                 }
+                /*  [NatNet] Disabling data handling function   */
+                mNatNet!.OnFrameReady -= FetchFrameData;
+
+                /*  Clearing Saved Descriptions */
+                mRigidBodies.Clear();
+                mSkeletons.Clear();
+                mHtSkelRBs.Clear();
+                mForcePlates.Clear();
+                mNatNet.Disconnect();
             }
-            /*  [NatNet] Disabling data handling function   */
-            mNatNet!.OnFrameReady -= FetchFrameData;
-
-            /*  Clearing Saved Descriptions */
-            mRigidBodies.Clear();
-            mSkeletons.Clear();
-            mHtSkelRBs.Clear();
-            mForcePlates.Clear();
-            mNatNet.Disconnect();
         }
-
-
 
         /// <summary>
         /// [NatNet] parseFrameData will be called when a frame of Mocap
@@ -182,14 +180,11 @@ namespace DartDataCollect
         /// <param name="client">The NatNet client instance</param>
         private static void FetchFrameData(FrameOfMocapData data, NatNetClientML client)
         {
-
             /*  Exception handler for cases where assets are added or removed.
                 Data description is re-obtained in the main function so that contents
                 in the frame handler is kept minimal. */
             if (data.bTrackingModelsChanged || data.nRigidBodies != mRigidBodies.Count || data.nSkeletons != mSkeletons.Count || data.nForcePlates != mForcePlates.Count)
-            {
                 mAssetChanged = true;
-            }
 
             /*  Processing and ouputting frame data every 200th frame.
                 This conditional statement is included in order to simplify the program output */
@@ -224,18 +219,36 @@ namespace DartDataCollect
 
                         if (rbData.Tracked)
                         {
-                            // Rigid Body Euler Orientation
-                            float[] quat = new float[4] { rbData.qx, rbData.qy, rbData.qz, rbData.qw };
-                            float[] eulers = NatNetClientML.QuatToEuler(quat, NATEulerOrder.NAT_XYZr);
-                            double xrot = RadiansToDegrees(eulers[0]);
-                            double yrot = RadiansToDegrees(eulers[1]);
-                            double zrot = RadiansToDegrees(eulers[2]);
                             if (doPrint)
                             {
                                 Console.WriteLine("\tRigidBody ({0}):", rb.Name);
                                 Console.WriteLine("\t\tpos ({0:N3}, {1:N3}, {2:N3})", rbData.x, rbData.y, rbData.z);
-                                Console.WriteLine("\t\tori ({0:N3}, {1:N3}, {2:N3})", xrot, yrot, zrot);
+                                Console.WriteLine("\t\tori ({0:N3}, {1:N3}, {2:N3}, {3:N3})", rbData.qx, rbData.qy, rbData.qz, rbData.qw);
                             }
+                            double timeDelaySeconds = mNatNet!.SecondsSinceHostTimestamp(data.CameraMidExposureTimestamp);
+                            DateTime trajtime = DateTime.UtcNow - TimeSpan.FromSeconds(timeDelaySeconds);
+                            OptitrackPoint optitrackPoint = new
+                            (
+                                object_id: "mmwave-radar",
+                                data: new
+                                (
+                                    position: new
+                                    (
+                                        x: rbData.x,
+                                        y: rbData.y,
+                                        z: rbData.z
+                                    ),
+                                    rotation: new
+                                    (
+                                        x: rbData.qx,
+                                        y: rbData.qy,
+                                        z: rbData.qz,
+                                        w: rbData.qw
+                                    ),
+                                    timestamp: (trajtime - DateTime.UnixEpoch).TotalSeconds
+                                )
+                            );
+                            mTrajWriter!.WriteLine(JsonSerializer.Serialize(optitrackPoint));
                         }
                         else if (doPrint)
                         {
@@ -438,9 +451,7 @@ namespace DartDataCollect
                         mForcePlates.Add(fp);
 
                         for (int j = 0; j < fp.ChannelCount; j++)
-                        {
                             Console.WriteLine("\t\tChannel {0}: {1}", j + 1, fp.ChannelNames[j]);
-                        }
                         break;
 
                     case (int)DataDescriptorType.eDeviceData:
@@ -451,9 +462,7 @@ namespace DartDataCollect
                         mDevices.Add(dd);
 
                         for (int j = 0; j < dd.ChannelCount; j++)
-                        {
                             Console.WriteLine("\t\tChannel {0}: {1}", j + 1, dd.ChannelNames[j]);
-                        }
                         break;
 
                     case (int)DataDescriptorType.eCameraData:
@@ -472,11 +481,6 @@ namespace DartDataCollect
                         break;
                 }
             }
-        }
-
-        private static double RadiansToDegrees(double dRads)
-        {
-            return dRads * (180.0f / Math.PI);
         }
 
         private static int LowWord(int number)
