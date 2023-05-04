@@ -35,15 +35,10 @@ def gt_map(file: str) -> GroundTruth:
     """Load ground truth reflectance map."""
     data = load_arrays(file)
     x, y, z = data['x'], data['y'], data['z']
-
     lower = jnp.array([np.min(x), np.min(y), np.min(z)])
     upper = jnp.array([np.max(x), np.max(y), np.max(z)])
-    resolution = jnp.array(data['v'].shape) / (upper - lower)
-
-    occupancy = jnp.array(data['v'], dtype=float)
-    grid = jnp.stack([occupancy, -10 * occupancy], axis=-1)
-
-    return GroundTruth(grid, lower=lower, resolution=resolution)
+    return GroundTruth.from_occupancy(
+        jnp.array(data['v'], dtype=float), lower, upper, alpha=-100)
 
 
 def trajectory(
@@ -65,8 +60,14 @@ def __raw_image_traj(
     pose = jax.vmap(make_pose)(src["vel"], src["pos"], src["rot"])
     image = src["rad"] / norm
     if sensor is not None:
+        if image.shape[1] > len(sensor.r):
+            image = image[:, :len(sensor.r)]
+        if image.shape[2] > len(sensor.d):
+            crop = int((image.shape[2] - len(sensor.d)) / 2)
+            image = image[:, :, crop:-crop]
         # Copy to garbage-collect the initial (larger) array
-        image = jnp.copy(image[:, :len(sensor.r)])
+        image = jnp.copy(image)
+
     return pose, image
 
 
@@ -96,6 +97,7 @@ def __make_dataset(
 
     poses, images = data
     columns = jax.vmap(process_image)(poses)
+
     images_col = jnp.swapaxes(images, 1, 2)
     dataset = (columns, images_col)
 

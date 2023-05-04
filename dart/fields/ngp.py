@@ -151,7 +151,7 @@ class NGPSH(NGP):
         alpha = mlp_out[-1]
 
         if dx is None:
-            sigma = mlp_out[0]
+            sigma = jnp.linalg.norm(mlp_out, ord=2)
         else:
             sh = spherical_harmonics(dx, self.harmonics)
             sigma = jnp.sum(mlp_out[:-1] * sh)

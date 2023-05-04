@@ -36,3 +36,22 @@ class GroundTruth:
         sigma, alpha = jnp.where(
             valid, interpolate(index, self.grid), jnp.zeros((2,)))
         return sigma, alpha
+
+    @classmethod
+    def from_occupancy(
+        cls, occupancy: Float32[Array, "Nx Ny Nz"],
+        lower: Float32[Array, "3"], upper: Float32[Array, "3"],
+        alpha: float = -100
+    ) -> "GroundTruth":
+        """Create ground truth from 0-1 occupancy grid.
+
+        Parameters
+        ----------
+        occupancy: source occupancy grid (i.e. from 3D model)
+        lower: coordinates of lower bound of the grid
+        upper: coordinates of upper bound of the grid
+        alpha: multiplier to apply to alpha of occupied cells
+        """
+        resolution = jnp.array(occupancy.shape) / (upper - lower)
+        grid = jnp.stack([occupancy, alpha * occupancy], axis=-1)
+        return cls(grid, lower=lower, resolution=resolution)

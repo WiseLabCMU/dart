@@ -78,3 +78,9 @@ Motion Stage (real):
 python train.py ngp -s data/linear1/linear1-fixed.json -o results/linear1 -p data/linear1/linear1.mat --norm 1e6 --min_speed 0.005 -b 512 -e 5 --repeat 10
 TARGET=results/linear1 RADIUS=0.5 make eval
 ```
+
+Coloradar:
+```sh
+python train.py ngp -s data/coloradar0/coloradar-short.json -o results/coloradar0-short -p data/coloradar0/coloradar0.mat --norm 1e4 --min_speed 1.0 -e 5 --base 2.0 --iid --repeat 5 -e 10
+TARGET=results/coloradar0 make eval
+```
