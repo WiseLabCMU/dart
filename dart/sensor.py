@@ -213,7 +213,7 @@ class VirtualRadar(NamedTuple):
         Parameters
         ----------
         key: PRNGKey for random sampling.
-        sigma: field function.
+        sigma: Field function.
         pose: Sensor pose parameters.
 
         Returns
