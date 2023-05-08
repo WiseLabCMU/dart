@@ -94,8 +94,8 @@ class VirtualCamera(NamedTuple):
 
         sigma, alpha = vmap(project)(jnp.linspace(0, self.max_depth, self.d))
 
-        transmitted = jnp.concatenate([jnp.zeros((1)), jnp.cumsum(alpha[:-1])])
-        amplitude = sigma * jnp.exp(transmitted * 0.1)
+        # transmitted = jnp.concatenate([jnp.zeros((1)), jnp.cumsum(alpha[:-1])])
+        amplitude = sigma  # * jnp.exp(transmitted * 0.1)
 
         d_idx = jnp.argmax(amplitude)
         d_clip = jnp.where(amplitude[d_idx] >= self.clip, d_idx / self.d, 1)

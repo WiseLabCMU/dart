@@ -26,6 +26,9 @@ def _parse():
     p.add_argument(
         "-c", "--camera", default=False, action="store_true",
         help="Render camera image instead of radar image.")
+    p.add_argument(
+        "--clip", default=0.01, type=float,
+        help="Inclusion threshold for camera rendering.")
     return p
 
 
@@ -33,7 +36,7 @@ def _render_dataset(state, args, traj):
     if args.camera:
         _render = jax.jit(partial(
             dart.camera, key=args.key, params=state,
-            camera=VirtualCamera(d=256, max_depth=3.2, f=1.0, clip=0.001)))
+            camera=VirtualCamera(d=256, max_depth=3.2, f=1.0, clip=args.clip)))
 
         def render(b):
             return _render(batch=b).to_rgb()
