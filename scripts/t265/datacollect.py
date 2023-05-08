@@ -1,10 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import argparse
 import tables as tb
 import pyrealsense2 as rs
+import os
 
-TRAJ_FILENAME = '../data/traj.h5'
+
 TRAJ_BUFSIZE = 200
 
 
@@ -23,12 +25,22 @@ class Pose(tb.IsDescription):
 
 
 def datacollect():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--output', '-o',
+        help='Output directory (eg. C:/Users/Administrator/Desktop/dartdata/dataset0',
+        default='./'
+    )
+    args = parser.parse_args()
+
     pipe = rs.pipeline()
     cfg = rs.config()
     cfg.disable_all_streams()
     cfg.enable_stream(rs.stream.pose)
     pipe.start(cfg)
-    with tb.open_file(TRAJ_FILENAME, mode='w', title='Trajectory file') as h5file:
+    os.makedirs(args.output)
+    outfile = os.path.join(args.output, 't265.h5')
+    with tb.open_file(outfile, mode='w', title='Trajectory file') as h5file:
         traj_group = h5file.create_group('/', 'traj', 'Trajectory information')
         pose_table = h5file.create_table(traj_group, 'pose', Pose, 'Pose data')
         pose_count = 0

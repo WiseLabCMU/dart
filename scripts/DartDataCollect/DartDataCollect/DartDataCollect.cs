@@ -1,5 +1,8 @@
 ﻿using System.Collections;
 using System.Data.Common;
+using System.Diagnostics;
+using System.Runtime.Versioning;
+using System.Security.AccessControl;
 using System.Text.Json;
 using NatNetML;
 
@@ -58,7 +61,7 @@ namespace DartDataCollect
         {
             string strLocalIP = "127.0.0.1";   // Local IP address (string)
             string strServerIP = "127.0.0.1";  // Server IP address (string)
-            string strDataDir = @".\";
+            string strOutputDir = @".\";
             ConnectionType connectionType = ConnectionType.Multicast; // Multicast or Unicast mode
 
             Console.WriteLine("DartDataCollect managed client application starting...\n");
@@ -67,8 +70,8 @@ namespace DartDataCollect
                 Console.WriteLine("  command line options: \n");
                 Console.WriteLine("  DartDataCollect [server_ip_address [client_ip_address [Unicast/Multicast [output_dir]]]] \n");
                 Console.WriteLine("  Examples: \n");
-                Console.WriteLine(@"    DartDataCollect 127.0.0.1 127.0.0.1 Unicast D:\dartdata\dataset0 \n");
-                Console.WriteLine(@"    DartDataCollect 127.0.0.1 127.0.0.1 m D:\dartdata\dataset0 \n");
+                Console.WriteLine(@"    DartDataCollect 127.0.0.1 127.0.0.1 Unicast C:\Users\Administrator\Desktop\dartdata\dataset0" + "\n");
+                Console.WriteLine(@"    DartDataCollect 127.0.0.1 127.0.0.1 m C:\Users\Administrator\Desktop\dartdata\dataset0" + "\n");
                 Console.WriteLine("\n");
             }
             else
@@ -85,7 +88,7 @@ namespace DartDataCollect
                         if (res2 == "u")
                             connectionType = ConnectionType.Unicast;
                         if (args.Length > 3)
-                            strDataDir = args[3];
+                            strOutputDir = args[3];
                     }
                 }
             }
@@ -123,9 +126,10 @@ namespace DartDataCollect
             }
 
             /*  Open files for writing output */
-            Directory.CreateDirectory(strDataDir);
-            using (mTrajWriter = File.CreateText(Path.Combine(strDataDir, "traj.json")))
+            Directory.CreateDirectory(strOutputDir);
+            using (mTrajWriter = File.CreateText(Path.Combine(strOutputDir, "optitrack.txt")))
             {
+                //Process.Start("cmd", "/c echo hello");
                 while (!(Console.KeyAvailable && Console.ReadKey().Key == ConsoleKey.Escape))
                 {
                     // Continuously listening for Frame data
