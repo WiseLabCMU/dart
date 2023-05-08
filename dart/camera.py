@@ -1,7 +1,9 @@
 """Virtual Camera routines."""
 
+from matplotlib import colors
 from functools import partial
 
+import numpy as np
 from jax import numpy as jnp
 from jax import vmap
 
@@ -10,6 +12,43 @@ from beartype.typing import NamedTuple
 
 from .pose import sensor_to_world
 from . import types
+
+
+class VirtualCameraImage(NamedTuple):
+    """Rendered virtual camera image.
+
+    Attributes
+    ----------
+    d: distance to (occlusion-adjusted) brightest point along a ray relative to
+        `max_depth`; has range [0, 1].
+    sigma: radar return of the brightest point for that ray.
+    a: amplitude contribution of that ray.
+    """
+
+    d: Float32[Array, "w h"]
+    sigma: Float32[Array, "w h"]
+    a: Float32[Array, "w h"]
+
+    def to_rgb(
+        self, clip: float = 5.0, range: tuple[float, float] = (0, 0.5)
+    ) -> Float32[Array, "w h 3"]:
+        """Convert to RGB image.
+
+        Parameters
+        ----------
+        clip: Percentile to clip extreme sigma values by.
+        range: Hue range to use for different sigma values.
+
+        Returns
+        -------
+        Image with floating point RGB in [0, 1].
+        """
+        lower = np.percentile(self.sigma, clip)
+        upper = np.percentile(self.sigma, 100 - clip)
+        sigma = (np.clip(self.sigma, lower, upper) - lower) / (upper - lower)
+        sigma = sigma * (range[1] - range[0]) + range[0]
+        hsv = np.stack([sigma, 1 - self.d, 1 - self.d], axis=-1)
+        return colors.hsv_to_rgb(hsv)
 
 
 class VirtualCamera(NamedTuple):
@@ -21,63 +60,72 @@ class VirtualCamera(NamedTuple):
     k: intrinsic matrix.
     d: depth resolution.
     max_depth: maximum depth to render to.
+    f: focal length.
+    clip: minimum return threshold.
     """
 
     # w: int
     # h: int
     # k: Float32[Array, "3 3"]
-    d: float
+    d: int
     max_depth: float
+    f: float
+    clip: float
 
     def render_pixel(
-        self, t: Float32[Array, "3"], sigma: types.SigmaField,
-        pose: types.RadarPose
-    ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
-        """Render a single pixel.
+        self, t: Float32[Array, "3"], pose: types.RadarPose,
+        field: types.SigmaField
+    ) -> tuple[Float32[Array, ""], Float32[Array, ""], Float32[Array, ""]]:
+        """Render a single pixel along `linspace(0, d, max_depth)`.
 
         Parameters
         ----------
         t: Sensor-space pixel ray on the unit sphere.
-        sigma: Field function.
         pose: Sensor pose.
+        field: Field function.
 
         Returns
         -------
-        depth: depth of the point that would contribute the most to a radar
-            rendering with range bins `linspace(0, d, max_depth)`.
-        sigma: the reflectance value at that point.
+        (d, sigma, alpha) pixel.
         """
         def project(r):
             t_world = sensor_to_world(r=r, t=t.reshape(3, 1), pose=pose)[:, 0]
-            return sigma(t_world)
+            return field(t_world)
 
-        sigma_samples, alpha_samples = vmap(project)(
-            jnp.arange(0, self.max_depth, self.d))
+        sigma, alpha = vmap(project)(jnp.linspace(0, self.max_depth, self.d))
 
-        transmitted = jnp.concatenate([
-            jnp.zeros((1)), jnp.cumsum(alpha_samples[:-1])])
-        amplitude = sigma_samples  # * jnp.exp(transmitted * 0.1)
-        d = jnp.argmax(amplitude)
-        return d.astype(float), jnp.max(sigma_samples)
+        transmitted = jnp.concatenate([jnp.zeros((1)), jnp.cumsum(alpha[:-1])])
+        amplitude = sigma * jnp.exp(transmitted * 0.1)
+
+        d_idx = jnp.argmax(amplitude)
+        d_clip = jnp.where(amplitude[d_idx] >= self.clip, d_idx / self.d, 1)
+
+        return d_clip, amplitude[d_idx], jnp.sum(amplitude)
 
     def render(
-        self, sigma: types.SigmaField, pose: types.RadarPose
-    ) -> Float32[Array, "w h 2"]:
+        self, pose: types.RadarPose, field: types.SigmaField
+    ) -> VirtualCameraImage:
         """Render single virtual depth camera image.
+
+        Notes
+        -----
+        `z` is "reversed" (positive z has lower index) to follow image
+        conventions where the top row has index 0.
 
         Parameters
         ----------
-        sigma: Field function.
         pose: Sensor pose.
+        field: Sigma/alpha field function.
 
         Returns
         -------
-        Image with (depth, sigma) channels.
+        Image with (depth, sigma, amplitude) channels.
         """
-        x = jnp.linspace(-1, 1, 64)
-        y = jnp.linspace(-1, 1, 64)
-        xx, yy = jnp.meshgrid(x, y)
-        xyz = jnp.stack([xx, yy, 0.2 * jnp.ones_like(yy)], axis=2)
+        y = jnp.linspace(-1, 1, 128)
+        z = jnp.linspace(1, -1, 128)
+        yy, zz = jnp.meshgrid(y, z)
+        xyz = jnp.stack([self.f * jnp.ones_like(yy), yy, zz], axis=2)
         xyz = xyz / jnp.linalg.norm(xyz, keepdims=True, axis=2)
-        return vmap(vmap(
-            partial(self.render_pixel, sigma=sigma, pose=pose)))(xyz)
+        distance, sigma, amplitude = vmap(vmap(
+            partial(self.render_pixel, pose=pose, field=field)))(xyz)
+        return VirtualCameraImage(d=distance, sigma=sigma, a=amplitude)

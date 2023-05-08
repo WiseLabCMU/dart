@@ -3,6 +3,7 @@
 import os
 import json
 from tqdm import tqdm
+from functools import partial
 from argparse import ArgumentParser
 
 import numpy as np
@@ -10,7 +11,7 @@ from jax import numpy as jnp
 import jax
 from scipy.io import savemat
 
-from dart import dataset, DART
+from dart import dataset, DART, VirtualCamera
 
 
 def _parse():
@@ -22,18 +23,30 @@ def _parse():
     p.add_argument(
         "-a", "--all", default=False, action="store_true",
         help="Render all images instead of only the validation set.")
+    p.add_argument(
+        "-c", "--camera", default=False, action="store_true",
+        help="Render camera image instead of radar image.")
     return p
 
 
-def _render_dataset(args, traj):
-    root_key = jax.random.PRNGKey(args.key)
+def _render_dataset(state, args, traj):
+    if args.camera:
+        _render = jax.jit(partial(
+            dart.camera, key=args.key, params=state,
+            camera=VirtualCamera(d=256, max_depth=3.2, f=1.0, clip=0.001)))
+
+        def render(b):
+            return _render(batch=b).to_rgb()
+    else:
+        _render = jax.jit(partial(dart.render, key=args.key, params=state))
+
+        def render(b):
+            return np.asarray(_render(batch=b))
+
     frames = []
     for batch in tqdm(traj.batch(args.batch)):
-        root_key, key = jax.random.split(root_key, 2)
-        pose = jax.tree_util.tree_map(jnp.array, batch)
-        keys = jnp.array(jax.random.split(key, batch.x.shape[0]))
-        frames.append(np.asarray(dart.render(state, pose)))
-    return {"rad": np.concatenate(frames, axis=0)}
+        frames.append(render(jax.tree_util.tree_map(jnp.array, batch)))
+    return {"cam" if args.camera else "rad": np.concatenate(frames, axis=0)}
 
 
 if __name__ == '__main__':
@@ -48,10 +61,12 @@ if __name__ == '__main__':
 
     if args.all:
         traj = dataset.trajectory(cfg["dataset"]["path"])
-        out = _render_dataset(args, traj)
-        savemat(os.path.join(args.path, "pred_all.mat"), out)
     else:
         subset = np.load(os.path.join(args.path, "metadata.npz"))["validx"]
         traj = dataset.trajectory(cfg["dataset"]["path"], subset=subset)
-        out = _render_dataset(args, traj)
-        savemat(os.path.join(args.path, "pred.mat"), out)
+
+    out = _render_dataset(state, args, traj)
+
+    outfile = "{}{}.mat".format(
+        "cam" if args.camera else "pred", "_all" if args.all else "")
+    savemat(os.path.join(args.path, outfile), out)
