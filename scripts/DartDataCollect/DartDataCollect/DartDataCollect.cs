@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Text.Json;
 using NatNetML;
 
@@ -126,6 +127,11 @@ namespace DartDataCollect
             Directory.CreateDirectory(strDataDir);
             using (mTrajWriter = File.CreateText(Path.Combine(strDataDir, "traj.json")))
             {
+                ProcessStartInfo psi = new(@"echo")
+                {
+                    Arguments = @"<run radar lua script instead of echo>"
+                };
+                Process.Start(psi);
                 while (!(Console.KeyAvailable && Console.ReadKey().Key == ConsoleKey.Escape))
                 {
                     // Continuously listening for Frame data
