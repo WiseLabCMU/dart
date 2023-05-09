@@ -81,9 +81,9 @@ class DART:
     ) -> tuple[types.ModelState, list, list]:
         """Train model."""
         @jax.jit
-        def loss_func(state, rng, batch):
+        def loss_func(params, rng, batch):
             columns, y_true = batch
-            y_pred = self.model.apply(state.params, rng, columns)
+            y_pred = self.model.apply(params, rng, columns)
             return self.loss(y_pred, y_true)
 
         # Note: not putting step in a closure here (jitting grads and updates
@@ -91,7 +91,7 @@ class DART:
         @jax.jit
         def step(state, rng, batch):
             loss, grads = jax.value_and_grad(
-                partial(loss_func, rng=rng, batch=batch))(state)
+                partial(loss_func, rng=rng, batch=batch))(state.params)
 
             clip = jax.tree_util.tree_map(jnp.nan_to_num, grads)
             updates, opt_state = self.optimizer.update(
@@ -108,7 +108,7 @@ class DART:
                 for _, batch in enumerate(epoch):
                     k, rng = jax.random.split(k, 2)
                     loss, state = step(state, rng, tf_to_jax(batch))
-                    avg = update_avg(float(loss), avg, j, epoch)
+                    avg = update_avg(float(loss), avg, epoch)
                     if jnp.isnan(loss):
                         print("WARNING: encountered NaN loss!")
 
@@ -118,7 +118,8 @@ class DART:
                 losses = []
                 for j, batch in enumerate(epoch):
                     k, rng = jax.random.split(k, 2)
-                    losses.append(loss_func(state, rng, tf_to_jax(batch)))
+                    losses.append(
+                        loss_func(state.params, rng, tf_to_jax(batch)))
                 losses_jnp = jnp.array(losses)
                 losses_jnp = losses_jnp[~jnp.isnan(losses_jnp)]
                 val_loss = np.mean(losses_jnp)
