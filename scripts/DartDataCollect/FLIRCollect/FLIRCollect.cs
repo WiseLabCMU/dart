@@ -45,7 +45,6 @@
 
 using System;
 using System.IO;
-using System.Collections.Generic;
 using SpinnakerNET.GenApi;
 using SpinnakerNET;
 
@@ -309,10 +308,10 @@ namespace FLIRCollect
                 // Begin acquiring images
                 cam.BeginAcquisition();
 
-                Console.WriteLine("Acquiring images...");
+                Console.WriteLine("Acquiring images: Press ESC to stop...");
 
                 // Retrieve device serial number for filename
-                String deviceSerialNumber = "";
+                string deviceSerialNumber = "";
 
                 IString iDeviceSerialNumber = nodeMapTLDevice.GetNode<IString>("DeviceSerialNumber");
                 if (iDeviceSerialNumber != null && iDeviceSerialNumber.IsReadable)
@@ -324,7 +323,6 @@ namespace FLIRCollect
                 Console.WriteLine();
 
                 // Retrieve, convert, and save images
-                const int NumImages = 10;
 
                 //
                 // Create ImageProcessor instance for post processing images
@@ -340,7 +338,8 @@ namespace FLIRCollect
                 //
                 processor.SetColorProcessing(ColorProcessingAlgorithm.HQ_LINEAR);
 
-                for (int imageCnt = 0; imageCnt < NumImages; imageCnt++)
+                int imageCnt = 0;
+                while (!(Console.KeyAvailable && Console.ReadKey().Key == ConsoleKey.Escape))
                 {
                     try
                     {
@@ -386,6 +385,7 @@ namespace FLIRCollect
                         Console.WriteLine("Error: {0}", ex.Message);
                         result = -1;
                     }
+                    ++imageCnt;
                 }
 
                 // End acquisition
@@ -487,9 +487,7 @@ namespace FLIRCollect
         // cameras.
         int RunSingleCamera(IManagedCamera cam, string outputPath)
         {
-            int result = 0;
-            int err = 0;
-
+            int result;
             try
             {
                 // Retrieve TL device nodemap and print device information
@@ -504,14 +502,14 @@ namespace FLIRCollect
                 INodeMap nodeMap = cam.GetNodeMap();
 
                 // Configure chunk data
-                err = ConfigureChunkData(nodeMap);
+                int err = ConfigureChunkData(nodeMap);
                 if (err < 0)
                 {
                     return err;
                 }
 
                 // Acquire images and display chunk data
-                result = result | AcquireImages(cam, nodeMap, nodeMapTLDevice, outputPath);
+                result |= AcquireImages(cam, nodeMap, nodeMapTLDevice, outputPath);
 
                 // Disable chunk data
                 err = DisableChunkData(nodeMap);
@@ -601,7 +599,7 @@ namespace FLIRCollect
                 try
                 {
                     // Run example
-                    result = result | program.RunSingleCamera(managedCamera, strOutputDir);
+                    result |= program.RunSingleCamera(managedCamera, strOutputDir);
                 }
                 catch (SpinnakerException ex)
                 {
