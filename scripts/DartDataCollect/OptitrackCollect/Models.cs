@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DartDataCollect
+namespace OptitrackCollect
 {
 #pragma warning disable IDE1006
     public record Vector3(double x, double y, double z);

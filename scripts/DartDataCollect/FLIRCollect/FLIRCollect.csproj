@@ -1,0 +1,160 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{1846D65E-043F-F5B0-2D71-DA3519C9D4BC}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>FLIRCollect</RootNamespace>
+    <AssemblyName Condition="'$(Configuration)' == 'Release'">ChunkData_CSharp_v143</AssemblyName>
+    <AssemblyName Condition="'$(Configuration)' == 'Debug'">ChunkData_CSharpd_v143</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <TargetFrameworkProfile />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <PlatformTarget>x86</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <BaseIntermediateOutputPath>obj\x86\Debug\</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>$(BaseIntermediateOutputPath)</IntermediateOutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <BaseIntermediateOutputPath>obj\x64\Debug\</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>$(BaseIntermediateOutputPath)</IntermediateOutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <PlatformTarget>x86</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <BaseIntermediateOutputPath>obj\x86\Release\</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>$(BaseIntermediateOutputPath)</IntermediateOutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <BaseIntermediateOutputPath>obj\x64\Release\</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>$(BaseIntermediateOutputPath)</IntermediateOutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyName>FLIRCollect</AssemblyName>
+  </PropertyGroup>
+  <Choose>
+    <When Condition=" ('$(Configuration)|$(Platform)' == 'Release|AnyCPU' And Exists('..\..\bin') And !Exists('..\..\bin64')) Or ('$(Configuration)|$(Platform)' == 'Release|x86' And Exists('..\..\bin'))  ">
+      <ItemGroup>
+        <Reference Include="SpinnakerNET_v140">
+          <HintPath>..\..\bin\vs2015\SpinnakerNET_v140.dll</HintPath>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition=" ('$(Configuration)|$(Platform)' == 'Debug|AnyCPU' And Exists('..\..\bin') And !Exists('..\..\bin64')) Or ('$(Configuration)|$(Platform)' == 'Debug|x86' And Exists('..\..\bin'))  ">
+      <ItemGroup>
+        <Reference Include="SpinnakerNETd_v140">
+          <HintPath>..\..\bin\vs2015\SpinnakerNETd_v140.dll</HintPath>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition=" ('$(Configuration)|$(Platform)' == 'Release|AnyCPU' And Exists('..\..\bin64')) Or ('$(Configuration)|$(Platform)' == 'Release|x64' And Exists('..\..\bin64'))  ">
+      <ItemGroup>
+        <Reference Include="SpinnakerNET_v140">
+          <HintPath>..\..\bin64\vs2015\SpinnakerNET_v140.dll</HintPath>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition=" ('$(Configuration)|$(Platform)' == 'Debug|AnyCPU' And Exists('..\..\bin64')) Or ('$(Configuration)|$(Platform)' == 'Debug|x64' And Exists('..\..\bin64'))  ">
+      <ItemGroup>
+        <Reference Include="SpinnakerNETd_v140">
+          <HintPath>..\..\bin64\vs2015\SpinnakerNETd_v140.dll</HintPath>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="SpinnakerNETd_v140">
+      <HintPath>..\..\..\..\..\..\..\Program Files\FLIR Systems\Spinnaker\bin64\vs2015\SpinnakerNETd_v140.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="FLIRCollect.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.8">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.8 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <PropertyGroup>
+    <GenerateResourceMSBuildArchitecture>CurrentArchitecture</GenerateResourceMSBuildArchitecture>
+    <GenerateResourceMSBuildRuntime>CurrentRuntime</GenerateResourceMSBuildRuntime>
+  </PropertyGroup>
+</Project>

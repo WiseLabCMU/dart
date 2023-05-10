@@ -7,7 +7,7 @@ using System.Text.Json;
 using NatNetML;
 
 
-/* DartDataCollect.cs
+/* OptitrackCollect.cs
  * 
  * This program is a sample console application which uses the managed NatNet assembly (NatNetML.dll) for receiving NatNet data
  * from a tracking server (e.g. Motive) and outputting them in every 200 mocap frames. This is provided mainly for demonstration purposes,
@@ -30,12 +30,12 @@ using NatNetML;
  */
 
 
-DartDataCollect.DartDataCollect.Main(args);
+OptitrackCollect.OptitrackCollect.Main(args);
 
 
-namespace DartDataCollect
+namespace OptitrackCollect
 {
-    public class DartDataCollect
+    public class OptitrackCollect
     {
         /*  [NatNet] Network connection configuration    */
         private static NatNetClientML? mNatNet;    // The client instance
@@ -64,14 +64,14 @@ namespace DartDataCollect
             string strOutputDir = @".\";
             ConnectionType connectionType = ConnectionType.Multicast; // Multicast or Unicast mode
 
-            Console.WriteLine("DartDataCollect managed client application starting...\n");
+            Console.WriteLine("OptitrackCollect managed client application starting...\n");
             if (args.Length == 0)
             {
                 Console.WriteLine("  command line options: \n");
-                Console.WriteLine("  DartDataCollect [server_ip_address [client_ip_address [Unicast/Multicast [output_dir]]]] \n");
+                Console.WriteLine("  OptitrackCollect [server_ip_address [client_ip_address [Unicast/Multicast [output_dir]]]] \n");
                 Console.WriteLine("  Examples: \n");
-                Console.WriteLine(@"    DartDataCollect 127.0.0.1 127.0.0.1 Unicast C:\Users\Administrator\Desktop\dartdata\dataset0" + "\n");
-                Console.WriteLine(@"    DartDataCollect 127.0.0.1 127.0.0.1 m C:\Users\Administrator\Desktop\dartdata\dataset0" + "\n");
+                Console.WriteLine(@"    OptitrackCollect 127.0.0.1 127.0.0.1 Unicast C:\Users\Administrator\Desktop\dartdata\dataset0" + "\n");
+                Console.WriteLine(@"    OptitrackCollect 127.0.0.1 127.0.0.1 m C:\Users\Administrator\Desktop\dartdata\dataset0" + "\n");
                 Console.WriteLine("\n");
             }
             else
@@ -93,7 +93,7 @@ namespace DartDataCollect
                 }
             }
 
-            string cmdline = "DartDataCollect " + strServerIP + " " + strLocalIP + " ";
+            string cmdline = "OptitrackCollect " + strServerIP + " " + strLocalIP + " ";
             if (connectionType == ConnectionType.Multicast)
                 cmdline += "Multicast";
             else
