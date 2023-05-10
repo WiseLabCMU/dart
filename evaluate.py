@@ -32,24 +32,34 @@ def _parse():
     return p
 
 
-def _render_dataset(state, args, traj):
-    if args.camera:
-        _render = jax.jit(partial(
-            dart.camera, key=args.key, params=state,
-            camera=VirtualCamera(d=256, max_depth=3.2, f=1.0, clip=args.clip)))
+def _render_camera(state, args, traj):
+    render = jax.jit(partial(
+        dart.camera, key=args.key, params=state,
+        camera=VirtualCamera(d=256, max_depth=3.2, f=1.0, clip=args.clip)))
 
-        def render(b):
-            return _render(batch=b).to_rgb()
-    else:
-        _render = jax.jit(partial(dart.render, key=args.key, params=state))
+    d, s, a = [], [], []
+    for batch in tqdm(traj.batch(args.batch)):
+        res = render(batch=jax.tree_util.tree_map(jnp.array, batch))
+        d.append(np.asarray(res.d))
+        s.append(np.asarray(res.sigma))
+        a.append(np.asarray(res.a))
+    return {
+        "d": np.concatenate(d, axis=0),
+        "sigma": np.concatenate(s, axis=0),
+        "a": np.concatenate(a, axis=0)
+    }
 
-        def render(b):
-            return np.asarray(_render(batch=b))
+
+def _render_radar(state, args, traj):
+
+    def render(b):
+        render = jax.jit(partial(dart.render, key=args.key, params=state))
 
     frames = []
     for batch in tqdm(traj.batch(args.batch)):
-        frames.append(render(jax.tree_util.tree_map(jnp.array, batch)))
-    return {"cam" if args.camera else "rad": np.concatenate(frames, axis=0)}
+        frames.append(np.asarray(
+            render(jax.tree_util.tree_map(jnp.array, batch))))
+    return {"rad": np.concatenate(frames, axis=0)}
 
 
 if __name__ == '__main__':
@@ -68,7 +78,10 @@ if __name__ == '__main__':
         subset = np.load(os.path.join(args.path, "metadata.npz"))["validx"]
         traj = dataset.trajectory(cfg["dataset"]["path"], subset=subset)
 
-    out = _render_dataset(state, args, traj)
+    if args.camera:
+        out = _render_camera(state, args, traj)
+    else:
+        out = _render_radar(state, args, traj)
 
     outfile = "{}{}.mat".format(
         "cam" if args.camera else "pred", "_all" if args.all else "")

@@ -2,6 +2,7 @@
 
 from matplotlib import colors
 from functools import partial
+from scipy.io import loadmat
 
 import numpy as np
 from jax import numpy as jnp
@@ -30,7 +31,8 @@ class VirtualCameraImage(NamedTuple):
     a: Float32[Array, "w h"]
 
     def to_rgb(
-        self, clip: float = 5.0, range: tuple[float, float] = (0, 0.5)
+        self, clip: float = 5.0, range: tuple[float, float] = (0, 0.5),
+        sat_decay_slope: float = 4.0
     ) -> Float32[Array, "w h 3"]:
         """Convert to RGB image.
 
@@ -38,6 +40,8 @@ class VirtualCameraImage(NamedTuple):
         ----------
         clip: Percentile to clip extreme sigma values by.
         range: Hue range to use for different sigma values.
+        sat_decay_slope: Slope for the saturation to decay to 0 for low-sigma
+            points.
 
         Returns
         -------
@@ -47,8 +51,16 @@ class VirtualCameraImage(NamedTuple):
         upper = np.percentile(self.sigma, 100 - clip)
         sigma = (np.clip(self.sigma, lower, upper) - lower) / (upper - lower)
         sigma = sigma * (range[1] - range[0]) + range[0]
-        hsv = np.stack([sigma, 1 - self.d, 1 - self.d], axis=-1)
+        hsv = np.stack([
+            sigma, np.minimum(1, sigma * sat_decay_slope), 1 - self.d
+        ], axis=-1)
         return colors.hsv_to_rgb(hsv)
+
+    @classmethod
+    def from_file(cls, file: str) -> "VirtualCameraImage":
+        """Load from file."""
+        data = loadmat(file)
+        return cls(d=data["d"], sigma=data["sigma"], a=data["a"])
 
 
 class VirtualCamera(NamedTuple):
