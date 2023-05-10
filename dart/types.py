@@ -4,7 +4,7 @@ from argparse import ArgumentParser, _ArgumentGroup, Namespace
 
 import tensorflow as tf
 
-from jaxtyping import Array, Float32, UInt8
+from jaxtyping import Array, Float32, UInt8, PyTree
 from beartype.typing import Union, Callable, NamedTuple
 from jax.random import PRNGKeyArray
 
@@ -92,3 +92,25 @@ RangeDopplerData = tuple[RadarPose, Float32[Array, "N Nr Nd"]]
 
 #: Doppler column data
 DopplerColumnData = tuple[RadarPose, Float32[Array, "N Nr"]]
+
+
+class ModelState(NamedTuple):
+    """Model parameters and optimizer state."""
+
+    params: PyTree
+    opt_state: PyTree
+
+    @staticmethod
+    def get_params(x: Union[PyTree, "ModelState"]) -> PyTree:
+        """Get params from the union type."""
+        if isinstance(x, ModelState):
+            return x.params
+        else:
+            return x
+
+
+class Average(NamedTuple):
+    """Loss averaging."""
+
+    avg: float
+    n: float

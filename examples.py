@@ -16,6 +16,9 @@ def _parse():
     p.add_argument(
         "-k", "--key", type=int, default=42,
         help="Random seed for choosing samples to plot.")
+    p.add_argument(
+        "-a", "--all", default=False, action="store_true",
+        help="Render all images instead of only the validation set.")
     return p
 
 
@@ -25,9 +28,15 @@ if __name__ == '__main__':
     with open(os.path.join(args.path, "metadata.json")) as f:
         cfg = json.load(f)
 
-    y_pred = dataset.load_arrays(os.path.join(args.path, "pred.mat"))["rad"]
-    validx = np.load(os.path.join(args.path, "metadata.npz"))["validx"]
-    y_true = dataset.load_arrays(cfg["dataset"]["path"])["rad"][validx]
+    y_true = dataset.load_arrays(cfg["dataset"]["path"])["rad"]
+    if args.all:
+        y_pred_file = "pred_all.mat"
+    else:
+        y_pred_file = "pred.mat"
+        validx = np.load(os.path.join(args.path, "metadata.npz"))["validx"]
+        y_true = y_true[validx]
+    y_pred = dataset.load_arrays(os.path.join(args.path, y_pred_file))["rad"]
+
     y_true = y_true[:, :y_pred.shape[1], 32:-32] / cfg["dataset"]["norm"]
 
     rng = np.random.default_rng(args.key)
@@ -49,5 +58,5 @@ if __name__ == '__main__':
             ax.set_yticks([])
 
     fig.savefig(
-        os.path.join(args.path, "pred.png"), bbox_inches='tight',
-        pad_inches=0.2, dpi=200)
+        os.path.join(args.path, "pred_all.png" if args.all else "pred.png"),
+        bbox_inches='tight', pad_inches=0.2, dpi=200)

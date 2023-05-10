@@ -12,21 +12,16 @@ import haiku as hk
 import optax
 
 from jaxtyping import Float32, Array, PyTree
-from beartype.typing import Callable, NamedTuple, Optional, Union
+from beartype.typing import Callable, Optional, Union
 from . import types
 
 from .sensor import VirtualRadar
+from .camera import VirtualCamera, VirtualCameraImage
 from . import fields
+from .types import ModelState
+from . import types
 from .utils import tf_to_jax, to_prngkey, update_avg
-from .opt import sparse_adam
 from .loss import get_loss_func
-
-
-class ModelState(NamedTuple):
-    """Model parameters and optimizer state."""
-
-    params: PyTree
-    opt_state: PyTree
 
 
 class DART:
@@ -42,51 +37,53 @@ class DART:
 
     def __init__(
         self, sensor: VirtualRadar, optimizer: optax.GradientTransformation,
-        sigma: Callable[[], types.SigmaField], loss: types.LossFunc
+        sigma: Callable[[], types.SigmaField], loss: types.LossFunc,
     ) -> None:
 
-        def forward_train(batch: types.TrainingColumn):
+        def forward(batch: types.TrainingColumn):
             keys = jnp.array(
                 jax.random.split(hk.next_rng_key(), batch.doppler.shape[0]))
             vfwd = jax.vmap(partial(sensor.column_forward, sigma=sigma()))
             return vfwd(keys, column=batch)
 
-        def forward_grid(batch: Float32[Array, "n 2"]):
-            return jax.vmap(sigma())(batch)
-
-        def forward_test(batch: types.RadarPose):
-            keys = jnp.array(
-                jax.random.split(hk.next_rng_key(), batch.x.shape[0]))
-            vfwd = jax.vmap(partial(sensor.render, sigma=sigma()))
-            return vfwd(keys, pose=batch)
-
-        self.model_train = hk.transform(forward_train)
-        self.model_grid = hk.transform(forward_grid)
-        self.model = hk.transform(forward_test)
+        self.sigma = sigma
+        self.model = hk.transform(forward)
 
         self.optimizer = optimizer
         self.sensor = sensor
         self.loss = loss
 
+    @classmethod
+    def from_config(
+        cls, sensor: dict = {}, field_name: str = "NGP", field: dict = {},
+        lr: float = 0.01, loss: dict = {}, **_
+    ) -> "DART":
+        """Create DART from config items."""
+        return cls(
+            sensor=VirtualRadar.from_config(**sensor),
+            optimizer=optax.adam(lr),
+            sigma=getattr(fields, field_name).from_config(**field),
+            loss=get_loss_func(**loss))
+
     def init(
         self, dataset: types.Dataset, key: types.PRNGSeed = 42
-    ) -> ModelState:
+    ) -> types.ModelState:
         """Initialize model parameters and optimizer state."""
         sample = tf_to_jax(list(dataset.take(1))[0][0])
-        params = self.model_train.init(to_prngkey(key), sample)
+        params = self.model.init(to_prngkey(key), sample)
         opt_state = self.optimizer.init(params)
-        return ModelState(params=params, opt_state=opt_state)
+        return types.ModelState(params=params, opt_state=opt_state)
 
     def fit(
-        self, train: types.Dataset, state: ModelState,
+        self, train: types.Dataset, state: types.ModelState,
         val: Optional[types.Dataset] = None, epochs: int = 1,
         tqdm=default_tqdm, key: types.PRNGSeed = 42
-    ) -> tuple[ModelState, list, list]:
+    ) -> tuple[types.ModelState, list, list]:
         """Train model."""
         @jax.jit
         def loss_func(params, rng, batch):
             columns, y_true = batch
-            y_pred = self.model_train.apply(params, rng, columns)
+            y_pred = self.model.apply(params, rng, columns)
             return self.loss(y_pred, y_true)
 
         # Note: not putting step in a closure here (jitting grads and updates
@@ -101,23 +98,20 @@ class DART:
                 clip, state.opt_state, state.params)
             params = optax.apply_updates(state.params, updates)
 
-            return loss, ModelState(params, opt_state)
+            return loss, types.ModelState(params, opt_state)
 
         train_log, val_log = [], []
         k = to_prngkey(key)
         for i in range(epochs):
             with tqdm(train, unit="batch", desc="Epoch {}".format(i)) as epoch:
-                avg = 0.
-                j = 0
+                avg = types.Average(0.0, 0.0)
                 for _, batch in enumerate(epoch):
                     k, rng = jax.random.split(k, 2)
-                    loss, _state = step(state, rng, tf_to_jax(batch))
-                    if not jnp.isnan(loss):
-                        state = _state
-                        avg = update_avg(float(loss), avg, j, epoch)
-                        j += 1
-                    else:
-                        print("Encountered NaN loss! Ignoring update.")
+                    loss, state = step(state, rng, tf_to_jax(batch))
+                    avg = update_avg(float(loss), avg, epoch)
+                    if jnp.isnan(loss):
+                        print("WARNING: encountered NaN loss!")
+
                 train_log.append(avg)
 
             if val is not None:
@@ -134,7 +128,7 @@ class DART:
 
         return state, train_log, val_log
 
-    def save(self, path: str, state: ModelState) -> None:
+    def save(self, path: str, state: types.ModelState) -> None:
         """Save state to file using pickle."""
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -142,43 +136,51 @@ class DART:
         with open(path, 'wb') as f:
             pickle.dump(state, f)
 
-    def load(self, path: str) -> ModelState:
+    def load(self, path: str) -> types.ModelState:
         """Load pickled state from file."""
         with open(path, 'rb') as f:
             return pickle.load(f)
 
     def render(
-        self, params: Union[ModelState, PyTree], batch: types.RadarPose,
+        self, params: Union[types.ModelState, PyTree], batch: types.RadarPose,
         key: types.PRNGSeed = 42
     ) -> Float32[Array, "w h b"]:
         """Render images from batch of poses."""
-        if isinstance(params, ModelState):
-            params = params.params
-        return jax.jit(self.model.apply)(params, to_prngkey(key), batch)
+        def forward(batch: types.RadarPose):
+            keys = jnp.array(
+                jax.random.split(hk.next_rng_key(), batch.x.shape[0]))
+            vfwd = jax.vmap(partial(self.sensor.render, sigma=self.sigma()))
+            return vfwd(keys, pose=batch)
+
+        return jax.jit(
+            hk.transform(forward).apply
+        )(ModelState.get_params(params), to_prngkey(key), batch)
 
     def grid(
-        self, params: Union[ModelState, PyTree],
-        x: Float32[Array, "x"], y: Float32[Array, "y"], z: Float32[Array, "z"]
+        self, params: Union[types.ModelState, PyTree],
+        x: Float32[Array, "x"], y: Float32[Array, "y"], z: Float32[Array, "z"],
+        key: types.PRNGSeed = 42
     ) -> tuple[Float32[Array, "x y z"], Float32[Array, "x y z"]]:
         """Evaluate model as a fixed grid."""
-        if isinstance(params, ModelState):
-            params = params.params
-        xyz = jnp.stack(
-            jnp.meshgrid(x, y, z, indexing='ij'), axis=-1).reshape(-1, 3)
-        sigma, alpha = jax.jit(self.model_grid.apply)(params, None, xyz)
+        def forward_grid(batch: Float32[Array, "n 2"]):
+            return jax.vmap(sigma())(batch)
+
+        grid = jnp.meshgrid(x, y, z, indexing='ij')
+        xyz = jnp.stack(grid, axis=-1).reshape(-1, 3)
+        sigma, alpha = jax.jit(
+            hk.transform(forward_grid).apply
+        )(types.ModelState.get_params(params), to_prngkey(key), xyz)
         shape = (x.shape[0], y.shape[0], z.shape[0])
         return sigma.reshape(shape), alpha.reshape(shape)
 
-    @classmethod
-    def from_config(
-        cls, sensor: dict = {}, field_name: str = "NGP", field: dict = {},
-        lr: float = 0.01, loss: dict = {}, **_
-    ) -> "DART":
-        """Create DART from config items."""
-        return cls(
-            sensor=VirtualRadar.from_config(**sensor),
-            # sparse_adam(lr=lr),
-            optimizer=optax.adam(lr),
-            sigma=getattr(fields, field_name).from_config(**field),
-            loss=get_loss_func(**loss)
-        )
+    def camera(
+        self, params: Union[types.ModelState, PyTree], batch: types.RadarPose,
+        camera: VirtualCamera, key: types.PRNGSeed = 42
+    ) -> VirtualCameraImage:
+        """Render camera images."""
+        def forward(batch: types.RadarPose):
+            vfwd = jax.vmap(partial(camera.render, field=self.sigma()))
+            return vfwd(pose=batch)
+
+        return hk.transform(forward).apply(
+            types.ModelState.get_params(params), to_prngkey(key), batch)

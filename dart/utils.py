@@ -25,11 +25,11 @@ def to_prngkey(key: types.PRNGSeed = 42) -> jax.random.PRNGKeyArray:
         return key
 
 
-def update_avg(loss: float, avg: float, idx: int, pbar: tqdm) -> float:
+def update_avg(loss: float, state: types.Average, pbar: tqdm) -> types.Average:
     """Update moving average on progress bar."""
-    avg = (avg * idx + loss) / (idx + 1)
+    avg = (state.avg * state.n + loss) / (state.n + 1)
     pbar.set_postfix(loss=avg)
-    return avg
+    return types.Average(avg=avg, n=state.n + 1)
 
 
 def get_size(tree: PyTree) -> int:
