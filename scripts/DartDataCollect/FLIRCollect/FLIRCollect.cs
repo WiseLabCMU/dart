@@ -378,7 +378,7 @@ namespace FLIRCollect
 
                                     // Convert image to mono 8
                                     using (
-                                        IManagedImage convertedImage = processor.Convert(rawImage, PixelFormatEnums.Mono8))
+                                        IManagedImage convertedImage = processor.Convert(rawImage, PixelFormatEnums.RGB8))
                                     {
                                         // Create unique file name
                                         string filename_nopath = imageCnt + ".jpg";
