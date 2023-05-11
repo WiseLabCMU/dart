@@ -51,6 +51,13 @@ using Newtonsoft.Json;
 
 namespace FLIRCollect
 {
+    class FLIRMetaData
+    {
+        public double timestamp;
+        public string filename;
+        public ManagedChunkData chunkData;
+    }
+
     class Program
     {
         // This function configures the camera to add chunk data to each image.
@@ -281,9 +288,7 @@ namespace FLIRCollect
         static int AcquireImages(IManagedCamera cam, INodeMap nodeMap, INodeMap nodeMapTLDevice, string outputPath)
         {
             int result = 0;
-
             Console.WriteLine("\n*** IMAGE ACQUISITION ***\n");
-
             try
             {
                 // Set acquisition mode to continuous
@@ -303,12 +308,22 @@ namespace FLIRCollect
                 }
 
                 iAcquisitionMode.Value = iAcquisitionModeContinuous.Symbolic;
-
                 Console.WriteLine("Acquisition mode set to continuous...");
+
+                // Set timestamp latch
+                ICommand iTimestampLatch = nodeMap.GetNode<ICommand>("TimestampLatch");
+                DateTime startTime = DateTime.UtcNow;
+                iTimestampLatch.Execute();
+                DateTime endTime = DateTime.UtcNow;
+                DateTime pcLatchTime = startTime.AddTicks((endTime - startTime).Ticks / 2);
+
+                IInteger iTimestampLatchValue = nodeMap.GetNode<IInteger>("TimestampLatchValue");
+                double flirLatchTime = iTimestampLatchValue.Value * 1e-9;
+
+                double timeOffset = new DateTimeOffset(pcLatchTime).ToUnixTimeMilliseconds() / 1000.0 - flirLatchTime;
 
                 // Begin acquiring images
                 cam.BeginAcquisition();
-
                 Console.WriteLine("Acquiring images: Press ESC to stop...");
 
                 // Retrieve device serial number for filename
@@ -318,7 +333,6 @@ namespace FLIRCollect
                 if (iDeviceSerialNumber != null && iDeviceSerialNumber.IsReadable)
                 {
                     deviceSerialNumber = iDeviceSerialNumber.Value;
-
                     Console.WriteLine("Device serial number retrieved as {0}...", deviceSerialNumber);
                 }
                 Console.WriteLine();
@@ -367,7 +381,8 @@ namespace FLIRCollect
                                         IManagedImage convertedImage = processor.Convert(rawImage, PixelFormatEnums.Mono8))
                                     {
                                         // Create unique file name
-                                        string filename = Path.Combine(outputPath, imageCnt + ".jpg");
+                                        string filename_nopath = imageCnt + ".jpg";
+                                        string filename = Path.Combine(outputPath, filename_nopath);
 
                                         // Save image
                                         convertedImage.Save(filename);
@@ -375,8 +390,14 @@ namespace FLIRCollect
 
                                         // Display chunk data
                                         ManagedChunkData managedChunkData = GetChunkData(rawImage);
+                                        FLIRMetaData metaData = new FLIRMetaData
+                                        {
+                                            timestamp = timeOffset + managedChunkData.Timestamp * 1e-9,
+                                            filename = filename_nopath,
+                                            chunkData = managedChunkData
+                                        };
                                         if (managedChunkData != null)
-                                            metaDataWriter.WriteLine(JsonConvert.SerializeObject(managedChunkData));
+                                            metaDataWriter.WriteLine(JsonConvert.SerializeObject(metaData));
                                         else
                                             result = -1;
                                     }
