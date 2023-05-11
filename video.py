@@ -26,7 +26,7 @@ def _parse():
     return p
 
 
-def loadrad(path):
+def _loadrad(path):
     rad = loadmat(path)["rad"]
     p5 = np.nanpercentile(rad, 5)
     p95 = np.nanpercentile(rad, 99.9)
@@ -49,14 +49,16 @@ if __name__ == '__main__':
 
     cam = np.concatenate(
         [VirtualCameraImage.from_file(p).to_rgb() for p in cam_path], axis=2)
-    rad = np.concatenate([loadrad(p) for p in rad_path], axis=2)
+    rad = np.concatenate([_loadrad(p) for p in rad_path], axis=2)
 
     fourcc = cv2.VideoWriter_fourcc(*args.fourcc)
     out = cv2.VideoWriter(
         args.out, fourcc, args.fps, (width, args.size * 2))
     for fc, fr in tqdm(zip(cam, rad), total=len(cam)):
-        fc = cv2.resize(fc, (width, args.size))
-        fr = cv2.resize(fr, (width, args.size))
+        fc = cv2.resize(
+            fc, (width, args.size), interpolation=cv2.INTER_NEAREST)
+        fr = cv2.resize(
+            fr, (width, args.size), interpolation=cv2.INTER_NEAREST)
         f = np.concatenate([fc, fr], axis=0)
         # RGB -> BGR since OpenCV assumes BGR
         out.write(cv2.resize(f, (width, args.size * 2))[:, :, [2, 1, 0]])
