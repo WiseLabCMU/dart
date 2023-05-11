@@ -47,6 +47,7 @@ using System;
 using System.IO;
 using SpinnakerNET.GenApi;
 using SpinnakerNET;
+using Newtonsoft.Json;
 
 namespace FLIRCollect
 {
@@ -339,53 +340,57 @@ namespace FLIRCollect
                 processor.SetColorProcessing(ColorProcessingAlgorithm.HQ_LINEAR);
 
                 int imageCnt = 0;
-                while (!(Console.KeyAvailable && Console.ReadKey().Key == ConsoleKey.Escape))
+                using (StreamWriter metaDataWriter = File.CreateText(Path.Combine(outputPath, "..", "flir.txt")))
                 {
-                    try
+                    while (!(Console.KeyAvailable && Console.ReadKey().Key == ConsoleKey.Escape))
                     {
-                        // Retrieve next received image and ensure image completion
-                        using(IManagedImage rawImage = cam.GetNextImage(1000))
+                        try
                         {
-                            if (rawImage.IsIncomplete)
+                            // Retrieve next received image and ensure image completion
+                            using (IManagedImage rawImage = cam.GetNextImage(1000))
                             {
-                                Console.WriteLine("Image incomplete with image status {0}...", rawImage.ImageStatus);
-                            }
-                            else
-                            {
-                                // Print image information
-                                Console.WriteLine(
-                                    "Grabbed image {0}, width = {1}, height = {1}",
-                                    imageCnt,
-                                    rawImage.Width,
-                                    rawImage.Height);
-
-                                // Convert image to mono 8
-                                using(
-                                    IManagedImage convertedImage = processor.Convert(rawImage, PixelFormatEnums.Mono8))
+                                if (rawImage.IsIncomplete)
                                 {
-                                    // Create unique file name
-                                    string filename = Path.Combine(outputPath, imageCnt + ".jpg");
+                                    Console.WriteLine("Image incomplete with image status {0}...", rawImage.ImageStatus);
+                                }
+                                else
+                                {
+                                    // Print image information
+                                    Console.WriteLine(
+                                        "Grabbed image {0}, width = {1}, height = {1}",
+                                        imageCnt,
+                                        rawImage.Width,
+                                        rawImage.Height);
 
-                                    // Save image
-                                    convertedImage.Save(filename);
+                                    // Convert image to mono 8
+                                    using (
+                                        IManagedImage convertedImage = processor.Convert(rawImage, PixelFormatEnums.Mono8))
+                                    {
+                                        // Create unique file name
+                                        string filename = Path.Combine(outputPath, imageCnt + ".jpg");
 
-                                    Console.WriteLine("Image saved at {0}", filename);
+                                        // Save image
+                                        convertedImage.Save(filename);
+                                        Console.WriteLine("Image saved at {0}", filename);
 
-                                    // Display chunk data
-                                    ManagedChunkData managedChunkData = GetChunkData(rawImage);
-                                    if (managedChunkData == null)
-                                        result = -1;
+                                        // Display chunk data
+                                        ManagedChunkData managedChunkData = GetChunkData(rawImage);
+                                        if (managedChunkData != null)
+                                            metaDataWriter.WriteLine(JsonConvert.SerializeObject(managedChunkData));
+                                        else
+                                            result = -1;
+                                    }
                                 }
                             }
+                            Console.WriteLine();
                         }
-                        Console.WriteLine();
+                        catch (SpinnakerException ex)
+                        {
+                            Console.WriteLine("Error: {0}", ex.Message);
+                            result = -1;
+                        }
+                        ++imageCnt;
                     }
-                    catch (SpinnakerException ex)
-                    {
-                        Console.WriteLine("Error: {0}", ex.Message);
-                        result = -1;
-                    }
-                    ++imageCnt;
                 }
 
                 // End acquisition
