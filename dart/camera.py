@@ -54,7 +54,7 @@ class VirtualCameraImage(NamedTuple):
         hsv = np.stack([
             sigma, np.minimum(1, sigma * sat_decay_slope), 1 - self.d
         ], axis=-1)
-        return colors.hsv_to_rgb(hsv)
+        return (colors.hsv_to_rgb(hsv) * 255).astype(np.uint8)
 
     @classmethod
     def from_file(cls, file: str) -> "VirtualCameraImage":
@@ -102,12 +102,14 @@ class VirtualCamera(NamedTuple):
         """
         def project(r):
             t_world = sensor_to_world(r=r, t=t.reshape(3, 1), pose=pose)[:, 0]
-            return field(t_world)
+            dx = pose.x - t_world
+            dx_norm = dx / jnp.linalg.norm(dx)
+            return field(t_world, dx=dx_norm)
 
         sigma, alpha = vmap(project)(jnp.linspace(0, self.max_depth, self.d))
 
         # transmitted = jnp.concatenate([jnp.zeros((1)), jnp.cumsum(alpha[:-1])])
-        amplitude = sigma  # * jnp.exp(transmitted * 0.1)
+        amplitude = jnp.nan_to_num(sigma, nan=0.0, copy=False)  # * jnp.exp(transmitted * 0.1)
 
         d_idx = jnp.argmax(amplitude)
         d_clip = jnp.where(amplitude[d_idx] >= self.clip, d_idx / self.d, 1)

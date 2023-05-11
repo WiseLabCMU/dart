@@ -36,8 +36,7 @@ if __name__ == '__main__':
         validx = np.load(os.path.join(args.path, "metadata.npz"))["validx"]
         y_true = y_true[validx]
     y_pred = dataset.load_arrays(os.path.join(args.path, y_pred_file))["rad"]
-
-    y_true = y_true[:, :y_pred.shape[1], 32:-32] / cfg["dataset"]["norm"]
+    y_true = y_true[:, :y_pred.shape[1]] / cfg["dataset"]["norm"]
 
     rng = np.random.default_rng(args.key)
     idxs = np.sort(rng.choice(y_true.shape[0], 18, replace=False))

@@ -1,0 +1,2 @@
+mypy
+tqdm-stubs

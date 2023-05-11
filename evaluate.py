@@ -19,7 +19,7 @@ def _parse():
     p.add_argument("-p", "--path", help="File path to output base name.")
     p.add_argument(
         "-r", "--key", default=42, type=int, help="Random seed.")
-    p.add_argument("-b", "--batch", default=32, type=int, help="Batch size")
+    p.add_argument("-b", "--batch", default=None, type=int, help="Batch size")
     p.add_argument(
         "-a", "--all", default=False, action="store_true",
         help="Render all images instead of only the validation set.")
@@ -51,20 +51,20 @@ def _render_camera(state, args, traj):
 
 
 def _render_radar(state, args, traj):
-
-    def render(b):
-        render = jax.jit(partial(dart.render, key=args.key, params=state))
-
+    render = jax.jit(partial(dart.render, key=args.key, params=state))
     frames = []
     for batch in tqdm(traj.batch(args.batch)):
         frames.append(np.asarray(
-            render(jax.tree_util.tree_map(jnp.array, batch))))
+            render(batch=jax.tree_util.tree_map(jnp.array, batch))))
     return {"rad": np.concatenate(frames, axis=0)}
 
 
 if __name__ == '__main__':
 
     args = _parse().parse_args()
+
+    if args.batch is None:
+        args.batch = 4 if args.camera else 32
 
     with open(os.path.join(args.path, "metadata.json")) as f:
         cfg = json.load(f)

@@ -112,7 +112,7 @@ class DART:
                     if jnp.isnan(loss):
                         print("WARNING: encountered NaN loss!")
 
-                train_log.append(avg)
+                train_log.append(avg.avg)
 
             if val is not None:
                 losses = []
@@ -152,9 +152,8 @@ class DART:
             vfwd = jax.vmap(partial(self.sensor.render, sigma=self.sigma()))
             return vfwd(keys, pose=batch)
 
-        return jax.jit(
-            hk.transform(forward).apply
-        )(ModelState.get_params(params), to_prngkey(key), batch)
+        return hk.transform(forward).apply(
+            ModelState.get_params(params), to_prngkey(key), batch)
 
     def grid(
         self, params: Union[types.ModelState, PyTree],
@@ -163,13 +162,12 @@ class DART:
     ) -> tuple[Float32[Array, "x y z"], Float32[Array, "x y z"]]:
         """Evaluate model as a fixed grid."""
         def forward_grid(batch: Float32[Array, "n 2"]):
-            return jax.vmap(sigma())(batch)
+            return jax.vmap(self.sigma())(batch)
 
         grid = jnp.meshgrid(x, y, z, indexing='ij')
         xyz = jnp.stack(grid, axis=-1).reshape(-1, 3)
-        sigma, alpha = jax.jit(
-            hk.transform(forward_grid).apply
-        )(types.ModelState.get_params(params), to_prngkey(key), xyz)
+        sigma, alpha = hk.transform(forward_grid).apply(
+            types.ModelState.get_params(params), to_prngkey(key), xyz)
         shape = (x.shape[0], y.shape[0], z.shape[0])
         return sigma.reshape(shape), alpha.reshape(shape)
 

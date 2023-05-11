@@ -26,7 +26,7 @@ def make_pose(
     # Transform velocity to sensor space and separate magnitude
     v_sensor = jnp.matmul(jnp.linalg.inv(A), v)
     s = jnp.linalg.norm(v_sensor)
-    v = v_sensor / s
+    v = jnp.nan_to_num(v_sensor / s, nan=0.0)
 
     # This takes an identity matrix, mods out v, and turns the remainder
     # into an orthonormal basis using SVD for best stability.

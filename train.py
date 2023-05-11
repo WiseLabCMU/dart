@@ -45,7 +45,7 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
     g = p.add_argument_group(title="Dataset")
     g.add_argument(
         "--norm", default=1.0, type=float,
-        help="Percentile normalization value.")
+        help="Normalization value.")
     g.add_argument(
         "--min_speed", default=0.1, type=float, help="Reject frames with "
         "insufficient (i.e. not enough doppler bins); 0 to disable.")
