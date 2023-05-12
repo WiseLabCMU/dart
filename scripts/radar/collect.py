@@ -1,30 +1,42 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+import argparse
 import listener
-# import organizer
-import sys
+import organizer_copy as org
+import os
 import pickle
-import glob
+import sys
+import tables as tb
 
-filename = sys.argv[1]
-fileroot = filename[:-4]
 
-obj = listener.UDPListener(fileroot=fileroot)
+def collect():
+	parser = argparse.ArgumentParser()
+	parser.add_argument(
+		'--output', '-o',
+		help='Output directory (eg. C:/Users/Administrator/Desktop/dartdata/dataset0',
+		default='./'
+	)
+	args = parser.parse_args()
 
-input("Press Enter to continue...")
+	if not os.path.exists(args.output):
+		os.makedirs(args.output)
+	outfile = os.path.join(args.output, 'radarpackets.pkl')
 
-all_data = obj.read()
+	obj = listener.UDPListener()
 
-print("Start time: ", all_data[3])
-print("End time: ", all_data[4])
+	input("Press Enter to continue...")
 
-with open(filename, 'wb') as f:
-	pickle.dump(all_data, f)
+	all_data = obj.read()
 
-print("Storing collected files in ", filename)
+	print("Start time: ", all_data[3])
+	print("End time: ", all_data[4])
 
-# print("Start time: ", all_data[0])
-# print("End time: ", all_data[1])
+	with open(outfile, 'wb') as f:
+		pickle.dump(all_data, f)
 
-# with open(fileroot + '_timestamp.pkl', 'wb') as f:
-# 	pickle.dump(all_data, f)
+	print("Storing collected files in ", outfile)
 
-# print("Storing collected files in ", fileroot)
+
+if __name__ == '__main__':
+	collect()
