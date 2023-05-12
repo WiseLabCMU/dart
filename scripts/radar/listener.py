@@ -36,17 +36,20 @@ def udp_collect():
     parser.add_argument(
         '--data_port', '-d',
         help='Port for data stream (eg. 4098)',
+        type=int,
         default=4098
     )
     parser.add_argument(
         '--config_port', '-c',
         help='Port for config stream (eg. 4096)',
+        type=int,
         default=4096
     )
     parser.add_argument(
         '--timeout', '-t',
         help='Socket timeout in seconds (eg. 1)',
-        default=1
+        type=float,
+        default=3
     )
     args = parser.parse_args()
 
@@ -79,11 +82,11 @@ def udp_collect():
         packet_table = h5file.create_table(scan_group, 'packet', Packet, 'Packet data')
         packet_in_chunk = 0
         num_all_packets = 0
-        start_time = dt.utcnow()
+        start_time = dt.datetime.utcnow()
         try:
             while True:
                 packet_num, byte_count, packet_data = _read_data_packet(data_socket)
-                curr_time = dt.utcnow()
+                curr_time = dt.datetime.utcnow()
                 packet_table.row['t'] = curr_time
                 packet_table.row['packet_data'] = packet_data
                 packet_table.row['packet_num'] = packet_num
@@ -98,7 +101,7 @@ def udp_collect():
                     packet_in_chunk = 0
 
         except (socket.timeout, KeyboardInterrupt):
-            curr_time = dt.utcnow()
+            curr_time = dt.datetime.utcnow()
             print(f'Flushing {packet_in_chunk} packets.')
             print(f'Capture time: {curr_time - start_time}s\n')
             print("Total packets captured ", num_all_packets)
