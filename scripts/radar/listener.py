@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import datetime as dt
+import time
 import numpy as np
 import os
 import socket
@@ -11,14 +11,14 @@ import tables as tb
 
 
 MAX_PACKET_SIZE = 4096
-PACKET_BUFSIZE = 200
+PACKET_BUFSIZE = 8192
 
 
 class Packet(tb.IsDescription):
     t           = tb.Float64Col()
-    packet_data = tb.Float64Col()
-    packet_num  = tb.Float64Col()
-    byte_count  = tb.Float64Col()
+    packet_data = tb.UInt16Col(shape=(728,))
+    packet_num  = tb.UInt32Col()
+    byte_count  = tb.UInt64Col()
 
 
 def udp_collect():
@@ -82,11 +82,11 @@ def udp_collect():
         packet_table = h5file.create_table(scan_group, 'packet', Packet, 'Packet data')
         packet_in_chunk = 0
         num_all_packets = 0
-        start_time = dt.datetime.utcnow()
+        start_time = time.time()
         try:
             while True:
                 packet_num, byte_count, packet_data = _read_data_packet(data_socket)
-                curr_time = dt.datetime.utcnow()
+                curr_time = time.time()
                 packet_table.row['t'] = curr_time
                 packet_table.row['packet_data'] = packet_data
                 packet_table.row['packet_num'] = packet_num
@@ -94,14 +94,14 @@ def udp_collect():
                 packet_table.row.append()
                 packet_in_chunk += 1
                 num_all_packets += 1
-                if packet_in_chunk > PACKET_BUFSIZE:
+                if packet_in_chunk >= PACKET_BUFSIZE:
                     print(f'Flushing {packet_in_chunk} packets.')
                     print(f'Capture time: {curr_time - start_time}s\n')
                     packet_table.flush()
                     packet_in_chunk = 0
 
         except (socket.timeout, KeyboardInterrupt):
-            curr_time = dt.datetime.utcnow()
+            curr_time = time.time()
             print(f'Flushing {packet_in_chunk} packets.')
             print(f'Capture time: {curr_time - start_time}s\n')
             print("Total packets captured ", num_all_packets)
