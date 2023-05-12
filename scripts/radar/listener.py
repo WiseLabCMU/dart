@@ -47,7 +47,7 @@ def udp_collect():
     )
     parser.add_argument(
         '--timeout', '-t',
-        help='Socket timeout in seconds (eg. 1)',
+        help='Socket timeout in seconds (eg. 3)',
         type=float,
         default=3
     )
@@ -100,7 +100,8 @@ def udp_collect():
                     packet_table.flush()
                     packet_in_chunk = 0
 
-        except (socket.timeout, KeyboardInterrupt):
+        except (socket.timeout, KeyboardInterrupt) as e:
+            print(e)
             curr_time = time.time()
             print(f'Flushing {packet_in_chunk} packets.')
             print(f'Capture time: {curr_time - start_time}s\n')
