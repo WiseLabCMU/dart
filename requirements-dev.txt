@@ -1,2 +1,2 @@
 mypy
-tqdm-stubs
+types-tqdm

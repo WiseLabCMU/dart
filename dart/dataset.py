@@ -54,7 +54,7 @@ def trajectory(
 
 def __raw_image_traj(
     path: str, norm: float = 1e4, sensor: Optional[VirtualRadar] = None
-) -> tuple[types.RadarPose, types.RangeDopplerData]:
+) -> types.RangeDopplerData:
     """Load image-trajectory data."""
     src = load_arrays(path)
     pose = jax.vmap(make_pose)(src["vel"], src["pos"], src["rot"])
@@ -148,14 +148,14 @@ def doppler_columns(
     val: Val dataset.
     validx: Indices of original images corresponding to the validation set.
     """
-    pose, image = __raw_image_traj(path, norm=norm, sensor=sensor)
-    idx = jnp.arange(image.shape[0])
+    pose, range_doppler = __raw_image_traj(path, norm=norm, sensor=sensor)
+    idx = jnp.arange(range_doppler.shape[0])
     valid_speed = pose.s > min_speed
 
     print("Loaded dataset: {} valid frames (speed > {}) / {}".format(
-        jnp.sum(valid_speed), min_speed, image.shape[0]))
+        jnp.sum(valid_speed), min_speed, range_doppler.shape[0]))
     data = jax.tree_util.tree_map(
-        lambda x: x[valid_speed], (pose, image, idx))
+        lambda x: x[valid_speed], (pose, range_doppler, idx))
 
     if iid_val:
         data = utils.shuffle(data, key=key)

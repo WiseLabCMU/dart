@@ -18,4 +18,4 @@ video:
 	python evaluate.py -p $(TARGET) -ac
 
 typecheck:
-	mypy train.py
+	python -m mypy train.py
