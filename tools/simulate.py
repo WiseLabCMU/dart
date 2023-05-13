@@ -2,7 +2,6 @@
 
 import json
 from tqdm import tqdm
-from argparse import ArgumentParser
 from functools import partial
 
 import numpy as np
@@ -13,9 +12,12 @@ from scipy.io import savemat
 from dart import VirtualRadar, dataset
 
 
-def _parse():
+_desc = (
+    "Generate a simulated dataset from a trajectory and a ground truth "
+    "reflectance grid.")
 
-    p = ArgumentParser()
+
+def _parse(p):
     p.add_argument(
         "-s", "--sensor", default="data/sim96.json",
         help="Sensor configuration.")
@@ -30,9 +32,7 @@ def _parse():
     return p
 
 
-if __name__ == '__main__':
-
-    args = _parse().parse_args()
+def _main(args):
 
     with open(args.sensor) as f:
         cfg = json.load(f)

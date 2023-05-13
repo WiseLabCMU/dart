@@ -1,21 +1,26 @@
 ifndef RADIUS
-RADIUS = 0.6
+RADIUS=0.6
 endif
 
 ifndef BATCH
-BATCH = 32
+BATCH=32
+endif
+
+ifndef DART
+DART=python manage.py
 endif
 
 .phony: eval typecheck eval-all video
 
 eval:
-	python evaluate.py -p $(TARGET) -b $(BATCH)
-	python examples.py -p $(TARGET)
-	python map.py -p $(TARGET) -r $(RADIUS)
+	$(DART) evaluate -p $(TARGET) -b $(BATCH)
+	$(DART) examples -p $(TARGET)
+	$(DART) map -p $(TARGET) -r $(RADIUS)
 
 video:
-	python evaluate.py -p $(TARGET) -a
-	python evaluate.py -p $(TARGET) -ac
+	$(DART) evaluate -p $(TARGET) -a
+	$(DART) evaluate -p $(TARGET) -ac
 
 typecheck:
 	python -m mypy train.py
+	python -m mypy manage.py

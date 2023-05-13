@@ -9,11 +9,12 @@ import numpy as np
 import cv2
 
 from dart import VirtualCameraImage
-from argparse import ArgumentParser
 
 
-def _parse():
-    p = ArgumentParser()
+_desc = "Create a video from radar and virtual camera renderings."
+
+
+def _parse(p):
     p.add_argument("-p", "--path", nargs='+', help="Files to load and render.")
     p.add_argument(
         "-c", "--fourcc", help="Format fourcc code.", default="mp4v")
@@ -35,10 +36,7 @@ def _loadrad(path):
     return (mpl.colormaps['viridis'](rad)[:, :, :, :3] * 255).astype(np.uint8)
 
 
-if __name__ == '__main__':
-
-    args = _parse().parse_args()
-
+def _main(args):
     cam_path = [os.path.join(p, "cam_all.mat") for p in args.path]
     rad_path = [os.path.join(p, "pred_all.mat") for p in args.path]
     width = args.size * len(cam_path)

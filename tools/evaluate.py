@@ -4,7 +4,6 @@ import os
 import json
 from tqdm import tqdm
 from functools import partial
-from argparse import ArgumentParser
 
 import numpy as np
 from jax import numpy as jnp
@@ -14,8 +13,10 @@ from scipy.io import savemat
 from dart import dataset, DART, VirtualCamera
 
 
-def _parse():
-    p = ArgumentParser()
+_desc = "Evaluate DART trained checkpoint for an input trajectory."
+
+
+def _parse(p):
     p.add_argument("-p", "--path", help="File path to output base name.")
     p.add_argument(
         "-r", "--key", default=42, type=int, help="Random seed.")
@@ -32,7 +33,7 @@ def _parse():
     return p
 
 
-def _render_camera(state, args, traj):
+def _render_camera(dart, state, args, traj):
     render = jax.jit(partial(
         dart.camera, key=args.key, params=state,
         camera=VirtualCamera(d=256, max_depth=3.2, f=1.0, clip=args.clip)))
@@ -50,7 +51,7 @@ def _render_camera(state, args, traj):
     }
 
 
-def _render_radar(state, args, traj):
+def _render_radar(dart, state, args, traj):
     render = jax.jit(partial(dart.render, key=args.key, params=state))
     frames = []
     for batch in tqdm(traj.batch(args.batch)):
@@ -59,9 +60,7 @@ def _render_radar(state, args, traj):
     return {"rad": np.concatenate(frames, axis=0)}
 
 
-if __name__ == '__main__':
-
-    args = _parse().parse_args()
+def _main(args):
 
     if args.batch is None:
         args.batch = 4 if args.camera else 32
@@ -79,9 +78,9 @@ if __name__ == '__main__':
         traj = dataset.trajectory(cfg["dataset"]["path"], subset=subset)
 
     if args.camera:
-        out = _render_camera(state, args, traj)
+        out = _render_camera(dart, state, args, traj)
     else:
-        out = _render_radar(state, args, traj)
+        out = _render_radar(dart, state, args, traj)
 
     outfile = "{}{}.mat".format(
         "cam" if args.camera else "pred", "_all" if args.all else "")

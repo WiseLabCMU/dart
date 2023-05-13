@@ -2,7 +2,6 @@
 
 import json
 import os
-from argparse import ArgumentParser
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -11,8 +10,10 @@ from jax import numpy as jnp
 from dart import DART
 
 
-def _parse():
-    p = ArgumentParser()
+_desc = "Draw maps of horizontal slices in a specified region."
+
+
+def _parse(p):
     p.add_argument("-p", "--path", help="File path to output base name.")
     p.add_argument(
         "-r", "--radius", default=0.6, type=float,
@@ -23,10 +24,7 @@ def _parse():
     return p
 
 
-if __name__ == '__main__':
-
-    args = _parse().parse_args()
-
+def _main(args):
     with open(os.path.join(args.path, "metadata.json")) as f:
         cfg = json.load(f)
 

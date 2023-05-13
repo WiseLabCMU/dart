@@ -2,7 +2,6 @@
 
 import json
 import os
-from argparse import ArgumentParser
 
 from matplotlib import pyplot as plt
 import numpy as np
@@ -10,8 +9,10 @@ import numpy as np
 from dart import dataset
 
 
-def _parse():
-    p = ArgumentParser()
+_desc = "Draw sample predicted/actual range-doppler images."
+
+
+def _parse(p):
     p.add_argument("-p", "--path", help="Path to output base name.")
     p.add_argument(
         "-k", "--key", type=int, default=42,
@@ -22,8 +23,7 @@ def _parse():
     return p
 
 
-if __name__ == '__main__':
-    args = _parse().parse_args()
+def _main(args):
 
     with open(os.path.join(args.path, "metadata.json")) as f:
         cfg = json.load(f)

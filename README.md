@@ -24,7 +24,9 @@
 TL;DR:
 ```
 python train.py -s data/path/to/sensor.json -o results/output -p data/path/to/data.mat --norm 1e4 --min_speed 0.25 --epochs 20
-TARGET=results/output RADIUS=4.0 make eval 
+TARGET=results/output make video
+# ...
+python manage.py video -p results/output results/output2 -f 30 -s 512 -o results/video.mp4
 ```
 
 - `path/to/sensor.json`: the radar sensor configuration file.
@@ -56,12 +58,11 @@ results/
 
 ## Experiments
 
-
 ### Cabinets
 
 Simulate/Train:
 ```sh
-python simulate.py -s data/cabinets/cabinets.json -o data/cabinets-000/sim.mat -g data/cabinets/map.mat -j data/cabinets-000/cabinets-000.mat
+python manage.py simulate -s data/cabinets/cabinets.json -o data/cabinets-000/sim.mat -g data/cabinets/map.mat -j data/cabinets-000/cabinets-000.mat
 python train.py ngp -s data/cabinets/cabinets.json -o results/cabinets.sim -e 5 --repeat 5 -p data/cabinets-000/sim.mat --min_speed 0.25 --iid
 python train.py ngp -s data/cabinets/cabinets.json -o results/cabinets.real -p data/cabinets-000/cabinets-000.mat --norm 1e4 --min_speed 0.25 -e 5 --repeat 5 --iid
 python train.py ngpsh -s data/cabinets/cabinets.json -o results/cabinets.ngpsh -p data/cabinets-000/cabinets-000.mat --norm 1e4 --min_speed 0.25 -e 5 --repeat 5 --iid
@@ -72,14 +73,14 @@ Create video:
 TARGET=results/cabinets.sim make video
 TARGET=results/cabinets.real make video
 TARGET=results/cabinets.ngpsh make video
-python video.py -p results/cabinets.sim results/cabinets.real -f 30 -s 512 -o results/cabinets.mp4
+python manage.py video -p results/cabinets.sim results/cabinets.real -f 30 -s 512 -o results/cabinets.mp4
 ```
 
 ### Motion Stage
 
 Simulate:
 ```sh
-python simulate.py -s data/linear1/linear1.json -o data/linear1/sim.mat -g data/linear1/map.mat -j data/linear1/linear1.mat
+python manage.py simulate -s data/linear1/linear1.json -o data/linear1/sim.mat -g data/linear1/map.mat -j data/linear1/linear1.mat
 ```
 
 Train:
@@ -92,7 +93,7 @@ Create video:
 ```sh
 TARGET=results/linear1.sim make video
 TARGET=results/linear1.real make video
-python video.py -p results/linear1.sim results/linear1.real -f 15 -s 512 -o results/linear1.mp4
+python manage.py video -p results/linear1.sim results/linear1.real -f 15 -s 512 -o results/linear1.mp4
 ```
 
 ### Coloradar

@@ -1,3 +1,0 @@
-try chirp-z-transform
-try sliding doppler window
-choose optimal doppler framelen
