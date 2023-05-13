@@ -10,7 +10,7 @@ ifndef DART
 DART=python manage.py
 endif
 
-.phony: eval typecheck eval-all video
+.phony: eval typecheck eval-all video test
 
 eval:
 	$(DART) evaluate -p $(TARGET) -b $(BATCH)
@@ -24,3 +24,8 @@ video:
 typecheck:
 	python -m mypy train.py
 	python -m mypy manage.py
+
+test:
+	python train.py ngp -s data/cabinets/cabinets.json -o results/test -p \
+		data/cabinets-000/cabinets-000.mat --norm 1e4 --min_speed 0.25 -e 1 \
+		--repeat 1 --iid

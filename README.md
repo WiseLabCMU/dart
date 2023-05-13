@@ -2,11 +2,15 @@
 
 ## Setup
 
-1. Install [jax](https://github.com/google/jax). Note that you will need to manually install jax-gpu based on your cuda version, i.e.
+0. Ensure that you have python (`>=3.8`), CUDA (`>=11.8`), and CUDNN.
+
+1. Install [jax](https://github.com/google/jax). Note that you will need to manually install jax-gpu to match the cuda version:
     ```sh
     pip install --upgrade "jax[cuda11_local]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
     ```
     for CUDA 11.x.
+
+    **NOTE**: jax is not included in `requirements.txt` due to its CUDA-dependent manual installation.
 
 2. Install `libhdf5`:
     ```sh
@@ -22,11 +26,9 @@
 ## Usage
 
 TL;DR:
-```
+```sh
 python train.py -s data/path/to/sensor.json -o results/output -p data/path/to/data.mat --norm 1e4 --min_speed 0.25 --epochs 20
 TARGET=results/output make video
-# ...
-python manage.py video -p results/output results/output2 -f 30 -s 512 -o results/video.mp4
 ```
 
 - `path/to/sensor.json`: the radar sensor configuration file.
@@ -41,18 +43,26 @@ results/
     output/
         metadata.json   # Model/dataset/training metadata
         model.chkpt     # Model weights checkpoint
-        pred.mat        # Predicted range-doppler images for the validation set
+        pred_all.mat    # Predicted range-doppler images
+        cam_all.mat     # Virtual camera renderings for the trajectory
         pred.png        # Rendering of 18 random (obs, pred) pairs
         map.png         # Visualization of horizontal slices of the scene 
+```
+
+After training and evaluating one or more models on the same trajectory, create an output video:
+```sh
+python manage.py video -p results/output results/output2 ... -f 30 -s 512 -o results/video.mp4
 ```
 
 ## Available Commands
 
 - `train.py`: train model.
-- `evaluate.py`: apply model to all poses in the trace, saving the result to disk. Can't be the same program as `train.py` due to vram limitations - need to completely free training memory allocation before running evaluate.
-- `examples.py`: sample and draw 18 random (observed, predicted) pairs of range-doppler images; need to run `evaluate.py` first.
-- `map.py`: visualize horizontal slices of the scene for a given area around the origin.
-- `video.py`: create video from radar and "camera" frames.
+- `manage.py`: evaluation and visualization tools:
+    - `evaluate`: apply model to all poses in the trace, saving the result to disk. Can't be the same program as `train.py` due to vram limitations - need to completely free training memory allocation before running evaluate.
+    - `examples`: sample and draw 18 random (observed, predicted) pairs of range-doppler images; need to run `evaluate` first.
+    - `map`: visualize horizontal slices of the scene for a given area around the origin.
+    - `simulate`: create simulated dataset.
+    - `video`: create video from radar and "camera" frames; need to run `evaluate -a` and `evaluate -ac` first.
 
 ***
 
