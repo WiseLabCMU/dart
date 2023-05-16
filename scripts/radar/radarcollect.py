@@ -52,7 +52,7 @@ def udp_collect():
         '--timeout', '-t',
         help='Socket timeout in seconds (eg. 30)',
         type=float,
-        default=30
+        default=10
     )
     args = parser.parse_args()
 
