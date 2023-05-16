@@ -52,8 +52,8 @@ ar1.GetCaptureCardFPGAVersion()
 
 ------------------------- Start the capture ------------------------------------
 
-RSTD.Sleep(5000)
-ar1.CaptureCardConfig_StartRecord("C:\\Users\\Administrator\\Desktop\\dartdata\\dataset0\\tibs.bin", 1)
+RSTD.Sleep(10000)
+ar1.CaptureCardConfig_StartRecord("C:\\ti\\mmwave_studio_02_01_01_00\\mmWaveStudio\\PostProc\\adc_data.bin", 1)
 RSTD.Sleep(1000)
 ar1.StartFrame()
 RSTD.Sleep(1000)
