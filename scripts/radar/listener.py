@@ -47,9 +47,9 @@ def udp_collect():
     )
     parser.add_argument(
         '--timeout', '-t',
-        help='Socket timeout in seconds (eg. 3)',
+        help='Socket timeout in seconds (eg. 30)',
         type=float,
-        default=3
+        default=30
     )
     args = parser.parse_args()
 
