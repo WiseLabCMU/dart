@@ -100,16 +100,17 @@ def udp_collect():
                     packet_table.flush()
                     packet_in_chunk = 0
 
-        except (socket.timeout, KeyboardInterrupt) as e:
+        except Exception as e:
             print(e)
-            curr_time = time.time()
-            print(f'Flushing {packet_in_chunk} packets.')
-            print(f'Capture time: {curr_time - start_time}s\n')
-            print("Total packets captured ", num_all_packets)
-            packet_table.flush()
-            packet_in_chunk = 0
-            data_socket.close()
-            config_socket.close()
+
+        curr_time = time.time()
+        print(f'Flushing {packet_in_chunk} packets.')
+        print(f'Capture time: {curr_time - start_time}s\n')
+        print("Total packets captured ", num_all_packets)
+        packet_table.flush()
+        packet_in_chunk = 0
+        data_socket.close()
+        config_socket.close()
 
 
 def _read_data_packet(data_socket):
