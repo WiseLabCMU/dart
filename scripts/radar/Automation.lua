@@ -56,13 +56,14 @@ RSTD.Sleep(5000)
 ar1.CaptureCardConfig_StartRecord("C:\\Users\\Administrator\\Desktop\\dartdata\\dataset0\\tibs.bin", 1)
 RSTD.Sleep(1000)
 ar1.StartFrame()
-RSTD.Sleep(120000)
-ar1.StopFrame()
+RSTD.Sleep(1000)
 
 ------------------------- End the capture --------------------------------------
 
-ar1.PowerOff()
-ar1.Disconnect()
+-- ar1.StopFrame()
+-- ar1.PowerOff()
+-- ar1.Disconnect()
+
 os.exit()
 
 -- end
