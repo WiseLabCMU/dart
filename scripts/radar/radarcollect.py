@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import subprocess
 import time
 import numpy as np
 import os
@@ -10,6 +11,8 @@ import struct
 import tables as tb
 
 
+CMD_DIR = 'C:/ti/mmwave_studio_02_01_01_00/mmWaveStudio/RunTime'
+SCRIPT_FILE = 'C:/Users/Administrator/git/dart/scripts/radar/Automation.lua'
 MAX_PACKET_SIZE = 4096
 PACKET_BUFSIZE = 8192
 
@@ -128,4 +131,11 @@ def _read_data_packet(data_socket):
 
 
 if __name__ == '__main__':
+    cwd = os.getcwd()
+    os.chdir(CMD_DIR)
+    subprocess.Popen(['mmWaveStudio.exe', '/lua', SCRIPT_FILE])
+    os.chdir(cwd)
+    print('waiting...')
+    time.sleep(48.0)
+    print('starting!')
     udp_collect()
