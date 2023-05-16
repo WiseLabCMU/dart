@@ -135,7 +135,7 @@ if __name__ == '__main__':
     os.chdir(CMD_DIR)
     subprocess.Popen(['mmWaveStudio.exe', '/lua', SCRIPT_FILE])
     os.chdir(cwd)
-    print('waiting...')
+    print('waiting 48 seconds...')
     time.sleep(48.0)
     print('starting!')
     udp_collect()
