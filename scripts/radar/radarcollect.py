@@ -13,8 +13,8 @@ import tables as tb
 
 CMD_DIR = 'C:/ti/mmwave_studio_02_01_01_00/mmWaveStudio/RunTime'
 SCRIPT_FILE = 'C:/Users/Administrator/git/dart/scripts/radar/Automation.lua'
-MAX_PACKET_SIZE = 4096
 PACKET_BUFSIZE = 8192
+MAX_PACKET_SIZE = 4096
 
 
 class Packet(tb.IsDescription):
@@ -24,13 +24,7 @@ class Packet(tb.IsDescription):
     byte_count  = tb.UInt64Col()
 
 
-def udp_collect():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--output', '-o',
-        help='Output directory (eg. C:/Users/Administrator/Desktop/dartdata/dataset0',
-        default='./'
-    )
+def add_args(parser):
     parser.add_argument(
         '--static_ip', '-i',
         help='Static IP address (eg 192.168.33.30)',
@@ -50,15 +44,24 @@ def udp_collect():
     )
     parser.add_argument(
         '--timeout', '-t',
-        help='Socket timeout in seconds (eg. 30)',
+        help='Socket timeout in seconds (eg. 15)',
         type=float,
-        default=10
+        default=15
     )
-    args = parser.parse_args()
 
+
+def radarcollect(args):
     if not os.path.exists(args.output):
         os.makedirs(args.output)
     outfile = os.path.join(args.output, 'radarpackets.h5')
+
+    cwd = os.getcwd()
+    os.chdir(CMD_DIR)
+    subprocess.Popen(['mmWaveStudio.exe', '/lua', SCRIPT_FILE])
+    os.chdir(cwd)
+    print('waiting 48 seconds...')
+    time.sleep(48.0)
+    print('starting!')
 
     cfg_recv = (args.static_ip, args.config_port)
     data_recv = (args.static_ip, args.data_port)
@@ -103,7 +106,7 @@ def udp_collect():
                     packet_table.flush()
                     packet_in_chunk = 0
 
-        except Exception as e:
+        except (KeyboardInterrupt, Exception) as e:
             print(e)
 
         curr_time = time.time()
@@ -131,11 +134,12 @@ def _read_data_packet(data_socket):
 
 
 if __name__ == '__main__':
-    cwd = os.getcwd()
-    os.chdir(CMD_DIR)
-    subprocess.Popen(['mmWaveStudio.exe', '/lua', SCRIPT_FILE])
-    os.chdir(cwd)
-    print('waiting 48 seconds...')
-    time.sleep(48.0)
-    print('starting!')
-    udp_collect()
+    parser = argparse.ArgumentParser()
+    add_args(parser)
+    parser.add_argument(
+        '--output', '-o',
+        help='Output directory (eg. C:/Users/Administrator/Desktop/dartdata/dataset0',
+        default='./'
+    )
+    args = parser.parse_args()
+    radarcollect(args)

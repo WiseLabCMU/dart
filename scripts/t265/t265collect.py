@@ -32,14 +32,10 @@ class Pose(tb.IsDescription):
 #     im_r    = tb.UInt8Col(shape=(800, 848))
 
 
-def datacollect():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--output', '-o',
-        help='Output directory (eg. C:/Users/Administrator/Desktop/dartdata/dataset0',
-        default='./'
-    )
-    args = parser.parse_args()
+def t265collect(args):
+    if not os.path.exists(args.output):
+        os.makedirs(args.output)
+    outfile = os.path.join(args.output, 't265.h5')
 
     pipe = rs.pipeline()
     cfg = rs.config()
@@ -48,9 +44,7 @@ def datacollect():
     # cfg.enable_stream(rs.stream.fisheye, 1)
     # cfg.enable_stream(rs.stream.fisheye, 2)
     pipe.start(cfg)
-    if not os.path.exists(args.output):
-        os.makedirs(args.output)
-    outfile = os.path.join(args.output, 't265.h5')
+
     with tb.open_file(outfile, mode='w', title='Trajectory file') as h5file:
         traj_group = h5file.create_group('/', 'traj', 'Trajectory information')
         pose_table = h5file.create_table(traj_group, 'pose', Pose, 'Pose data')
@@ -108,17 +102,26 @@ def datacollect():
                     #         cam_table.flush()
                     #         cam_count = 0
                         
-        except KeyboardInterrupt:
-            pipe.stop()
-            print(f'Interrupted.')
-            print(f'Flushing {pose_count} poses.')
-            print(f'Trajectory time: {pose_end_time - pose_start_time}s\n')
-            pose_table.flush()
-            pose_count = 0
-            # print(f'Flushing {cam_count} cam frames.')
-            # print(f'Cam time: {cam_end_time - cam_start_time}s\n')
-            # cam_table.flush()
-            # cam_count = 0
+        except (KeyboardInterrupt, Exception) as e:
+            print(e)
+
+        pipe.stop()
+        print(f'Flushing {pose_count} poses.')
+        print(f'Trajectory time: {pose_end_time - pose_start_time}s\n')
+        pose_table.flush()
+        pose_count = 0
+        # print(f'Flushing {cam_count} cam frames.')
+        # print(f'Cam time: {cam_end_time - cam_start_time}s\n')
+        # cam_table.flush()
+        # cam_count = 0
+
 
 if __name__ == '__main__':
-    datacollect()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--output', '-o',
+        help='Output directory (eg. C:/Users/Administrator/Desktop/dartdata/dataset0',
+        default='./'
+    )
+    args = parser.parse_args()
+    t265collect(args)
