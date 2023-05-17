@@ -44,9 +44,9 @@ def add_args(parser):
     )
     parser.add_argument(
         '--timeout', '-t',
-        help='Socket timeout in seconds (eg. 15)',
+        help='Socket timeout in seconds (eg. 20)',
         type=float,
-        default=15
+        default=20
     )
 
 
@@ -59,8 +59,8 @@ def radarcollect(args):
     os.chdir(CMD_DIR)
     subprocess.Popen(['mmWaveStudio.exe', '/lua', SCRIPT_FILE])
     os.chdir(cwd)
-    print('waiting 48 seconds...')
-    time.sleep(48.0)
+    print('waiting 56 seconds...')
+    time.sleep(56.0)
     print('starting!')
 
     cfg_recv = (args.static_ip, args.config_port)

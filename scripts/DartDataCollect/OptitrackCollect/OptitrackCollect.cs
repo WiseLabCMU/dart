@@ -229,7 +229,7 @@ namespace OptitrackCollect
                             DateTime trajtime = DateTime.UtcNow - TimeSpan.FromSeconds(timeDelaySeconds);
                             OptitrackPoint optitrackPoint = new
                             (
-                                object_id: "mmwave-radar",
+                                object_id: rb.Name,
                                 data: new
                                 (
                                     position: new
