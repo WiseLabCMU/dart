@@ -23,9 +23,6 @@ class Organizer:
 		self.UINT16_IN_FRAME = self.BYTES_IN_FRAME // 2
 		self.NUM_PACKETS_PER_FRAME = self.BYTES_IN_FRAME // BYTES_IN_PACKET
 
-		self.start_time = all_data[3]
-		self.end_time = all_data[4]
-
 	def iq(self, raw_frame):
 		"""Reorganizes raw ADC data into a full frame
 
@@ -89,12 +86,6 @@ class Organizer:
 
 	def organize(self):
 
-		radar_unix_start_time = dt.timestamp(dt.fromisoformat(self.start_time[:-1]))*1e6
-		radar_unix_end_time = dt.timestamp(dt.fromisoformat(self.end_time[:-1]))*1e6
-
-		print('Start time: ', self.start_time)
-		print('End time: ', self.end_time)
-
 		self.byte_count = np.array(self.byte_count)
 		self.data = np.array(self.data)
 		self.packet_num = np.array(self.packet_num)
@@ -139,7 +130,8 @@ class Organizer:
 
 			print('Number of packets per frame ', self.NUM_PACKETS_PER_FRAME)
 
-			where_44 = int(np.argwhere(packets_ooo == 44)[0])
+			# where_44 = int(np.argwhere(packets_ooo == 44)[0])
+			where_44 = 0
 			print(where_44)
 			diff = []
 			for i in range(where_44, len(packets_ooo)-1):
