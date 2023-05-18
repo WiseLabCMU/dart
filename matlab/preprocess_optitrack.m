@@ -1,4 +1,4 @@
-function preprocess_traj(infile, outfile)
+function preprocess_optitrack(infile, outfile)
 
 s = readlines(infile);
 N = size(s, 1) - 1; % Skip last line to handle EOF
