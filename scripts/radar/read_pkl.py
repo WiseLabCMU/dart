@@ -1,36 +1,43 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+import argparse
 import organizer_copy as org
-import pickle
+import tables as tb
 from scipy.io import savemat
 import sys
 
-file_name = sys.argv[1]
-file_root = file_name[:-4]
 
-f = open('./' + file_name,'rb')
-print(f)
-s = pickle.load(f)
+def parse(args):
+    file_name = sys.argv[1]
+    file_root = file_name[:-4]
 
-# o = org.Organizer(s, 64, 4, 3, 512)
-o = org.Organizer(s, 1, 4, 3, 512)
-frames = o.organize()
+    f = open('./' + file_name,'rb')
+    print(f)
+    s = pickle.load(f)
 
-print(frames.shape)
+    # o = org.Organizer(s, 64, 4, 3, 512)
+    o = org.Organizer(s, 1, 4, 3, 512)
+    frames = o.organize()
 
-import matplotlib.pyplot as plt
-import numpy as np
+    print(frames.shape)
 
-# # w = np.hanning(512)
-# ff = np.fft.fft(frames[0][0][0])
+    savemat(file_root+'.mat',{'frames':frames, 'start_time':s[3], 'end_time':s[4]})
 
-# plt.plot(10*np.log10(np.abs(ff)))
-# plt.show()
+    to_save = {'frames':frames, 'start_time':s[3], 'end_time':s[4], 'num_frames':len(frames)}
 
-# plt.plot(np.real(frames[0][0][0]))
-# plt.show()
+    with open('./' + file_root + '_read.pkl', 'wb') as f:
+        pickle.dump(to_save, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-savemat(file_root+'.mat',{'frames':frames, 'start_time':s[3], 'end_time':s[4]})
 
-to_save = {'frames':frames, 'start_time':s[3], 'end_time':s[4], 'num_frames':len(frames)}
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--output', '-o',
+        help='Output directory (eg. C:/Users/Administrator/Desktop/dartdata/dataset0',
+        default='./'
+    )
+    args = parser.parse_args()
+    parse(args)
 
-with open('./' + file_root + '_read.pkl', 'wb') as f:
-    pickle.dump(to_save, f, protocol=pickle.HIGHEST_PROTOCOL)
+
