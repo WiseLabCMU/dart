@@ -7,28 +7,25 @@ function [timestamps, scans] = timed_scans_from_file( ...
 )
 
 fprintf('Loading %s...\n', filename);
-load(filename, 'frames_real', 'frames_imag', 'frametimes');
-frames = complex(frames_real, frames_imag);
-clear frames_real frames_imag
+% load(filename, 'frames_real', 'frames_imag', 'frametimes');
+% frames = complex(frames_real, frames_imag);
+% clear frames_real frames_imag
+
+load(filename, 'frames', 'frametimes');
 
 fprintf('Processing %s...\n', filename);
 chirplen = size(frames, 4); % before decmiation
 numchirps_in = size(frames, 1);
 
-t_start = posixtime(datetime(start_time, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS''Z'''));
-t_start = t_start - 5*60*60;
-t_end = posixtime(datetime(end_time, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS''Z'''));
-t_end = t_end - 5*60*60;
-chirp_dt = (t_end - t_start) / (numchirps_in - 1);
+numframes = floor((numchirps_in - framelen) / stride) + 1;
 
-timestamps = (t_start + chirp_dt * (framelen - 1) / 2 : chirp_dt * stride : t_end - chirp_dt * (framelen - 1) / 2).';
-numframes = size(timestamps, 1);
-assert(numframes == floor((numchirps_in - framelen) / stride) + 1);
-
+timestamps = zeros(numframes, 1);
 scans = zeros(chirplen, framelen, numframes);
 for i = 1:numframes
     startchirp = stride * (i - 1) + 1;
-    scans(:, :, i) = squeeze(frames(startchirp : startchirp + framelen - 1, 1, 1, :)).';
+    chirp_idx = startchirp : startchirp + framelen - 1;
+    timestamps(i) = mean(frametimes(chirp_idx));
+    scans(:, :, i) = squeeze(frames(chirp_idx, 1, 1, :)).';
 end
 scans = fft2(scans);
 scans(:, 1, :) = scans(:, 1, :) - median(scans(:, 1, :), 3);

@@ -6,10 +6,12 @@ function [pos, rot, vel, waypoint_t, waypoint_pos, waypoint_quat] = traj_from_fi
     interp_fs ...
 )
 
-fprintf('Loading %s...\n', filename);
-load(filename, 't', 'x', 'y', 'z', 'qx', 'qy', 'qz', 'qw');
+T_OFFSET = 1674069448.98683;
 
-waypoint_t = t;
+fprintf('Loading %s...\n', filename);
+load(filename, 'rt', 't', 'x', 'y', 'z', 'qx', 'qy', 'qz', 'qw');
+
+waypoint_t = t + T_OFFSET;
 waypoint_pos = [x, -z, y];
 waypoint_quat = quaternion(qw, qx, -qz, qy);
 

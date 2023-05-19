@@ -1,7 +1,5 @@
 close all;
 
-datadir = 'D:\dartdata\cabinets-sep';
-dataset = 'cabinets-018';
 real_rad = rad;
 % load(simfile, 'rad');
 % sim_rad = rad;
@@ -18,14 +16,15 @@ for i = 1:size(facing, 1)
     facing(i, :) = (r * [0.3; 0; 0]).';
 end
 v = max(min(vel,0.4),-0.4);
-[fo, vo] = isosurface(map.x,map.y,map.z,map.v);
-patch('Faces',fo,'Vertices',vo,'FaceColor','#909090','EdgeColor','None');
-hold on;
-light;
+% [fo, vo] = isosurface(map.x,map.y,map.z,map.v);
+% patch('Faces',fo,'Vertices',vo,'FaceColor','#909090','EdgeColor','None');
+% hold on;
+% light;
 cam = plotCamera('Size',0.1,'Opacity',0.1);
+hold on;
 axis equal; axis vis3d;
-axis([-2,3,-2,3,0,2]);
-% axis([-3,3,-3,3,-1.5,1.5]);
+% axis([-2,3,-2,3,0,2]);
+axis([-3,3,-3,3,-2,2]);
 view(3);
 xlabel('x (m)');
 ylabel('y (m)');
