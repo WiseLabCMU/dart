@@ -1,5 +1,4 @@
 import numpy as np 
-from datetime import datetime as dt
 
 MAX_PACKET_SIZE = 4096
 BYTES_IN_PACKET = 1456
@@ -8,10 +7,11 @@ np.set_printoptions(threshold=np.inf,linewidth=325)
 
 class Organizer:
 
-	def __init__(self, all_data, num_chirp_loops, num_rx, num_tx, num_samples):
+	def __init__(self, all_data, timestamps, num_chirp_loops, num_rx, num_tx, num_samples):
 		self.data = all_data[0]
 		self.packet_num = all_data[1]
 		self.byte_count = all_data[2]
+		self.timestamps = timestamps
 
 		self.num_packets = len(self.byte_count)
 		self.num_chirps = num_chirp_loops*num_tx
@@ -45,6 +45,8 @@ class Organizer:
 
 	def get_frames(self, start_chunk, end_chunk, bc):
 
+		print(f'start_chunk: {start_chunk}')
+		print(f'end_chunk: {end_chunk}')
 		# if first packet received is not the first byte transmitted
 		if bc[start_chunk] == 0:
 			bytes_left_in_curr_frame = 0
@@ -65,7 +67,8 @@ class Organizer:
 		# print(bc[end_chunk])
 		# print(num_frames, start_chunk, end_chunk, self.BYTES_IN_FRAME)
 		frames = np.zeros((num_frames, self.UINT16_IN_FRAME), dtype=np.int16)
-		ret_frames = np.zeros((num_frames, self.num_chirps, self.num_rx, self.num_samples), dtype=complex)		
+		ret_frames = np.zeros((num_frames, self.num_chirps, self.num_rx, self.num_samples), dtype=complex)
+		ret_frametimes = np.zeros((num_frames, 1))
 
 		# compress all received data into one byte stream
 		all_uint16 = np.array(self.data).reshape(-1)
@@ -79,9 +82,9 @@ class Organizer:
 			frame_end_idx = (i+1)*self.UINT16_IN_FRAME
 			frame = all_uint16[frame_start_idx:frame_end_idx]
 			frames[i][:len(frame)] = frame.astype(np.int16)
-			ret_frames[i] = self.iq(frames[i])	
+			ret_frames[i] = self.iq(frames[i])
 
-		return ret_frames
+		return ret_frames, ret_frametimes
 
 
 	def organize(self):
@@ -114,16 +117,17 @@ class Organizer:
 		if len(packets_ooo) == 0:
 			print('packets in order')
 			start_chunk = 0
-			ret_frames = self.get_frames(start_chunk, -1, bc)
+			ret_frames, ret_frametimes = self.get_frames(start_chunk, -1, bc)
 
 		elif len(packets_ooo) == 1:
 			print('1 packet not in order')
 			start_chunk = packets_ooo[0]+1
-			ret_frames = self.get_frames(start_chunk, -1, bc)
+			ret_frames, ret_frametimes = self.get_frames(start_chunk, -1, bc)
 			# start_chunk = 0
 
 		else:
 			print('Packet num not in order')
+			packets_ooo = np.insert(packets_ooo, 0, 1)
 			packets_ooo = np.append(packets_ooo, len(self.packet_num)-1)
 
 			print('Packets ooo', packets_ooo)
@@ -181,15 +185,17 @@ class Organizer:
 				# print(self.packet_num[start_chunk],self.packet_num[start_chunk-1])
 				# print(self.byte_count[start_chunk],self.byte_count[start_chunk-1])
 
-				curr_frames = self.get_frames(start_chunk, end_chunk, bc)
+				curr_frames, curr_frametimes = self.get_frames(start_chunk, end_chunk, bc)
 
 				if i == 0:
 					ret_frames = curr_frames
+					ret_frametimes = curr_frametimes
 				else:
 					ret_frames = np.concatenate((ret_frames, curr_frames), axis=0)
+					ret_frametimes = np.concatenate((ret_frametimes, curr_frametimes), axis=0)
 
 
-		return ret_frames
+		return ret_frames, ret_frametimes
 
 		# Old approach
 
