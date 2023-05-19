@@ -22,6 +22,7 @@ class Organizer:
 		self.BYTES_IN_FRAME_CLIPPED = (self.BYTES_IN_FRAME // BYTES_IN_PACKET) * BYTES_IN_PACKET
 		self.UINT16_IN_FRAME = self.BYTES_IN_FRAME // 2
 		self.NUM_PACKETS_PER_FRAME = self.BYTES_IN_FRAME // BYTES_IN_PACKET
+		print(f'{len(np.unique(timestamps))} unique timestamps out of {len(timestamps)}')
 
 	def iq(self, raw_frame):
 		"""Reorganizes raw ADC data into a full frame
@@ -83,6 +84,8 @@ class Organizer:
 			frame = all_uint16[frame_start_idx:frame_end_idx]
 			frames[i][:len(frame)] = frame.astype(np.int16)
 			ret_frames[i] = self.iq(frames[i])
+			t_idx = start_chunk + (i * self.BYTES_IN_FRAME) // BYTES_IN_PACKET
+			ret_frametimes[i] = np.mean(self.timestamps[t_idx : t_idx + self.NUM_PACKETS_PER_FRAME])
 
 		return ret_frames, ret_frametimes
 
