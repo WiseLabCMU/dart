@@ -8,10 +8,10 @@ np.set_printoptions(threshold=np.inf,linewidth=325)
 class Organizer:
 
 	def __init__(self, all_data, timestamps, num_chirp_loops, num_rx, num_tx, num_samples):
-		self.data = all_data[0]
-		self.packet_num = all_data[1]
-		self.byte_count = all_data[2]
-		self.timestamps = timestamps
+		self.data = np.array(all_data[0]).reshape(-1)
+		self.packet_num = np.array(all_data[1])
+		self.byte_count = np.array(all_data[2])
+		self.timestamps = np.array(timestamps)
 
 		self.num_packets = len(self.byte_count)
 		self.num_chirps = num_chirp_loops*num_tx
@@ -44,46 +44,30 @@ class Organizer:
 		ret[1::2] = raw_frame[1::4] + 1j * raw_frame[3::4]
 		return ret.reshape((self.num_chirps, self.num_rx, self.num_samples))
 
-	def get_frames(self, start_chunk, end_chunk, bc):
+	def get_frames(self, start_chunk, end_chunk):
 
-		print(f'start_chunk: {start_chunk}')
-		print(f'end_chunk: {end_chunk}')
 		# if first packet received is not the first byte transmitted
-		if bc[start_chunk] == 0:
+		if self.byte_count[start_chunk] == 0:
 			bytes_left_in_curr_frame = 0
 			start = start_chunk*(BYTES_IN_PACKET // 2)
 		else:
-			frames_so_far = bc[start_chunk] // self.BYTES_IN_FRAME
-			bytes_so_far = frames_so_far * self.BYTES_IN_FRAME
-			# bytes_left_in_curr_frame = bc[start_chunk] - bytes_so_far
-			bytes_left_in_curr_frame = (frames_so_far+1)*self.BYTES_IN_FRAME - bc[start_chunk]
+			frames_so_far = self.byte_count[start_chunk] // self.BYTES_IN_FRAME
+			bytes_left_in_curr_frame = (frames_so_far+1)*self.BYTES_IN_FRAME - self.byte_count[start_chunk]
 			start = (bytes_left_in_curr_frame // 2) + start_chunk*(BYTES_IN_PACKET // 2)
 
-		# print(start_chunk, start)
-
 		# find num of frames
-		total_bytes = bc[end_chunk] - (bc[start_chunk] + bytes_left_in_curr_frame)
+		total_bytes = self.byte_count[end_chunk] - (self.byte_count[start_chunk] + bytes_left_in_curr_frame)
 		num_frames = total_bytes // (self.BYTES_IN_FRAME)
 
-		# print(bc[end_chunk])
-		# print(num_frames, start_chunk, end_chunk, self.BYTES_IN_FRAME)
-		frames = np.zeros((num_frames, self.UINT16_IN_FRAME), dtype=np.int16)
 		ret_frames = np.zeros((num_frames, self.num_chirps, self.num_rx, self.num_samples), dtype=complex)
 		ret_frametimes = np.zeros((num_frames, 1))
 
-		# compress all received data into one byte stream
-		all_uint16 = np.array(self.data).reshape(-1)
-
-		# only choose uint16 starting from a new frame
-		all_uint16 = all_uint16[start:]
-
 		# organizing into frames
 		for i in range(num_frames):
-			frame_start_idx = i*self.UINT16_IN_FRAME
-			frame_end_idx = (i+1)*self.UINT16_IN_FRAME
-			frame = all_uint16[frame_start_idx:frame_end_idx]
-			frames[i][:len(frame)] = frame.astype(np.int16)
-			ret_frames[i] = self.iq(frames[i])
+			frame_start_idx = start + i*self.UINT16_IN_FRAME
+			frame_end_idx = start + (i+1)*self.UINT16_IN_FRAME
+			frame = self.data[frame_start_idx:frame_end_idx].astype(np.int16)
+			ret_frames[i] = self.iq(frame)
 			t_idx = start_chunk + (i * self.BYTES_IN_FRAME) // BYTES_IN_PACKET
 			ret_frametimes[i] = np.mean(self.timestamps[t_idx : t_idx + self.NUM_PACKETS_PER_FRAME])
 
@@ -91,26 +75,6 @@ class Organizer:
 
 
 	def organize(self):
-
-		self.byte_count = np.array(self.byte_count)
-		self.data = np.array(self.data)
-		self.packet_num = np.array(self.packet_num)
-
-		# Reordering packets
-		# sorted_idx = np.argsort(self.packet_num)
-		# print(sorted_idx.dtype)
-		# print(len(self.packet_num), len(self.byte_count), len(self.data), sorted_idx.shape)
-		# self.packet_num = self.packet_num[sorted_idx]
-		# self.data = self.data[sorted_idx]
-		# self.byte_count = self.byte_count[sorted_idx]
-
-		# self.packet_num = self.packet_num.tolist()
-		# self.byte_count = self.byte_count.tolist()
-		# self.data = self.data.tolist()
-
-		# print("Packet numbers ", self.packet_num[:100])
-
-		bc = np.array(self.byte_count)
 
 		packets_ooo = np.where(np.array(self.packet_num[1:])-np.array(self.packet_num[0:-1]) != 1)[0]
 		is_not_monotonic = np.where(np.array(self.packet_num[1:])-np.array(self.packet_num[0:-1]) < 0)[0]
@@ -120,12 +84,12 @@ class Organizer:
 		if len(packets_ooo) == 0:
 			print('packets in order')
 			start_chunk = 0
-			ret_frames, ret_frametimes = self.get_frames(start_chunk, -1, bc)
+			ret_frames, ret_frametimes = self.get_frames(start_chunk, -1)
 
 		elif len(packets_ooo) == 1:
 			print('1 packet not in order')
 			start_chunk = packets_ooo[0]+1
-			ret_frames, ret_frametimes = self.get_frames(start_chunk, -1, bc)
+			ret_frames, ret_frametimes = self.get_frames(start_chunk, -1)
 			# start_chunk = 0
 
 		else:
@@ -137,12 +101,10 @@ class Organizer:
 
 			print('Number of packets per frame ', self.NUM_PACKETS_PER_FRAME)
 
-			# where_44 = int(np.argwhere(packets_ooo == 44)[0])
 			where_44 = 0
 			print(where_44)
 			diff = []
 			for i in range(where_44, len(packets_ooo)-1):
-				# print(i, len(packets_ooo))
 				diff.append(self.packet_num[packets_ooo[i+1]]-self.packet_num[packets_ooo[i]+1])
 			
 			print('Packets received before atleast 1 loss ', diff)
@@ -171,24 +133,11 @@ class Organizer:
 
 			new_packets_ooo = np.append(new_packets_ooo, -1)
 
-			# print('New packets ooo', new_packets_ooo)
-			# print('Start new packets ooo', start_new_packets_ooo)
-			# print('End new packets ooo', end_new_packets_ooo)
-			# exit()
-
 			for i in range(len(start_new_packets_ooo)):
-			# for i in range(len(new_packets_ooo)-1):
-			# for i in [len(new_packets_ooo)-2]:
-				# start_chunk = new_packets_ooo[i]+1
-				# end_chunk = new_packets_ooo[i+1]
 
 				start_chunk = start_new_packets_ooo[i]+1
 				end_chunk = end_new_packets_ooo[i]
-
-				# print(self.packet_num[start_chunk],self.packet_num[start_chunk-1])
-				# print(self.byte_count[start_chunk],self.byte_count[start_chunk-1])
-
-				curr_frames, curr_frametimes = self.get_frames(start_chunk, end_chunk, bc)
+				curr_frames, curr_frametimes = self.get_frames(start_chunk, end_chunk)
 
 				if i == 0:
 					ret_frames = curr_frames
@@ -197,22 +146,4 @@ class Organizer:
 					ret_frames = np.concatenate((ret_frames, curr_frames), axis=0)
 					ret_frametimes = np.concatenate((ret_frametimes, curr_frametimes), axis=0)
 
-
 		return ret_frames, ret_frametimes
-
-		# Old approach
-
-
-		# frame_start_idx = np.where((bc % self.BYTES_IN_FRAME_CLIPPED == 0) & (bc != 0))[0]
-		# num_frames = len(frame_start_idx)-1
-
-		# frames = np.zeros((num_frames, self.UINT16_IN_FRAME), dtype=np.int16)
-		# ret_frames = np.zeros((num_frames, self.num_chirps, self.num_rx, self.num_samples), dtype=complex)
-
-		# for i in range(num_frames):
-		# 	d = np.array(self.data[frame_start_idx[i]:frame_start_idx[i+1]])
-		# 	frame = d.reshape(-1)
-		# 	frames[i][:len(frame)] = frame.astype(np.int16)
-		# 	ret_frames[i] = self.iq(frames[i])
-
-		# return ret_frames
