@@ -7,11 +7,10 @@ function [timestamps, scans] = timed_scans_from_file( ...
 )
 
 fprintf('Loading %s...\n', filename);
-% load(filename, 'frames_real', 'frames_imag', 'frametimes');
-% frames = complex(frames_real, frames_imag);
-% clear frames_real frames_imag
-
-load(filename, 'frames', 'frametimes');
+data = h5read(filename, '/Radar/frame');
+frametimes = data.t;
+frames = permute(complex(data.frames_real, data.frames_imag), [4, 3, 2, 1]);
+clear data;
 
 fprintf('Processing %s...\n', filename);
 chirplen = size(frames, 4); % before decmiation

@@ -32,11 +32,11 @@ GLOBAL_TFORM = [1, 0,  0, 0;
 
 % ---------------------------------------------------------- %
 
-radarpacketsfile = fullfile(DATADIR, DATASET, 'radarpackets.h5');
+% radarpacketsfile = fullfile(DATADIR, DATASET, 'radarpackets.h5');
 t265file = fullfile(DATADIR, DATASET, 't265.h5');
 optitrackfile = fullfile(DATADIR, DATASET, 'optitrack.txt');
 
-scanfile = fullfile(DATADIR, DATASET, 'frames.mat');
+scanfile = fullfile(DATADIR, DATASET, 'frames.h5');
 trajfile = fullfile(DATADIR, DATASET, 'traj.mat');
 outfile = fullfile(DATADIR, DATASET, append(DATASET, '.mat'));
 jsonfile = fullfile(DATADIR, DATASET, append(DATASET, '.json'));
