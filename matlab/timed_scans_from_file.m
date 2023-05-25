@@ -7,7 +7,7 @@ function [timestamps, scans] = timed_scans_from_file( ...
 )
 
 fprintf('Loading %s...\n', filename);
-data = h5read(filename, '/Radar/frame');
+data = h5read(filename, '/radar/frame');
 frametimes = data.t;
 frames = permute(complex(data.frames_real, data.frames_imag), [4, 3, 2, 1]);
 clear data;

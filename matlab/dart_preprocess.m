@@ -1,9 +1,9 @@
 % ------------------- PARAMS ------------------------------- %
 
 DATADIR = 'D:\dartdata';
-DATASET = 'dataset0';
+DATASET = 'aframe';
 
-USE_T265 = true;
+USE_T265 = false;
 FORCE_REPROCESS_TRAJ = true;
 INTERP_TRAJ = false;
 INTERP_TRAJ_FS = 200;
@@ -20,15 +20,15 @@ RMAX = 21.5991;
 
 GEN_MAP = false;
 
-LOCAL_TFORM = [ 0, 1,  0, 0;
-                0, 0, -1, 0;
-               -1, 0,  0, 0;
-                0, 0,  0, 1];
+LOCAL_TFORM = [ 1,  0,  0,  0;
+                0,  0,  1,  0;
+                0, -1,  0,  0;
+                0,  0,  0,  1];
 
-GLOBAL_TFORM = [1, 0,  0, 0; 
-                0, 0, -1, 0;
-                0, 1,  0, 0;
-                0, 0,  0, 1 ];
+GLOBAL_TFORM = [ 1,  0,  0,  0;
+                 0,  0, -1,  0;
+                 0,  1,  0,  0;
+                 0,  0,  0,  1];
 
 % ---------------------------------------------------------- %
 

@@ -16,8 +16,7 @@ qw = zeros(N, 1);
 
 for i = 1:N
     pose = jsondecode(s(i)).data;
-    dt = datetime(pose.ts_at_receive, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss.SSSSSS''Z''');
-    rt(i) = posixtime(dt);
+    rt(i) = pose.timestamp;
     t(i) = pose.timestamp;
     x(i) = pose.position.x;
     y(i) = pose.position.y;
