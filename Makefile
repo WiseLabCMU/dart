@@ -18,8 +18,8 @@ eval:
 	$(DART) map -p $(TARGET) -r $(RADIUS)
 
 video:
-	$(DART) evaluate -p $(TARGET) -a
-	$(DART) evaluate -p $(TARGET) -ac
+	$(DART) evaluate -p $(TARGET) -a -b 1
+	$(DART) evaluate -p $(TARGET) -ac -b 1
 
 typecheck:
 	python -m mypy train.py

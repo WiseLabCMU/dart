@@ -86,6 +86,22 @@ TARGET=results/cabinets.ngpsh make video
 python manage.py video -p results/cabinets.sim results/cabinets.real -f 30 -s 512 -o results/cabinets.mp4
 ```
 
+### Cabinets (5 traces)
+
+Simulate/Train:
+```sh
+python manage.py simulate -s data/cabinets/cabinets.json -o data/cabinets-5/sim.mat -g data/cabinets/map.mat -j data/cabinets-5/cabinets-5.mat
+python train.py ngp -s data/cabinets/cabinets.json -o results/cabinets-5.sim -e 10 --repeat 1 -p data/cabinets-5/sim.mat --min_speed 0.25 --iid
+python train.py ngp -s data/cabinets/cabinets.json -o results/cabinets-5.real -p data/cabinets-5/cabinets-5.mat --norm 1e4 --min_speed 0.25 -e 5 --repeat 1 --iid
+```
+
+Create video:
+```sh
+TARGET=results/cabinets-5.sim make video
+TARGET=results/cabinets-5.real make video
+python manage.py video -p results/cabinets-5.sim results/cabinets-5.real -f 30 -s 512 -o results/cabinets-5.mp4
+```
+
 ### Motion Stage
 
 Simulate:

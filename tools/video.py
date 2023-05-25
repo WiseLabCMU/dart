@@ -2,9 +2,10 @@
 
 import os
 from tqdm import tqdm
+import json
 import matplotlib as mpl
 
-from scipy.io import loadmat
+from dart.dataset import load_arrays
 import numpy as np
 import cv2
 
@@ -28,7 +29,7 @@ def _parse(p):
 
 
 def _loadrad(path):
-    rad = loadmat(path)["rad"]
+    rad = load_arrays(path)["rad"]
     p5 = np.nanpercentile(rad, 5)
     p95 = np.nanpercentile(rad, 99.9)
     rad = np.nan_to_num(rad, nan=p5)
@@ -36,28 +37,39 @@ def _loadrad(path):
     return (mpl.colormaps['viridis'](rad)[:, :, :, :3] * 255).astype(np.uint8)
 
 
+def _get_dataset(path):
+    with open(os.path.join(path, "metadata.json")) as f:
+        cfg = json.load(f)
+    return cfg["dataset"]["path"]
+
+
+def _resize(img, size):
+    return cv2.resize(img, size, interpolation=cv2.INTER_NEAREST)
+
+
 def _main(args):
     cam_path = [os.path.join(p, "cam_all.mat") for p in args.path]
     rad_path = [os.path.join(p, "pred_all.mat") for p in args.path]
-    width = args.size * len(cam_path)
+    dataset_path = [_get_dataset(p) for p in args.path]
+    height = args.size * len(cam_path)
 
     print("Creating video:")
-    print("Top row: {}".format(", ".join(cam_path)))
-    print("Bottom row: {}".format(", ".join(cam_path)))
+    print("Left column: {}".format(", ".join(cam_path)))
+    print("Middle column: {}".format(", ".join(cam_path)))
+    print("Right column: {}".format(", ".join(dataset_path)))
 
     cam = np.concatenate(
-        [VirtualCameraImage.from_file(p).to_rgb() for p in cam_path], axis=2)
-    rad = np.concatenate([_loadrad(p) for p in rad_path], axis=2)
+        [VirtualCameraImage.from_file(p).to_rgb() for p in cam_path], axis=1)
+    rad = np.concatenate([_loadrad(p) for p in rad_path], axis=1)
+    gt = np.concatenate([_loadrad(p) for p in dataset_path], axis=1)
 
     fourcc = cv2.VideoWriter_fourcc(*args.fourcc)
-    out = cv2.VideoWriter(
-        args.out, fourcc, args.fps, (width, args.size * 2))
-    for fc, fr in tqdm(zip(cam, rad), total=len(cam)):
-        fc = cv2.resize(
-            fc, (width, args.size), interpolation=cv2.INTER_NEAREST)
-        fr = cv2.resize(
-            fr, (width, args.size), interpolation=cv2.INTER_NEAREST)
-        f = np.concatenate([fc, fr], axis=0)
+    out = cv2.VideoWriter(args.out, fourcc, args.fps, (args.size * 3, height))
+    for fc, fr, fg in tqdm(zip(cam, rad, gt), total=len(cam)):
+        fc = _resize(fc, (args.size, height))
+        fr = _resize(fr, (args.size, height))
+        fg = _resize(fg, (args.size, height))
+        f = np.concatenate([fc, fr, fg], axis=1)
         # RGB -> BGR since OpenCV assumes BGR
-        out.write(cv2.resize(f, (width, args.size * 2))[:, :, [2, 1, 0]])
+        out.write(cv2.resize(f, (args.size * 3, height))[:, :, [2, 1, 0]])
     out.release()
