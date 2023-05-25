@@ -1,11 +1,11 @@
 datadir = 'D:\dartdata';
-dataset = 'dataset0';
+dataset = 'cubes';
 
 scandir = fullfile(datadir, dataset, 'frames');
 trajdir = fullfile(datadir, dataset, 'traj');
 outfile = fullfile(datadir, dataset, append(dataset, '.mat'));
 jsonfile = fullfile(datadir, dataset, append(dataset, '.json'));
-% mapfile = fullfile(datadir, dataset, 'map.mat');
+mapfile = fullfile(datadir, dataset, 'map.mat');
 dbgfile = fullfile(datadir, dataset, 'dbg.mat');
 simfile = fullfile(datadir, dataset, 'simulated.mat');
 
@@ -22,6 +22,16 @@ RMAX = 21.5991;
 force_reprocess_traj = false;
 interp_traj = false;
 interp_traj_fs = 200;
+
+LOCAL_TFORM = [1,  0, 0, 0;
+               0,  0, 1, 0;
+               0, -1, 0, 0;
+               0,  0, 0, 1];
+
+GLOBAL_TFORM = [1, 0,  0, 0; 
+                0, 0, -1, 0;
+                0, 1,  0, 0;
+                0, 0,  0, 1 ];
  
 bin_doppler = DMAX / framelen;
 res_doppler = framelen / doppler_decimation;
@@ -45,14 +55,14 @@ radarjson.d = [min_doppler, max_doppler, res_doppler];
 jsonstring = jsonencode(radarjson, 'PrettyPrint', true);
 writelines(jsonstring, jsonfile);
 
-% map = gen_map();
-% x = map.x;
-% y = map.y;
-% z = map.z;
-% v = map.v;
-% cx = map.cx;
-% cy = map.cy;
-% cz = map.cz;
+map = gen_map();
+x = map.x;
+y = map.y;
+z = map.z;
+v = map.v;
+cx = map.cx;
+cy = map.cy;
+cz = map.cz;
 
 all_t = [];
 all_rad = [];
@@ -69,7 +79,7 @@ for i = 1:length(scanfiles)
     trajfile = fullfile(trajdir, append(filenameNoExt, '.mat'));
     if ~exist(trajfile, 'file') || force_reprocess_traj
         trajjsonfile = fullfile(trajdir, append(filenameNoExt, '.txt'));
-        preprocess_traj(trajjsonfile, trajfile);
+        preprocess_optitrack(trajjsonfile, trajfile);
     end
     
     [scan_t, rad] = scans_from_file( ...
@@ -80,10 +90,12 @@ for i = 1:length(scanfiles)
         stride ...
     );
     
-    [pos, rot, vel, wp_t, wp_pos, wp_quat] = traj_from_file( ...
+    [pos, rot, vel, wp_t, wp_pos, wp_quat] = old_traj_from_file( ...
         trajfile, ...
         scan_t, ...
         scan_window, ...
+        LOCAL_TFORM, ...
+        GLOBAL_TFORM, ...
         interp_traj, ...
         interp_traj_fs ...
     );
@@ -107,5 +119,5 @@ wp_pos = all_wp_pos;
 wp_quat = all_wp_quat;
 clear all_t all_rad all_pos all_rot all_vel all_wp_t all_wp_pos all_wp_quat;
 save(outfile, 't', 'rad', 'pos', 'rot', 'vel', '-v7.3');
-% save(mapfile, 'x', 'y', 'z', 'v', 'cx', 'cy', 'cz', '-v7.3');
+save(mapfile, 'x', 'y', 'z', 'v', 'cx', 'cy', 'cz', '-v7.3');
 save(dbgfile, '-v7.3');

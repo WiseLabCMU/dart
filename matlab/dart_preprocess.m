@@ -20,6 +20,16 @@ RMAX = 21.5991;
 
 GEN_MAP = false;
 
+LOCAL_TFORM = [ 0, 1,  0, 0;
+                0, 0, -1, 0;
+               -1, 0,  0, 0;
+                0, 0,  0, 1];
+
+GLOBAL_TFORM = [1, 0,  0, 0; 
+                0, 0, -1, 0;
+                0, 1,  0, 0;
+                0, 0,  0, 1 ];
+
 % ---------------------------------------------------------- %
 
 radarpacketsfile = fullfile(DATADIR, DATASET, 'radarpackets.h5');
@@ -87,6 +97,8 @@ end
     trajfile, ...
     scan_t, ...
     scan_window, ...
+    LOCAL_TFORM, ...
+    GLOBAL_TFORM, ...
     INTERP_TRAJ, ...
     INTERP_TRAJ_FS ...
 );

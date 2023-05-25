@@ -11,15 +11,17 @@ y = linspace(min_range, max_range, res_range);
 fig = figure;
 subplot(2,3,[2,3,5,6]);
 facing = zeros(size(pos));
+up = zeros(size(pos));
 for i = 1:size(facing, 1)
     r = squeeze(rot(i, :, :));
     facing(i, :) = (r * [0.3; 0; 0]).';
+    up(i, :) = (r * [0; 0; 0.3]).';
 end
 v = max(min(vel,0.4),-0.4);
-% [fo, vo] = isosurface(map.x,map.y,map.z,map.v);
-% patch('Faces',fo,'Vertices',vo,'FaceColor','#909090','EdgeColor','None');
-% hold on;
-% light;
+[fo, vo] = isosurface(map.x,map.y,map.z,map.v);
+patch('Faces',fo,'Vertices',vo,'FaceColor','#909090','EdgeColor','None');
+hold on;
+light;
 cam = plotCamera('Size',0.1,'Opacity',0.1);
 hold on;
 axis equal; axis vis3d;
@@ -58,6 +60,14 @@ q2 = quiver3(0,0,0,0,0,0, ...
     'VDataSource','facing(sld.Value,2)', ...
     'WDataSource','facing(sld.Value,3)', ...
     'LineWidth',2);
+q3 = quiver3(0,0,0,0,0,0, ...
+    'XDataSource','pos(sld.Value,1)', ...
+    'YDataSource','pos(sld.Value,2)', ...
+    'ZDataSource','pos(sld.Value,3)', ...
+    'UDataSource','up(sld.Value,1)', ...
+    'VDataSource','up(sld.Value,2)', ...
+    'WDataSource','up(sld.Value,3)', ...
+    'LineWidth',2);
 
 fig.WindowState = 'maximized';
 ts = t(2)-t(1);
@@ -83,6 +93,7 @@ while true
         cam.AbsolutePose = pose;
         refreshdata(q1, 'caller');
         refreshdata(q2, 'caller');
+        refreshdata(q3, 'caller');
 
         subplot(2,3,1);
         hold off;
