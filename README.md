@@ -102,6 +102,14 @@ TARGET=results/cabinets-5.real make video
 python manage.py video -p results/cabinets-5.sim results/cabinets-5.real -f 30 -s 512 -o results/cabinets-5.mp4
 ```
 
+### Couch
+
+```sh
+python train.py ngp -s data/couch0/dataset0.json -o results/couch0 -p data/couch0/dataset0.mat --min_speed 0.25 -b 2048 -e 5 --repeat 5 --iid --norm 1e5
+TARGET=results/couch0 make video
+python manage.py video -p results/couch0 -f 30 -s 512 -o results/couch0.mp4
+```
+
 ### Motion Stage
 
 Simulate:
