@@ -27,7 +27,7 @@
 
 TL;DR:
 ```sh
-python train.py ngp -p path/to/dataset -o results/output --norm 1e4 --min_speed 0.25 --epochs 5
+python train.py ngp -p path/to/dataset -o results/output --norm 1e5 --min_speed 0.25 --epochs 5
 TARGET=results/output make video
 ```
 

@@ -20,6 +20,7 @@ eval:
 video:
 	$(DART) evaluate -p $(TARGET) -a -b 1
 	$(DART) evaluate -p $(TARGET) -ac -b 1
+	$(DART) video -p $(TARGET) -o $(TARGET).mp4 
 
 typecheck:
 	python -m mypy train.py
