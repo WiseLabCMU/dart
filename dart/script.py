@@ -16,6 +16,7 @@ def script_train(cfg: dict) -> None:
     """Train DART model from configuration dictionary."""
     os.makedirs(cfg["out"], exist_ok=True)
     print(json.dumps(cfg))
+
     print("Setting up...")
     start = time.time()
 
@@ -27,7 +28,11 @@ def script_train(cfg: dict) -> None:
     assert val is not None
     train = train.shuffle(cfg["shuffle_buffer"], reshuffle_each_iteration=True)
 
-    print("Done setting up ({:.1f}s).".format(time.time() - start))
+    setup_time = time.time() - start
+    print("Done setting up ({:.1f}s).".format(setup_time))
+
+    print("Training...")
+    start = time.time()
 
     state = dart.init(train.batch(2), key=k2)
     state, train_log, val_log = dart.fit(
@@ -35,6 +40,10 @@ def script_train(cfg: dict) -> None:
         key=k3, val=val.batch(cfg["batch"]))
     dart.save(os.path.join(cfg["out"], "model.chkpt"), state)
 
+    train_time = time.time() - start
+    print("Done training ({:.1f}s).".format(train_time))
+
+    cfg["time"] = {"setup": setup_time, "train": train_time}
     cfg["train_log"] = train_log
     cfg["val_log"] = val_log
     with open(os.path.join(cfg["out"], "metadata.json"), 'w') as f:

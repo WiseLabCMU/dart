@@ -1,5 +1,6 @@
 """Train DART model."""
 
+import os
 import json
 from argparse import ArgumentParser
 
@@ -18,8 +19,7 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
 
     g = p.add_argument_group(title="Sensor")
     g.add_argument(
-        "-s", "--sensor", default="data/awr1843boost-cup.json",
-        help="Sensor parameters (.json).")
+        "-s", "--sensor", default=None, help="Sensor parameters (.json).")
     g.add_argument(
         "-n", default=256, type=int,
         help="Override on stochastic integration angular bin resolution (n).")
@@ -50,7 +50,7 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
         "--min_speed", default=0.1, type=float, help="Reject frames with "
         "insufficient (i.e. not enough doppler bins); 0 to disable.")
     g.add_argument(
-        "-p", "--path", default="data/cup.mat", help="Dataset file.")
+        "-p", "--path", default="data", help="Dataset file or directory.")
     g.add_argument(
         "--repeat", default=0, type=int,
         help="Repeat dataset within each epoch to cut down on overhead.")
@@ -70,6 +70,13 @@ if __name__ == '__main__':
         v.to_parser(p.add_argument_group("Field"))
         p.set_defaults(field=v)
     args = parser.parse_args()
+
+    # Directory input -> use default sensor, dataset name.
+    if os.path.isdir(args.path):
+        bn = os.path.basename(args.path)
+        if args.sensor is None:
+            args.sensor = os.path.join(args.path, "{}.json".format(bn))
+        args.path = os.path.join(args.path, "{}.mat".format(bn))
 
     jax.default_device(jax.devices("gpu")[args.device])
 
