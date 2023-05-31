@@ -32,7 +32,7 @@ TARGET=results/output make video
 ```
 
 For example:
-```
+```sh
 python train.py ngp -p data/aframe -o results/aframe --norm 1e4 --min_speed 0.25 --epochs 5
 TARGET=results/aframe make video
 ```

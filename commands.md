@@ -73,3 +73,10 @@ TARGET=results/coloradar0-short make eval
 python train.py ngp -s data/coloradar/coloradar-short.json -o results/coloradar1 -p data/coloradar/coloradar1.mat --norm 1e4 --min_speed 1.0 --base 2.0 --iid --repeat 5 -e 10
 TARGET=results/coloradar1 make eval
 ```
+
+### Slice
+
+```sh
+python manage.py map -l -4.0 -4.0 -1.0 -u 4.0 4.0 3.0 -r 512 -b 16 -p results/aframe_t265
+python manage.py slice -p results/aframe_t265 -o results/aframe_t265.slice.mp4 -f 10
+```
