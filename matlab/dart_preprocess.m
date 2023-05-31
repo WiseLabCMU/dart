@@ -2,8 +2,9 @@
 
 DATADIR = 'D:\dartdata';
 DATASET = 'aframe';
+BATCH_SIZE = 50000;
 
-USE_T265 = false;
+USE_T265 = true;
 FORCE_REPROCESS_TRAJ = true;
 INTERP_TRAJ = false;
 INTERP_TRAJ_FS = 200;
@@ -20,10 +21,17 @@ RMAX = 21.5991;
 
 GEN_MAP = false;
 
-LOCAL_TFORM = [ 1,  0,  0,  0;
-                0,  0,  1,  0;
-                0, -1,  0,  0;
-                0,  0,  0,  1];
+if USE_T265
+    LOCAL_TFORM = [ 0,  1,  0,  0;
+                    0,  0, -1,  0;
+                   -1,  0,  0,  0;
+                    0,  0,  0,  1];
+else
+    LOCAL_TFORM = [ 1,  0,  0,  0;
+                    0,  0,  1,  0;
+                    0, -1,  0,  0;
+                    0,  0,  0,  1];
+end
 
 GLOBAL_TFORM = [ 1,  0,  0,  0;
                  0,  0, -1,  0;
@@ -85,13 +93,24 @@ if ~exist(trajfile, 'file') || FORCE_REPROCESS_TRAJ
     end
 end
 
-[scan_t, rad] = timed_scans_from_file( ...
-    scanfile, ...
-    range_decimation, ...
-    doppler_decimation, ...
-    framelen, ...
-    stride ...
-);
+nrows = h5info(scanfile).Groups.Datasets.Dataspace.Size;
+nbatches = ceil(nrows / BATCH_SIZE);
+scan_t = [];
+rad = [];
+for b = 0 : nbatches - 1
+    fprintf('Batch %d/%d\n', b + 1, nbatches);
+    [new_scan_t, new_rad] = timed_scans_from_file( ...
+        scanfile, ...
+        range_decimation, ...
+        doppler_decimation, ...
+        framelen, ...
+        stride, ...
+        b * BATCH_SIZE + 1, ...
+        min(BATCH_SIZE, nrows - b * BATCH_SIZE) ...
+    );
+    scan_t = cat(1, scan_t, new_scan_t);
+    rad = cat(1, rad, new_rad);
+end
 
 [pos, rot, vel, wp_t, wp_pos, wp_quat] = traj_from_file( ...
     trajfile, ...
@@ -102,7 +121,14 @@ end
     INTERP_TRAJ, ...
     INTERP_TRAJ_FS ...
 );
-
 t = scan_t;
+
+naan = isnan(pos(:,1));
+t(naan) = [];
+rad(naan, :, :) = [];
+pos(naan, :) = [];
+rot(naan, :, :) = [];
+vel(naan, :) = [];
+
 save(outfile, 't', 'rad', 'pos', 'rot', 'vel', '-v7.3');
 save(dbgfile, '-v7.3');

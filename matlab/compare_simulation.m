@@ -18,10 +18,10 @@ for i = 1:size(facing, 1)
     up(i, :) = (r * [0; 0; 0.3]).';
 end
 v = max(min(vel,0.4),-0.4);
-[fo, vo] = isosurface(map.x,map.y,map.z,map.v);
-patch('Faces',fo,'Vertices',vo,'FaceColor','#909090','EdgeColor','None');
-hold on;
-light;
+% [fo, vo] = isosurface(map.x,map.y,map.z,map.v);
+% patch('Faces',fo,'Vertices',vo,'FaceColor','#909090','EdgeColor','None');
+% hold on;
+% light;
 cam = plotCamera('Size',0.1,'Opacity',0.1);
 hold on;
 axis equal; axis vis3d;
