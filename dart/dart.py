@@ -13,15 +13,12 @@ import optax
 
 from jaxtyping import Float32, Array, PyTree
 from beartype.typing import Callable, Optional, Union
-from . import types
 
+from . import types
+from . import fields, components, adjustments
 from .sensor import VirtualRadar
 from .camera import VirtualCamera, VirtualCameraImage
-from . import fields
-from .types import ModelState
-from . import types
 from .utils import tf_to_jax, to_prngkey, update_avg
-from .loss import get_loss_func
 
 
 class DART:
@@ -33,20 +30,27 @@ class DART:
     optimizer: Model optax optimizer.
     sigma: Field function closure.
     loss: Loss function to use.
+    adjust: Pose adjustment model.
     """
 
     def __init__(
         self, sensor: VirtualRadar, optimizer: optax.GradientTransformation,
-        sigma: Callable[[], types.SigmaField], loss: types.LossFunc,
+        sigma: Callable[[], types.SigmaField],
+        adjust: Callable[[], types.PoseAdjustment],
+        loss: components.LossFunc,
     ) -> None:
 
         def forward(batch: types.TrainingColumn):
+            _adjust = adjust()
+
             keys = jnp.array(
                 jax.random.split(hk.next_rng_key(), batch.doppler.shape[0]))
-            vfwd = jax.vmap(partial(sensor.column_forward, sigma=sigma()))
-            return vfwd(keys, column=batch)
+            vfwd = jax.vmap(partial(
+                sensor.column_forward, sigma=sigma(), adjust=_adjust))
+            return vfwd(keys, column=batch), _adjust(None)
 
         self.sigma = sigma
+        self.adjust = adjust
         self.model = hk.transform(forward)
 
         self.optimizer = optimizer
@@ -56,6 +60,7 @@ class DART:
     @classmethod
     def from_config(
         cls, sensor: dict = {}, field_name: str = "NGP", field: dict = {},
+        adjustment_name: str = "Identity", adjustment: dict = {},
         lr: float = 0.01, loss: dict = {}, **_
     ) -> "DART":
         """Create DART from config items."""
@@ -63,7 +68,9 @@ class DART:
             sensor=VirtualRadar.from_config(**sensor),
             optimizer=optax.adam(lr),
             sigma=getattr(fields, field_name).from_config(**field),
-            loss=get_loss_func(**loss))
+            adjust=getattr(
+                adjustments, adjustment_name).from_config(**adjustment),
+            loss=components.get_loss_func(**loss))
 
     def init(
         self, dataset: types.Dataset, key: types.PRNGSeed = 42
@@ -74,6 +81,34 @@ class DART:
         opt_state = self.optimizer.init(params)
         return types.ModelState(params=params, opt_state=opt_state)
 
+    def _train(
+        self, step_func, key: types.PRNGKeyArray, state: types.ModelState,
+        dataset: types.Dataset, tqdm
+    ) -> tuple[types.ModelState, float]:
+        """Run training loop."""
+        avg = types.Average(0.0, 0.0)
+        with tqdm(dataset) as epoch:
+            for batch in epoch:
+                key, rng = jax.random.split(key, 2)
+                loss, state = step_func(state, rng, tf_to_jax(batch))
+                avg = update_avg(float(loss), avg, epoch)
+                if jnp.isnan(loss):
+                    print("WARNING: encountered NaN loss!")
+        return state, avg.avg
+
+    def _validate(
+        self, loss_func, key: types.PRNGKeyArray, params: PyTree,
+        dataset: types.Dataset
+    ) -> float:
+        """Run validation."""
+        losses = []
+        for batch in dataset:
+            key, rng = jax.random.split(key, 2)
+            losses.append(loss_func(params, rng, tf_to_jax(batch)))
+        losses_np = np.array(losses)
+        losses_np = losses_np[~np.isnan(losses_np)]
+        return np.mean(losses_np)
+
     def fit(
         self, train: types.Dataset, state: types.ModelState,
         val: Optional[types.Dataset] = None, epochs: int = 1,
@@ -81,17 +116,18 @@ class DART:
     ) -> tuple[types.ModelState, list, list]:
         """Train model."""
         @jax.jit
-        def loss_func(params, rng, batch):
+        def loss_func(params, rng, batch, include_reg=False):
             columns, y_true = batch
-            y_pred = self.model.apply(params, rng, columns)
-            return self.loss(y_pred, y_true)
+            y_pred, reg = self.model.apply(params, rng, columns)
+            return self.loss(y_pred, y_true) + reg
 
         # Note: not putting step in a closure here (jitting grads and updates
         # separately) results in a ~100x performance penalty!
         @jax.jit
         def step(state, rng, batch):
             loss, grads = jax.value_and_grad(
-                partial(loss_func, rng=rng, batch=batch))(state.params)
+                partial(loss_func, rng=rng, batch=batch, include_reg=True)
+            )(state.params)
 
             clip = jax.tree_util.tree_map(jnp.nan_to_num, grads)
             updates, opt_state = self.optimizer.update(
@@ -103,26 +139,14 @@ class DART:
         train_log, val_log = [], []
         k = to_prngkey(key)
         for i in range(epochs):
-            with tqdm(train, unit="batch", desc="Epoch {}".format(i)) as epoch:
-                avg = types.Average(0.0, 0.0)
-                for _, batch in enumerate(epoch):
-                    k, rng = jax.random.split(k, 2)
-                    loss, state = step(state, rng, tf_to_jax(batch))
-                    avg = update_avg(float(loss), avg, epoch)
-                    if jnp.isnan(loss):
-                        print("WARNING: encountered NaN loss!")
-
-                train_log.append(avg.avg)
+            k, rng = jax.random.split(k, 2)
+            tqdm_epoch = partial(tqdm, unit="batch", desc="Epoch {}".format(i))
+            state, loss = self._train(step, rng, state, train, tqdm_epoch)
+            train_log.append(loss)
 
             if val is not None:
-                losses = []
-                for j, batch in enumerate(epoch):
-                    k, rng = jax.random.split(k, 2)
-                    losses.append(
-                        loss_func(state.params, rng, tf_to_jax(batch)))
-                losses_jnp = jnp.array(losses)
-                losses_jnp = losses_jnp[~jnp.isnan(losses_jnp)]
-                val_loss = np.mean(losses_jnp)
+                k, rng = jax.random.split(k, 2)
+                val_loss = self._validate(loss_func, rng, state.params, val)
                 print("Val: {}".format(val_loss))
                 val_log.append(float(val_loss))
 
@@ -153,7 +177,7 @@ class DART:
             return vfwd(keys, pose=batch)
 
         return hk.transform(forward).apply(
-            ModelState.get_params(params), to_prngkey(key), batch)
+            types.ModelState.get_params(params), to_prngkey(key), batch)
 
     def grid(
         self, params: Union[types.ModelState, PyTree],

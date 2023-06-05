@@ -15,9 +15,19 @@ from beartype.typing import NamedTuple
 from jax import numpy as jnp
 from jax import random, vmap
 
-from . import types, antenna
+from .components import antenna
+from . import types
 from .pose import project_angle, sensor_to_world
-from .spatial import vec_to_angle
+
+
+def vec_to_angle(
+    t: Float32[Array, "3 k"]
+) -> tuple[Float32[Array, "k"], Float32[Array, "k"]]:
+    """Get azimuth and elevation from unit sphere values."""
+    x, y, z = t
+    theta = jnp.arcsin(jnp.clip(z, -0.99999, 0.99999))
+    phi = jnp.arcsin(jnp.clip(y / jnp.cos(theta), -0.99999, 0.99999))
+    return (theta, phi)
 
 
 class VirtualRadar(NamedTuple):
@@ -133,7 +143,7 @@ class VirtualRadar(NamedTuple):
 
     def column_forward(
         self, key: random.PRNGKeyArray, column: types.TrainingColumn,
-        sigma: types.SigmaField,
+        sigma: types.SigmaField, adjust: types.PoseAdjustment
     ) -> Float32[Array, "nr"]:
         """Render a training column.
 
@@ -142,16 +152,19 @@ class VirtualRadar(NamedTuple):
         key : PRNGKey for random sampling.
         column: Pose and y_true.
         sigma: Field function.
+        adjust: Pose adjustment function.
 
         Returns
         -------
         Predicted doppler column.
         """
         valid = jnp.unpackbits(column.valid)
+        pose = adjust(column.pose)
+
         t = self.sample_rays(
-            key, d=column.doppler, valid_psi=valid, pose=column.pose)
+            key, d=column.doppler, valid_psi=valid, pose=pose)
         return self.render_column(
-            t=t, sigma=sigma, pose=column.pose, weight=column.weight)
+            t=t, sigma=sigma, pose=pose, weight=column.weight)
 
     def valid_mask(
         self, d: Float32[Array, ""], pose: types.RadarPose

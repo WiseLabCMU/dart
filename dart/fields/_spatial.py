@@ -6,16 +6,6 @@ from beartype.typing import Union, Callable
 from jax import numpy as jnp
 
 
-def vec_to_angle(
-    t: Float32[Array, "3 k"]
-) -> tuple[Float32[Array, "k"], Float32[Array, "k"]]:
-    """Get azimuth and elevation from unit sphere values."""
-    x, y, z = t
-    theta = jnp.arcsin(jnp.clip(z, -0.99999, 0.99999))
-    phi = jnp.arcsin(jnp.clip(y / jnp.cos(theta), -0.99999, 0.99999))
-    return (theta, phi)
-
-
 def interpolate(
     x: Float32[Array, "3"],
     grid: Union[

@@ -1,14 +1,14 @@
 """Instant Neural Graphics Primitive (NGP) based fields."""
 
-from jaxtyping import Float32, Integer, Array
-from beartype.typing import Optional, Callable
-
 from jax import numpy as jnp
 import jax
 import haiku as hk
 
-from dart.spatial import interpolate, spherical_harmonics
+from jaxtyping import Float32, Integer, Array
+from beartype.typing import Optional, Callable
+
 from dart import types
+from ._spatial import interpolate, spherical_harmonics
 
 
 class NGP(hk.Module):

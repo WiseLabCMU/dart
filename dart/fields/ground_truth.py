@@ -1,10 +1,10 @@
 """Ground truth field for simulations."""
 
+from jax import numpy as jnp
 from jaxtyping import Float32, Array
 from beartype.typing import Union, Optional
 
-from jax import numpy as jnp
-from dart.spatial import interpolate
+from ._spatial import interpolate
 
 
 class GroundTruth:

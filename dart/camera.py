@@ -68,17 +68,14 @@ class VirtualCamera(NamedTuple):
 
     Attributes
     ----------
-    w, h: width, height of camera in pixels.
-    k: intrinsic matrix.
     d: depth resolution.
     max_depth: maximum depth to render to.
-    f: focal length.
+    f: focal length (perfect camera with fx = fy).
+    size:
+    res: 
     clip: minimum return threshold.
     """
 
-    # w: int
-    # h: int
-    # k: Float32[Array, "3 3"]
     d: int
     max_depth: float
     f: float

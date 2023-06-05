@@ -4,8 +4,8 @@ from argparse import ArgumentParser, _ArgumentGroup, Namespace
 
 import tensorflow as tf
 
-from jaxtyping import Array, Float32, UInt8, PyTree
-from beartype.typing import Union, Callable, NamedTuple
+from jaxtyping import Array, Float32, UInt8, Int32, PyTree
+from beartype.typing import Union, Callable, NamedTuple, Optional
 from jax.random import PRNGKeyArray
 
 #: Argument parser or parser group
@@ -20,10 +20,6 @@ Dataset = tf.data.Dataset
 
 #: PRNGKey seed
 PRNGSeed = Union[PRNGKeyArray, int]
-
-#: Loss function
-LossFunc = Callable[
-    [Float32[Array, "..."], Float32[Array, "..."]], Float32[Array, "..."]]
 
 #: Reflectance field
 SigmaField = Callable[[Float32[Array, "3"]], Float32[Array, "2"]]
@@ -56,6 +52,7 @@ class RadarPose(NamedTuple):
     x: sensor location in global coordinates.
     A: 3D rotation matrix for sensor pose; should transform sensor-space to
         world-space.
+    i: index of pose relative to the original order.
     """
 
     v: Float32[Array, "3"]
@@ -64,6 +61,12 @@ class RadarPose(NamedTuple):
     s: Float32[Array, ""]
     x: Float32[Array, "3"]
     A: Float32[Array, "3 3"]
+    i: Int32[Array, ""]
+
+
+#: Pose Adjustment model
+PoseAdjustment = Callable[
+    [Optional[RadarPose]], Union[RadarPose, Float32[Array, ""]]]
 
 
 class TrainingColumn(NamedTuple):
@@ -95,9 +98,17 @@ DopplerColumnData = tuple[RadarPose, Float32[Array, "N Nr"]]
 
 
 class ModelState(NamedTuple):
-    """Model parameters and optimizer state."""
+    """Model parameters and optimizer state.
+
+    Attributes
+    ----------
+    params: main model parameters
+    # delta: trajectory adjustment parameters
+    opt_state: optimizer state for the main model
+    """
 
     params: PyTree
+    # delta: Optional[PyTree]
     opt_state: PyTree
 
     @staticmethod

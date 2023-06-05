@@ -41,6 +41,8 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
         help="Use IID validation split.")
     g.add_argument("--loss", default="l2", help="Loss function.")
     g.add_argument("--weight", default=None, help="Loss weighting.")
+    g.add_argument(
+        "--adj", type=float, default=0.1, help="Adjustment regularization.")
 
     g = p.add_argument_group(title="Dataset")
     g.add_argument(
@@ -88,14 +90,20 @@ if __name__ == '__main__':
         "sensor": sensor_cfg,
         "shuffle_buffer": 200 * 1000, "lr": args.lr, "batch": args.batch,
         "epochs": args.epochs, "key": args.key, "out": args.out,
-        "loss": {
-            "weight": args.weight, "loss": args.loss, "eps": 1e-6
-        },
+        "loss": {"weight": args.weight, "loss": args.loss, "eps": 1e-6},
         "dataset": {
             "pval": args.pval, "norm": args.norm, "iid_val": args.iid,
             "path": args.path, "min_speed": args.min_speed,
             "repeat": args.repeat
         }
     }
+
+    if args.adj < 0:
+        cfg["adjustment_name"] = "Identity"
+        cfg["adjustment"] = {}
+    else:
+        cfg["adjustment_name"] = "Position"
+        cfg["adjustment"] = {"n": 10000, "k": 100, "alpha": args.adj}
+
     cfg.update(args.field.args_to_config(args))
     script_train(cfg)

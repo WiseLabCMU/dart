@@ -1,13 +1,12 @@
 """Basic Plenoxels-inspired Grid."""
 
+from jax import numpy as jnp
+import haiku as hk
 from jaxtyping import Float32, Array
 from beartype.typing import Union, Optional, Callable
 
-from jax import numpy as jnp
-import haiku as hk
-
-from dart.spatial import interpolate
 from dart import types
+from ._spatial import interpolate
 
 
 class SimpleGrid(hk.Module):
