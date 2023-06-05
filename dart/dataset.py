@@ -46,7 +46,8 @@ def trajectory(
 ) -> types.Dataset:
     """Generate trajectory dataset."""
     data = load_arrays(traj)
-    pose = jax.vmap(make_pose)(data["vel"], data["pos"], data["rot"])
+    idxs = jnp.arange(data["vel"].shape[0])
+    pose = jax.vmap(make_pose)(data["vel"], data["pos"], data["rot"], idxs)
     if subset is not None:
         pose = jax.tree_util.tree_map(lambda x: x[subset], pose)
     return types.Dataset.from_tensor_slices(pose)
@@ -57,7 +58,8 @@ def __raw_image_traj(
 ) -> types.RangeDopplerData:
     """Load image-trajectory data."""
     src = load_arrays(path)
-    pose = jax.vmap(make_pose)(src["vel"], src["pos"], src["rot"])
+    idxs = jnp.arange(src["vel"].shape[0])
+    pose = jax.vmap(make_pose)(src["vel"], src["pos"], src["rot"], idxs)
     image = src["rad"] / norm
     if sensor is not None:
         if image.shape[1] > len(sensor.r):
@@ -149,7 +151,7 @@ def doppler_columns(
     validx: Indices of original images corresponding to the validation set.
     """
     pose, range_doppler = __raw_image_traj(path, norm=norm, sensor=sensor)
-    idx = jnp.arange(range_doppler.shape[0])
+    idx = jnp.arange(range_doppler.shape[0], dtype=jnp.int32)
     valid_speed = pose.s > min_speed
 
     print("Loaded dataset: {} valid frames (speed > {}) / {}".format(

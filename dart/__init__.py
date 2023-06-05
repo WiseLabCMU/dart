@@ -2,13 +2,12 @@
 
 from jaxtyping import install_import_hook
 with install_import_hook("foo", ("beartype", "beartype")):
-    from dart.spatial import interpolate
     from dart.sensor import VirtualRadar
     from dart.pose import make_pose
     from dart.dart import DART
     from dart import dataset
     from dart import types
-    from dart import antenna
+    from dart.components import antenna
     from dart.script import script_train
     from dart.camera import VirtualCamera, VirtualCameraImage
 
@@ -16,7 +15,7 @@ with install_import_hook("foo", ("beartype", "beartype")):
 from dart import fields
 
 __all__ = [
-    "DART", "VirtualRadar", "make_pose", "interpolate",
+    "DART", "VirtualRadar", "make_pose",
     "dataset", "types", "fields", "script_train", "antenna",
     "VirtualCamera", "VirtualCameraImage"
 ]

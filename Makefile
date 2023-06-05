@@ -15,12 +15,15 @@ endif
 eval:
 	$(DART) evaluate -p $(TARGET) -b $(BATCH)
 	$(DART) examples -p $(TARGET)
-	$(DART) map -p $(TARGET) -r $(RADIUS)
 
 video:
 	$(DART) evaluate -p $(TARGET) -a -b 1
 	$(DART) evaluate -p $(TARGET) -ac -b 1
-	$(DART) video -p $(TARGET) -o $(TARGET).mp4 
+	$(DART) video -p $(TARGET)
+
+mri:
+	$(DART) map -p $(TARGET) -l -3.0 -3.0 -1.0 -u 3.0 3.0 3.0 -r 512 -b 16
+	$(DART) slice -p $(TARGET)
 
 typecheck:
 	python -m mypy train.py

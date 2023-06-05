@@ -1,6 +1,6 @@
 """Sensor pose utilities."""
 
-from jaxtyping import Float32, Array
+from jaxtyping import Float32, Int32, Array
 from beartype.typing import Union
 from . import types
 
@@ -9,6 +9,7 @@ from jax import numpy as jnp
 
 def make_pose(
     v: Float32[Array, "3"], x: Float32[Array, "3"], A: Float32[Array, "3 3"],
+    i: Int32[Array, ""]
 ) -> types.RadarPose:
     """Create pose data namedtuple.
 
@@ -18,6 +19,7 @@ def make_pose(
     x: Sensor location in global coordinates.
     A: 3D rotation matrix for sensor pose; should transform sensor-space to
         world-space.
+    i: index of pose relative to original order.
 
     Returns
     -------
@@ -33,7 +35,7 @@ def make_pose(
     _, _, _V = jnp.linalg.svd(jnp.eye(3) - jnp.outer(v, v))
     p, q = _V[:2]
 
-    return types.RadarPose(v=v, s=s, p=p, q=q, x=x, A=A)
+    return types.RadarPose(v=v, s=s, p=p, q=q, x=x, A=A, i=i)
 
 
 def sensor_to_world(

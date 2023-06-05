@@ -40,6 +40,10 @@ def _resize(img, size):
 
 
 def _main(args):
+    if args.out is None:
+        args.out = os.path.join(
+            args.path, "slice.mp4")
+
     fourcc = cv2.VideoWriter_fourcc(*args.fourcc)
     out = cv2.VideoWriter(
         args.out, fourcc, args.fps, (args.size * 2, args.size))
