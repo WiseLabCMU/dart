@@ -1,7 +1,7 @@
 % ------------------- PARAMS ------------------------------- %
 
-DATADIR = 'D:\dartdata';
-DATASET = 'aframe';
+DATADIR = '/media/john/HEADCOUNT/dartdata';
+DATASET = 'cichall';
 BATCH_SIZE = 50000;
 
 USE_T265 = true;
@@ -9,7 +9,7 @@ FORCE_REPROCESS_TRAJ = true;
 INTERP_TRAJ = false;
 INTERP_TRAJ_FS = 200;
 
-range_decimation = 8;      % max_range=21m when range_decimation=1
+range_decimation = 4;      % max_range=21m when range_decimation=1
 doppler_decimation = 1;    % max_velocity=2m/s when doppler_decimation=1
 framelen = 256;
 stride = 64;
