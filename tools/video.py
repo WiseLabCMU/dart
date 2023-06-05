@@ -48,6 +48,11 @@ def _resize(img, size):
 
 
 def _main(args):
+
+    if args.out is None:
+        args.out = os.path.join(
+            args.path[0], "video.mp4")
+
     cam_path = [os.path.join(p, "cam_all.mat") for p in args.path]
     rad_path = [os.path.join(p, "pred_all.mat") for p in args.path]
     dataset_path = [_get_dataset(p) for p in args.path]
