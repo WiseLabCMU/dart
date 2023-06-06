@@ -1,6 +1,7 @@
 """Utilities that should be included in a standard library somewhere."""
 
 from tqdm import tqdm
+import json
 
 import jax
 from jax import numpy as jnp
@@ -8,7 +9,7 @@ import numpy as np
 
 
 from jaxtyping import PyTree
-from beartype.typing import TypeVar, Optional
+from beartype.typing import TypeVar, Optional, Union
 from . import types
 
 
@@ -59,3 +60,35 @@ def split(data: PyTree, nval: int = 0) -> tuple[PyTree, Optional[PyTree]]:
         return train, val
     else:
         return data, None
+
+
+def save_weights(weights: dict, path: str) -> None:
+    """Save weights to the provided path."""
+    # Accumulate global flattened entries
+    flattened: dict[str, np.ndarray] = {}
+
+    def _save(breadcrumb: list[str], subweights: dict) -> dict:
+        subschema: dict[str, Union[str, dict]] = {}
+        for k, v in subweights.items():
+            subpath = "/".join(breadcrumb + [k])
+            if isinstance(v, dict):
+                subschema[k] = _save([subpath], v)
+            else:
+                flattened[subpath] = np.array(v)
+                subschema[k] = subpath
+        return subschema
+
+    schema = _save([], weights)
+
+    with open(path + ".json", 'w') as f:
+        json.dump(schema, f, indent=4)
+    np.savez(path + ".npz", **flattened)
+
+
+def load_weights(path: str) -> dict:
+    """Load weights from the provided path (.json and .npz files.)."""
+    with open(path + ".json") as f:
+        schema = json.load(f)
+    flattened = np.load(path + ".npz")
+
+    return jax.tree_util.tree_map(flattened.get, schema)

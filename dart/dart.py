@@ -18,7 +18,8 @@ from . import types
 from . import fields, components, adjustments
 from .sensor import VirtualRadar
 from .camera import VirtualCamera, VirtualCameraImage
-from .utils import tf_to_jax, to_prngkey, update_avg
+from .utils import (
+    tf_to_jax, to_prngkey, update_avg, load_weights, save_weights)
 
 
 class DART:
@@ -114,7 +115,7 @@ class DART:
     def fit(
         self, train: types.Dataset, state: types.ModelState,
         val: Optional[types.Dataset] = None, epochs: int = 1,
-        tqdm=default_tqdm, key: types.PRNGSeed = 42
+        tqdm=default_tqdm, key: types.PRNGSeed = 42, save: Optional[str] = None
     ) -> tuple[types.ModelState, list, list]:
         """Train model."""
         @jax.jit
@@ -153,6 +154,8 @@ class DART:
                 if val is not None:
                     val_log.append(float(
                         self._val(loss_func, k2, state.params, val)))
+                if save is not None:
+                    self.save("{}_{}".format(save, i), state)
             except KeyboardInterrupt:
                 break
 
@@ -162,14 +165,11 @@ class DART:
         """Save state to file using pickle."""
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path), exist_ok=True)
+        save_weights(state.params, path)
 
-        with open(path, 'wb') as f:
-            pickle.dump(state, f)
-
-    def load(self, path: str) -> types.ModelState:
+    def load(self, path: str) -> dict:
         """Load pickled state from file."""
-        with open(path, 'rb') as f:
-            return pickle.load(f)
+        return load_weights(path)
 
     def render(
         self, params: Union[types.ModelState, PyTree], batch: types.RadarPose,

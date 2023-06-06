@@ -30,7 +30,7 @@ video:
 	$(DART) video -p $(TARGET)
 
 slices:
-	$(DART) map -p $(TARGET) -l $(LOWER) -u $(UPPER) -r $(RESOLUTION) -b 4
+	$(DART) map -p $(TARGET) -l $(LOWER) -u $(UPPER) -r $(RESOLUTION) -b 16
 	$(DART) slice -p $(TARGET)
 
 typecheck:

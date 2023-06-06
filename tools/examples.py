@@ -6,7 +6,7 @@ import os
 from matplotlib import pyplot as plt
 import numpy as np
 
-from dart import dataset
+from dart import dataset, DartResult
 
 
 _desc = "Draw sample predicted/actual range-doppler images."
@@ -25,10 +25,8 @@ def _parse(p):
 
 def _main(args):
 
-    with open(os.path.join(args.path, "metadata.json")) as f:
-        cfg = json.load(f)
-
-    y_true = dataset.load_arrays(cfg["dataset"]["path"])["rad"]
+    result = DartResult(args.path)
+    y_true = result.data("rad")["rad"]
     if args.all:
         y_pred_file = "pred_all.mat"
     else:
@@ -36,7 +34,7 @@ def _main(args):
         validx = np.load(os.path.join(args.path, "metadata.npz"))["validx"]
         y_true = y_true[validx]
     y_pred = dataset.load_arrays(os.path.join(args.path, y_pred_file))["rad"]
-    y_true = y_true[:, :y_pred.shape[1]] / cfg["dataset"]["norm"]
+    y_true = y_true[:, :y_pred.shape[1]] / result.metadata["dataset"]["norm"]
 
     rng = np.random.default_rng(args.key)
     idxs = np.sort(rng.choice(y_true.shape[0], 18, replace=False))

@@ -10,7 +10,7 @@ from jax import numpy as jnp
 import jax
 from scipy.io import savemat
 
-from dart import dataset, DART, VirtualCamera
+from dart import dataset, DART, VirtualCamera, DartResult
 
 
 _desc = "Evaluate DART trained checkpoint for an input trajectory."
@@ -41,7 +41,7 @@ def _render_camera(dart, state, args, traj):
     render = jax.jit(partial(
         dart.camera, key=args.key, params=state,
         camera=VirtualCamera(
-            d=256, max_depth=args.depth, f=1.0, size=(1.0, 1.0),
+            d=128, max_depth=args.depth, f=1.0, size=(1.0, 1.0),
             res=(128, 128), clip=args.clip)))
 
     d, s, a = [], [], []
@@ -71,23 +71,17 @@ def _main(args):
     if args.batch is None:
         args.batch = 4 if args.camera else 32
 
-    with open(os.path.join(args.path, "metadata.json")) as f:
-        cfg = json.load(f)
-
-    dart = DART.from_config(**cfg)
+    result = DartResult(args.path)
+    dart = result.dart()
     state = dart.load(os.path.join(args.path, "model.chkpt"))
 
-    if args.all:
-        traj = dataset.trajectory(cfg["dataset"]["path"])
-    else:
-        subset = np.load(os.path.join(args.path, "metadata.npz"))["validx"]
-        traj = dataset.trajectory(cfg["dataset"]["path"], subset=subset)
+    subset = None if args.all else np.load(
+        os.path.join(args.path, "metadata.npz"))["validx"]
+    traj = result.trajectory_dataset(subset=subset)
 
-    if args.camera:
-        out = _render_camera(dart, state, args, traj)
-    else:
-        out = _render_radar(dart, state, args, traj)
+    render_func = _render_camera if args.camera else _render_radar
+    out = render_func(dart, state, args, traj)
 
     outfile = "{}{}.mat".format(
         "cam" if args.camera else "pred", "_all" if args.all else "")
-    savemat(os.path.join(args.path, outfile), out)
+    result.save(outfile, out)

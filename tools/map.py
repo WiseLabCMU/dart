@@ -3,12 +3,14 @@
 import json
 import os
 from tqdm import tqdm
+from functools import partial
 
 from scipy.io import savemat
 import numpy as np
 from jax import numpy as jnp
+import jax
 
-from dart import DART
+from dart import DART, DartResult
 
 
 _desc = "Evaluate DART model in a grid."
@@ -35,26 +37,27 @@ def _parse(p):
 def _main(args):
     assert len(args.lower) == 3
     assert len(args.upper) == 3
-    args.resolution = args.resolution * 3
+    args.resolution = (args.resolution * 3)[:3]
 
-    with open(os.path.join(args.path, "metadata.json")) as f:
-        cfg = json.load(f)
-
-    dart = DART.from_config(**cfg)
+    result = DartResult(args.path)
+    dart = result.dart()
     state = dart.load(os.path.join(args.path, "model.chkpt"))
 
     x, y, z = [
         jnp.linspace(lower, upper, res) for lower, upper, res in
         zip(args.lower, args.upper, args.resolution)]
 
+    render = jax.jit(partial(dart.grid, state.params, x, y))
     sigma, alpha = [], []
     for _ in tqdm(range(int(np.ceil(args.resolution[2] / args.batch)))):
-        _sigma, _alpha = dart.grid(state.params, x, y, z[:args.batch])
+        _sigma, _alpha = render(z=z[:args.batch])
         z = z[args.batch:]
         sigma.append(_sigma)
         alpha.append(_alpha)
     sigma = np.concatenate(sigma, axis=2)
     alpha = np.concatenate(alpha, axis=2)
 
-    savemat(
-        os.path.join(args.path, "map.mat"), {"sigma": sigma, "alpha": alpha})
+    result.save("map.mat", {
+        "sigma": sigma, "alpha": alpha,
+        "lower": args.lower, "upper": args.upper
+    })

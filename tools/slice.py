@@ -52,6 +52,6 @@ def _main(args):
     for i in tqdm(range(sigma.shape[2])):
         fs = sigma[:, :, i, :]
         fa = alpha[:, :, i, :]
-        f = np.concatenate([fs, fa], axis=1)
+        f = np.flip(np.concatenate([fs, fa], axis=1), axis=0)
         out.write(f[:, :, [2, 1, 0]])
     out.release()

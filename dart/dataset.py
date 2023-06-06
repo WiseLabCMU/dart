@@ -16,7 +16,7 @@ from .sensor import VirtualRadar
 from . import types, utils
 
 
-def load_arrays(file: str) -> Any:
+def load_arrays(file: str, keys: Optional[list[str]] = None) -> Any:
     """General load function."""
     if file.endswith(".npz"):
         return np.load(file)
@@ -25,7 +25,8 @@ def load_arrays(file: str) -> Any:
             return loadmat(file)
         except NotImplementedError:
             f = h5py.File(file, 'r')
-            return {k: np.array(f.get(k)).T for k in f.keys()}
+            key_res = f.keys() if keys is None else keys
+            return {k: np.array(f.get(k)).T for k in key_res}
     else:
         raise TypeError(
             "Unknown file type: {} (expected .npz or .mat)".format(file))

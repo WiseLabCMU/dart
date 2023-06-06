@@ -3,9 +3,17 @@
 ### cichall
 
 ```sh
-python train.py ngp -p data/cichall -o results/cichall -e 10 -b 1024
-TARGET=results/cichall LOWER=-7 -15 -2 UPPER=13 9 3 make slices
+python train.py ngp -p data/cichall -o results/cichall -e 10 -b 1024 --iid
+TARGET=results/cichall LOWER="-7 -15 -2" UPPER="13 9 3" RESOLUTION="800 1000 200" make slices
 TARGET=results/cichall make video
+```
+
+### cabinets
+
+```sh
+python train.py ngp -p data/cabinets-10 -o results/cabinets-10 -e 10 --iid
+TARGET=results/cabinets-10 LOWER="-3 -3 -1" UPPER="5 5 3" RESOLUTION="400 400 200" make slices
+TARGET=results/cabinets-10 make video
 ```
 
 

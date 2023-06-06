@@ -37,8 +37,9 @@ def script_train(cfg: dict) -> None:
     state = dart.init(train.batch(2), key=k2)
     state, train_log, val_log = dart.fit(
         train.batch(cfg["batch"]), state, epochs=cfg["epochs"], tqdm=tqdm,
-        key=k3, val=val.batch(cfg["batch"]))
-    dart.save(os.path.join(cfg["out"], "model.chkpt"), state)
+        key=k3, val=val.batch(cfg["batch"]),
+        save=os.path.join(cfg["out"], "checkpoints", "checkpoint"))
+    dart.save(os.path.join(cfg["out"], "model"), state)
 
     train_time = time.time() - start
     print("Done training ({:.1f}s).".format(train_time))
