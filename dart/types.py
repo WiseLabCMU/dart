@@ -64,11 +64,6 @@ class RadarPose(NamedTuple):
     i: Int32[Array, ""]
 
 
-#: Pose Adjustment model
-PoseAdjustment = Callable[
-    [Optional[RadarPose]], Union[RadarPose, Float32[Array, ""]]]
-
-
 class TrainingColumn(NamedTuple):
     """Single column for training.
 

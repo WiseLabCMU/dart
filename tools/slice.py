@@ -2,7 +2,6 @@
 
 import os
 from tqdm import tqdm
-import json
 import matplotlib as mpl
 
 from dart.dataset import load_arrays
@@ -19,15 +18,19 @@ def _parse(p):
         "-c", "--fourcc", help="Format fourcc code.", default="mp4v")
     p.add_argument("-o", "--out", help="Output file.")
     p.add_argument(
-        "-f", "--fps", default=30.0, type=float, help="Video framerate.")
-    p.add_argument(
-        "-s", "--size", type=int, default=512,
-        help="Vertical/horizontal size to rescale each plot to.")
+        "-f", "--fps", default=10.0, type=float, help="Video framerate.")
     return p
 
 
-def _colorize(x):
-    return (mpl.colormaps['viridis'](x)[:, :, :, :3] * 255).astype(np.uint8)
+def _colorize(x, k=20):
+    conved = sum(x[:, :, i:x.shape[2] - (k - i)] for i in range(k + 1))
+    lower = np.percentile(conved, 1)
+    upper = np.percentile(conved, 99)
+    clipped = np.clip(conved, lower, upper)
+    scaled = (clipped - lower) / (upper - lower)
+    return (
+        mpl.colormaps['viridis'](scaled)[:, :, :, :3] * 255
+    ).astype(np.uint8)
 
 
 def _loadmap(path):
@@ -35,23 +38,20 @@ def _loadmap(path):
     return _colorize(data["sigma"]), _colorize(data["alpha"])
 
 
-def _resize(img, size):
-    return cv2.resize(img, size, interpolation=cv2.INTER_NEAREST)
-
-
 def _main(args):
     if args.out is None:
         args.out = os.path.join(
             args.path, "slice.mp4")
 
+    sigma, alpha = _loadmap(os.path.join(args.path, "map.mat"))
+
     fourcc = cv2.VideoWriter_fourcc(*args.fourcc)
     out = cv2.VideoWriter(
-        args.out, fourcc, args.fps, (args.size * 2, args.size))
+        args.out, fourcc, args.fps, (sigma.shape[1] * 2, sigma.shape[0]))
 
-    sigma, alpha = _loadmap(os.path.join(args.path, "map.mat"))
     for i in tqdm(range(sigma.shape[2])):
-        fs = _resize(sigma[:, :, i, :], (args.size, args.size))
-        fa = _resize(alpha[:, :, i, :], (args.size, args.size))
+        fs = sigma[:, :, i, :]
+        fa = alpha[:, :, i, :]
         f = np.concatenate([fs, fa], axis=1)
         out.write(f[:, :, [2, 1, 0]])
     out.release()

@@ -20,7 +20,9 @@ def _parse(p):
     p.add_argument("-p", "--path", help="File path to output base name.")
     p.add_argument(
         "-r", "--key", default=42, type=int, help="Random seed.")
-    p.add_argument("-b", "--batch", default=None, type=int, help="Batch size")
+    p.add_argument(
+        "-b", "--batch", default=None, type=int,
+        help="Batch size; defaults (4 cam / 32 radar) use 24GB of VRAM.")
     p.add_argument(
         "-a", "--all", default=False, action="store_true",
         help="Render all images instead of only the validation set.")
@@ -28,15 +30,19 @@ def _parse(p):
         "-c", "--camera", default=False, action="store_true",
         help="Render camera image instead of radar image.")
     p.add_argument(
-        "--clip", default=0.01, type=float,
+        "--clip", default=0.05, type=float,
         help="Inclusion threshold for camera rendering.")
+    p.add_argument(
+        "--depth", default=5.0, type=float, help="Maximum depth to render.")
     return p
 
 
 def _render_camera(dart, state, args, traj):
     render = jax.jit(partial(
         dart.camera, key=args.key, params=state,
-        camera=VirtualCamera(d=256, max_depth=3.2, f=1.0, clip=args.clip)))
+        camera=VirtualCamera(
+            d=256, max_depth=args.depth, f=1.0, size=(1.0, 1.0),
+            res=(128, 128), clip=args.clip)))
 
     d, s, a = [], [], []
     for batch in tqdm(traj.batch(args.batch)):

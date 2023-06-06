@@ -36,7 +36,7 @@ class DART:
     def __init__(
         self, sensor: VirtualRadar, optimizer: optax.GradientTransformation,
         sigma: Callable[[], types.SigmaField],
-        adjust: Callable[[], types.PoseAdjustment],
+        adjust: Callable[[], adjustments.Adjustment],
         loss: components.LossFunc,
     ) -> None:
 
@@ -96,7 +96,7 @@ class DART:
                     print("WARNING: encountered NaN loss!")
         return state, avg.avg
 
-    def _validate(
+    def _val(
         self, loss_func, key: types.PRNGKeyArray, params: PyTree,
         dataset: types.Dataset
     ) -> float:
@@ -107,7 +107,9 @@ class DART:
             losses.append(loss_func(params, rng, tf_to_jax(batch)))
         losses_np = np.array(losses)
         losses_np = losses_np[~np.isnan(losses_np)]
-        return np.mean(losses_np)
+        loss_avg = np.mean(losses_np)
+        print("Val: {}".format(loss_avg))
+        return loss_avg
 
     def fit(
         self, train: types.Dataset, state: types.ModelState,
@@ -116,7 +118,7 @@ class DART:
     ) -> tuple[types.ModelState, list, list]:
         """Train model."""
         @jax.jit
-        def loss_func(params, rng, batch, include_reg=False):
+        def loss_func(params, rng, batch):
             columns, y_true = batch
             y_pred, reg = self.model.apply(params, rng, columns)
             return self.loss(y_pred, y_true) + reg
@@ -126,8 +128,7 @@ class DART:
         @jax.jit
         def step(state, rng, batch):
             loss, grads = jax.value_and_grad(
-                partial(loss_func, rng=rng, batch=batch, include_reg=True)
-            )(state.params)
+                partial(loss_func, rng=rng, batch=batch))(state.params)
 
             clip = jax.tree_util.tree_map(jnp.nan_to_num, grads)
             updates, opt_state = self.optimizer.update(
@@ -138,17 +139,22 @@ class DART:
 
         train_log, val_log = [], []
         k = to_prngkey(key)
-        for i in range(epochs):
-            k, rng = jax.random.split(k, 2)
-            tqdm_epoch = partial(tqdm, unit="batch", desc="Epoch {}".format(i))
-            state, loss = self._train(step, rng, state, train, tqdm_epoch)
-            train_log.append(loss)
 
-            if val is not None:
-                k, rng = jax.random.split(k, 2)
-                val_loss = self._validate(loss_func, rng, state.params, val)
-                print("Val: {}".format(val_loss))
-                val_log.append(float(val_loss))
+        k, rng = jax.random.split(k, 2)
+        self._val(loss_func, rng, state.params, val)
+
+        for i in range(epochs):
+            try:
+                k, k1, k2 = jax.random.split(k, 3)
+                pbar = partial(tqdm, unit="batch", desc="Epoch {}".format(i))
+                state, loss = self._train(step, k1, state, train, pbar)
+                train_log.append(float(loss))
+
+                if val is not None:
+                    val_log.append(float(
+                        self._val(loss_func, k2, state.params, val)))
+            except KeyboardInterrupt:
+                break
 
         return state, train_log, val_log
 
