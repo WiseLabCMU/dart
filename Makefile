@@ -1,14 +1,22 @@
 ifndef RADIUS
 RADIUS=0.6
 endif
-
 ifndef BATCH
 BATCH=32
 endif
-
 ifndef DART
 DART=python manage.py
 endif
+ifndef LOWER
+LOWER=-3 -3 -3
+endif
+ifndef UPPER
+UPPER=3 3 3
+endif
+ifndef RESOLUTION
+RESOLUTION=400 500 100
+endif
+
 
 .phony: eval typecheck eval-all video test
 
@@ -22,7 +30,7 @@ video:
 	$(DART) video -p $(TARGET)
 
 mri:
-	$(DART) map -p $(TARGET) -l -3.0 -3.0 -1.0 -u 3.0 3.0 3.0 -r 512 -b 16
+	$(DART) map -p $(TARGET) -l $(LOWER) -u $(UPPER) -r $(RESOLUTION) -b 16
 	$(DART) slice -p $(TARGET)
 
 typecheck:

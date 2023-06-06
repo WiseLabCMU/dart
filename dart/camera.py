@@ -47,9 +47,8 @@ class VirtualCameraImage(NamedTuple):
         -------
         Image with floating point RGB in [0, 1].
         """
-        lower = np.percentile(self.sigma, clip)
         upper = np.percentile(self.sigma, 100 - clip)
-        sigma = (np.clip(self.sigma, lower, upper) - lower) / (upper - lower)
+        sigma = np.clip(self.sigma, 0.0, upper) / upper
         sigma = sigma * (range[1] - range[0]) + range[0]
         hsv = np.stack([
             sigma, np.minimum(1, sigma * sat_decay_slope), 1 - self.d
@@ -71,14 +70,16 @@ class VirtualCamera(NamedTuple):
     d: depth resolution.
     max_depth: maximum depth to render to.
     f: focal length (perfect camera with fx = fy).
-    size:
-    res: 
+    size: sensor size (dx, dy) as an offset to the center; always symmetric.
+    res: image resolution (width, height).
     clip: minimum return threshold.
     """
 
     d: int
     max_depth: float
     f: float
+    size: tuple[float, float]
+    res: tuple[int, int]
     clip: float
 
     def render_pixel(
@@ -132,8 +133,8 @@ class VirtualCamera(NamedTuple):
         -------
         Image with (depth, sigma, amplitude) channels.
         """
-        y = jnp.linspace(-1, 1, 128)
-        z = jnp.linspace(1, -1, 128)
+        y = jnp.linspace(-self.size[0], self.size[0], self.res[0])
+        z = jnp.linspace(self.size[1], -self.size[1], self.res[1])
         yy, zz = jnp.meshgrid(y, z)
         xyz = jnp.stack([self.f * jnp.ones_like(yy), yy, zz], axis=2)
         xyz = xyz / jnp.linalg.norm(xyz, keepdims=True, axis=2)

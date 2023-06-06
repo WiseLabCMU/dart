@@ -16,6 +16,7 @@ from jax import numpy as jnp
 from jax import random, vmap
 
 from .components import antenna
+from .adjustments import Adjustment
 from . import types
 from .pose import project_angle, sensor_to_world
 
@@ -143,7 +144,7 @@ class VirtualRadar(NamedTuple):
 
     def column_forward(
         self, key: random.PRNGKeyArray, column: types.TrainingColumn,
-        sigma: types.SigmaField, adjust: types.PoseAdjustment
+        sigma: types.SigmaField, adjust: Adjustment
     ) -> Float32[Array, "nr"]:
         """Render a training column.
 

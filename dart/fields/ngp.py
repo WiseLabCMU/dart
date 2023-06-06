@@ -74,7 +74,7 @@ class NGP(hk.Module):
 
     @classmethod
     def from_config(
-        cls, levels=8, exponent=0.5, base=4, size=16, features=2
+        cls, levels=8, exponent=0.5, base=2, size=16, features=2
     ) -> Callable[[], "NGP"]:
         """Create NGP haiku closure from config items."""
         def closure():
@@ -92,7 +92,7 @@ class NGP(hk.Module):
             "--exponent", default=0.43, type=float,
             help="Hash table level exponent, in powers of 2.")
         p.add_argument(
-            "--base", default=10., type=float,
+            "--base", default=2., type=float,
             help="Size of base (most coarse) hash table level.")
         p.add_argument(
             "--size", default=16, type=int,

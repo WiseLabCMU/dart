@@ -42,7 +42,7 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
     g.add_argument("--loss", default="l2", help="Loss function.")
     g.add_argument("--weight", default=None, help="Loss weighting.")
     g.add_argument(
-        "--adj", type=float, default=0.1, help="Adjustment regularization.")
+        "--adj", type=float, default=-1, help="Adjustment regularization.")
 
     g = p.add_argument_group(title="Dataset")
     g.add_argument(

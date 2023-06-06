@@ -4,22 +4,28 @@ from jax import numpy as jnp
 import haiku as hk
 
 from jaxtyping import Float32, Array
-from beartype.typing import Callable, Optional, Union
+from beartype.typing import Callable, Optional, Literal, overload
 
 from . import types
 
 
-class Identity(hk.Module):
-    """No adjustments."""
+class Adjustment(hk.Module):
+    """Adjustment base class."""
 
     @classmethod
     def from_config(cls):
         """Create identity closure."""
         return lambda: cls()
 
-    def __call__(
-        self, pose: Optional[types.RadarPose]
-    ) -> Union[types.RadarPose, Float32[Array, ""]]:
+    @overload
+    def __call__(self, pose: Literal[None]) -> Float32[Array, ""]:
+        ...
+
+    @overload
+    def __call__(self, pose: types.RadarPose) -> types.RadarPose:
+        ...
+
+    def __call__(self, pose: Optional[types.RadarPose]):
         """No adjustment."""
         if pose is None:
             return jnp.array(0.0)
@@ -27,7 +33,13 @@ class Identity(hk.Module):
             return pose
 
 
-class Position(Identity):
+class Identity(Adjustment):
+    """No adjustments."""
+
+    pass
+
+
+class Position(Adjustment):
     """Position adjustment parameters."""
 
     def __init__(self, n: int, k: int, alpha: float = 1.) -> None:
@@ -45,7 +57,7 @@ class Position(Identity):
             return cls(n=n, k=k, alpha=alpha)
         return closure
 
-    def __call__(self, pose: types.RadarPose) -> types.RadarPose:
+    def __call__(self, pose: Optional[types.RadarPose]):
         """Apply pose adjustments."""
         deltas = hk.get_parameter("delta", shape=(self.k, 3), init=jnp.zeros)
 
