@@ -29,8 +29,8 @@ video:
 	$(DART) evaluate -p $(TARGET) -ac -b 1
 	$(DART) video -p $(TARGET)
 
-mri:
-	$(DART) map -p $(TARGET) -l $(LOWER) -u $(UPPER) -r $(RESOLUTION) -b 16
+slices:
+	$(DART) map -p $(TARGET) -l $(LOWER) -u $(UPPER) -r $(RESOLUTION) -b 4
 	$(DART) slice -p $(TARGET)
 
 typecheck:
