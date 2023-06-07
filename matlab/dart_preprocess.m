@@ -124,7 +124,7 @@ t = scan_t;
 
 naan = isnan(pos(:,1));
 t(naan) = [];
-rad(naan, :, :) = [];
+rad(naan, :, :, :) = [];
 pos(naan, :) = [];
 rot(naan, :, :) = [];
 vel(naan, :) = [];
