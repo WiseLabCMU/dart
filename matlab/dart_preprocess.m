@@ -40,7 +40,6 @@ GLOBAL_TFORM = [ 1,  0,  0,  0;
 
 % ---------------------------------------------------------- %
 
-% radarpacketsfile = fullfile(DATADIR, DATASET, 'radarpackets.h5');
 t265file = fullfile(DATADIR, DATASET, 't265.h5');
 optitrackfile = fullfile(DATADIR, DATASET, 'optitrack.txt');
 
