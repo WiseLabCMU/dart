@@ -106,13 +106,13 @@ class VirtualCamera(NamedTuple):
 
         sigma, alpha = vmap(project)(jnp.linspace(0, self.max_depth, self.d))
 
-        # transmitted = jnp.concatenate([jnp.zeros((1)), jnp.cumsum(alpha[:-1])])
-        amplitude = jnp.nan_to_num(sigma, nan=0.0, copy=False)  # * jnp.exp(transmitted * 0.1)
+        tx = jnp.concatenate([jnp.zeros((1)), jnp.cumsum(alpha[:-1])])
+        rx = jnp.nan_to_num(sigma, nan=0.0, copy=False)
 
-        d_idx = jnp.argmax(amplitude)
-        d_clip = jnp.where(amplitude[d_idx] >= self.clip, d_idx / self.d, 1)
+        d_idx = jnp.argmax(rx)
+        d_clip = jnp.where(rx[d_idx] >= self.clip, d_idx / self.d, 1)
 
-        return d_clip, amplitude[d_idx], jnp.sum(amplitude)
+        return d_clip, rx[d_idx], jnp.sum(rx)
 
     def render(
         self, pose: types.RadarPose, field: types.SigmaField

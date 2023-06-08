@@ -22,7 +22,7 @@ def _parse(p):
     return p
 
 
-def _colorize(x, k=20):
+def _colorize(x, k=10):
     conved = sum(x[:, :, i:x.shape[2] - (k - i)] for i in range(k + 1))
     lower = np.percentile(conved, 1)
     upper = np.percentile(conved, 99)
@@ -35,15 +35,17 @@ def _colorize(x, k=20):
 
 def _loadmap(path):
     data = load_arrays(path)
-    return _colorize(data["sigma"]), _colorize(data["alpha"])
+    return (
+        _colorize(data["sigma"]), _colorize(data["alpha"]),
+        data["lower"].reshape(-1), data["upper"].reshape(-1))
 
 
 def _main(args):
     if args.out is None:
-        args.out = os.path.join(
-            args.path, "slice.mp4")
+        fname = "{}.slice.mp4".format(os.path.basename(args.path))
+        args.out = os.path.join(args.path, fname)
 
-    sigma, alpha = _loadmap(os.path.join(args.path, "map.mat"))
+    sigma, alpha, lower, upper = _loadmap(os.path.join(args.path, "map.mat"))
 
     fourcc = cv2.VideoWriter_fourcc(*args.fourcc)
     out = cv2.VideoWriter(
@@ -52,6 +54,11 @@ def _main(args):
     for i in tqdm(range(sigma.shape[2])):
         fs = sigma[:, :, i, :]
         fa = alpha[:, :, i, :]
-        f = np.flip(np.concatenate([fs, fa], axis=1), axis=0)
+        f = np.concatenate([fs, fa], axis=1)
+
+        z = lower[2] + (upper[2] - lower[2]) * (i + 5) / (sigma.shape[2] + 10)
+        cv2.putText(
+            f, "{:.1f}m".format(z), (20, 50), cv2.FONT_HERSHEY_SIMPLEX,
+            1, (255, 255, 255), 2, cv2.LINE_AA)
         out.write(f[:, :, [2, 1, 0]])
     out.release()

@@ -99,7 +99,7 @@ def __make_dataset(
         return jax.vmap(make_column)(sensor.d)
 
     poses, images = data
-    columns = jax.vmap(process_image)(poses)
+    columns = jax.jit(jax.vmap(process_image))(poses)
 
     images_col = jnp.swapaxes(images, 1, 2)
     dataset = (columns, images_col)

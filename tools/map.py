@@ -41,13 +41,13 @@ def _main(args):
 
     result = DartResult(args.path)
     dart = result.dart()
-    state = dart.load(os.path.join(args.path, "model.chkpt"))
+    params = dart.load(os.path.join(args.path, "model"))
 
     x, y, z = [
         jnp.linspace(lower, upper, res) for lower, upper, res in
         zip(args.lower, args.upper, args.resolution)]
 
-    render = jax.jit(partial(dart.grid, state.params, x, y))
+    render = jax.jit(partial(dart.grid, params, x, y))
     sigma, alpha = [], []
     for _ in tqdm(range(int(np.ceil(args.resolution[2] / args.batch)))):
         _sigma, _alpha = render(z=z[:args.batch])

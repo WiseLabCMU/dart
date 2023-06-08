@@ -48,9 +48,9 @@ def _resize(img, size):
 
 
 def _main(args):
-
     if args.out is None:
-        args.out = os.path.join(args.path[0], "video.mp4")
+        fname = "{}.video.mp4".format(os.path.basename(args.path[0]))
+        args.out = os.path.join(args.path[0], fname)
 
     cam_path = [os.path.join(p, "cam_all.mat") for p in args.path]
     rad_path = [os.path.join(p, "pred_all.mat") for p in args.path]
@@ -67,13 +67,22 @@ def _main(args):
     rad = np.concatenate([_loadrad(p) for p in rad_path], axis=1)
     gt = np.concatenate([_loadrad(p) for p in dataset_path], axis=1)
 
+    validx = np.zeros(cam.shape[0], dtype=bool)
+    valset = np.load(os.path.join(args.path[0], "metadata.npz"))["validx"]
+    validx[valset] = True
+
     fourcc = cv2.VideoWriter_fourcc(*args.fourcc)
     out = cv2.VideoWriter(args.out, fourcc, args.fps, (args.size * 3, height))
-    for fc, fr, fg in tqdm(zip(cam, rad, gt), total=len(cam)):
+    for i, (fc, fr, fg) in enumerate(tqdm(zip(cam, rad, gt), total=len(cam))):
         fc = _resize(fc, (args.size, height))
         fr = _resize(fr, (args.size, height))
         fg = _resize(fg, (args.size, height))
         f = np.concatenate([fc, fr, fg], axis=1)
+
+        cv2.putText(
+            f, "{}{}".format("v" if validx[i] else "t", i), (20, 50),
+            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+
         # RGB -> BGR since OpenCV assumes BGR
         out.write(cv2.resize(f, (args.size * 3, height))[:, :, [2, 1, 0]])
     out.release()

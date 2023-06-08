@@ -69,8 +69,8 @@ class NGP(hk.Module):
     ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
         """Index into learned reflectance map."""
         table_out = self.lookup(x)
-        alpha, sigma = self.head(table_out.reshape(-1))
-        return alpha, sigma
+        sigma, alpha = self.head(table_out.reshape(-1))
+        return sigma, jnp.minimum(alpha, 0.0)
 
     @classmethod
     def from_config(
@@ -151,9 +151,9 @@ class NGPSH(NGP):
         alpha = mlp_out[-1]
 
         if dx is None:
-            sigma = jnp.linalg.norm(mlp_out, ord=2)
+            sigma = mlp_out[0]
         else:
             sh = spherical_harmonics(dx, self.harmonics)
             sigma = jnp.sum(mlp_out[:-1] * sh)
 
-        return sigma, alpha
+        return sigma, jnp.minimum(alpha, 0.0)

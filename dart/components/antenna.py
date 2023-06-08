@@ -19,7 +19,7 @@ def awr1843boost(
     _theta = theta / jnp.pi * 180 / 56
     _phi = phi / jnp.pi * 180 / 56
 
-    return jnp.exp((
+    return jnp.power(10, (
         (0.14 * _phi**6 + 0.13 * _phi**4 - 8.2 * _phi**2)
         + (3.1 * _theta**8 - 22 * _theta**6 + 54 * _theta**4 - 55 * _theta**2)
-    ).reshape(1, -1) / 10)
+    ).reshape(1, -1) / 20)

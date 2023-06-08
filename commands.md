@@ -1,19 +1,28 @@
 ## Experiments
 
+cichall-sh2: baseline
+cichall-sh3: pow(10, db/20)
+cichall-sh4: pow(10, db/10)
+
 ### cichall
 
 ```sh
 python train.py ngp -p data/cichall -o results/cichall -e 10 -b 1024 --iid
-TARGET=results/cichall LOWER="-7 -15 -2" UPPER="13 9 3" RESOLUTION="800 1000 200" make slices
-TARGET=results/cichall make video
+TARGET=results/cichall LOWER="-7 -15 -2" UPPER="13 9 3" RESOLUTION="800 1000 200" make visualize
 ```
 
 ### cabinets
 
 ```sh
-python train.py ngp -p data/cabinets-10 -o results/cabinets-10 -e 10 --iid
-TARGET=results/cabinets-10 LOWER="-3 -3 -1" UPPER="5 5 3" RESOLUTION="400 400 200" make slices
-TARGET=results/cabinets-10 make video
+python train.py ngp -p data/cabinets-10k -o results/cabinets-10k -e 5 --iid -b 512
+TARGET=results/cabinets-10k LOWER="-5 -5 -1" UPPER="7 7 3" RESOLUTION="600 600 200" make visualize
+```
+
+### aframe
+
+```sh
+python train.py ngp -p data/aframe_t265 -o results/aframe -e 10
+TARGET=results/aframe LOWER="-8 -6 -1" UPPER="4 6 3" RESOLUTION="600 600 200" make visualize
 ```
 
 
@@ -46,13 +55,6 @@ python train.py ngp -s data/cabinets/cabinets.json -o results/cabinets-5.sim -e 
 python train.py ngp -s data/cabinets/cabinets.json -o results/cabinets-5.real -p data/cabinets-5/cabinets-5.mat --norm 1e4 --min_speed 0.25 -e 5 --repeat 1 --iid
 ```
 
-Create video:
-```sh
-TARGET=results/cabinets-5.sim make video
-TARGET=results/cabinets-5.real make video
-python manage.py video -p results/cabinets-5.sim results/cabinets-5.real -f 30 -s 512 -o results/cabinets-5.mp4
-```
-
 ### Couch
 
 ```sh
@@ -79,16 +81,4 @@ Create video:
 TARGET=results/linear1.sim make video
 TARGET=results/linear1.real make video
 python manage.py video -p results/linear1.sim results/linear1.real -f 15 -s 512 -o results/linear1.mp4
-```
-
-### Coloradar
-
-```sh
-python train.py ngp -s data/coloradar/coloradar-short.json -o results/coloradar0-short -p data/coloradar/coloradar0.mat --norm 1e3 --min_speed 1.0 --base 2.0 --iid --repeat 5 -e 10
-TARGET=results/coloradar0-short make eval
-```
-
-```sh
-python train.py ngp -s data/coloradar/coloradar-short.json -o results/coloradar1 -p data/coloradar/coloradar1.mat --norm 1e4 --min_speed 1.0 --base 2.0 --iid --repeat 5 -e 10
-TARGET=results/coloradar1 make eval
 ```

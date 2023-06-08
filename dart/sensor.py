@@ -137,7 +137,7 @@ class VirtualRadar(NamedTuple):
             jnp.cumsum(alpha_samples[:-1], axis=0)
         ], axis=0)
         gain = self.gain(*vec_to_angle(t))
-        amplitude = sigma_samples * jnp.exp(transmitted * 0.1) * gain
+        amplitude = sigma_samples * gain * jnp.exp(transmitted * 0.1)
 
         constant = weight / self.n * self.r
         return jnp.sum(amplitude, axis=1) * constant

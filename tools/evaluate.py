@@ -30,16 +30,16 @@ def _parse(p):
         "-c", "--camera", default=False, action="store_true",
         help="Render camera image instead of radar image.")
     p.add_argument(
-        "--clip", default=0.05, type=float,
+        "--clip", default=0.1, type=float,
         help="Inclusion threshold for camera rendering.")
     p.add_argument(
         "--depth", default=5.0, type=float, help="Maximum depth to render.")
     return p
 
 
-def _render_camera(dart, state, args, traj):
+def _render_camera(dart, params, args, traj):
     render = jax.jit(partial(
-        dart.camera, key=args.key, params=state,
+        dart.camera, key=args.key, params=params,
         camera=VirtualCamera(
             d=128, max_depth=args.depth, f=1.0, size=(1.0, 1.0),
             res=(128, 128), clip=args.clip)))
@@ -57,8 +57,8 @@ def _render_camera(dart, state, args, traj):
     }
 
 
-def _render_radar(dart, state, args, traj):
-    render = jax.jit(partial(dart.render, key=args.key, params=state))
+def _render_radar(dart, params, args, traj):
+    render = jax.jit(partial(dart.render, key=args.key, params=params))
     frames = []
     for batch in tqdm(traj.batch(args.batch)):
         frames.append(np.asarray(
@@ -73,14 +73,14 @@ def _main(args):
 
     result = DartResult(args.path)
     dart = result.dart()
-    state = dart.load(os.path.join(args.path, "model.chkpt"))
+    params = dart.load(os.path.join(args.path, "model"))
 
     subset = None if args.all else np.load(
         os.path.join(args.path, "metadata.npz"))["validx"]
     traj = result.trajectory_dataset(subset=subset)
 
     render_func = _render_camera if args.camera else _render_radar
-    out = render_func(dart, state, args, traj)
+    out = render_func(dart, params, args, traj)
 
     outfile = "{}{}.mat".format(
         "cam" if args.camera else "pred", "_all" if args.all else "")
