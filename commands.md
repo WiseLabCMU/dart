@@ -25,6 +25,13 @@ python train.py ngp -p data/aframe_t265 -o results/aframe -e 10
 TARGET=results/aframe LOWER="-8 -6 -1" UPPER="4 6 3" RESOLUTION="600 600 200" make visualize
 ```
 
+### picnic
+
+```sh
+python train.py ngp -p data/picnic-2 -o results/picnic-2 -b 1024 --iid -e 3
+TARGET=results/picnic-2 LOWER="-8 -18 -1" UPPER="6 -6 3" RESOLUTION="700 600 200" make vizualize
+```
+
 
 ***
 

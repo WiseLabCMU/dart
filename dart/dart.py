@@ -83,12 +83,12 @@ class DART:
         return types.ModelState(params=params, opt_state=opt_state)
 
     def _train(
-        self, step_func, key: types.PRNGKeyArray, state: types.ModelState,
-        dataset: types.Dataset, tqdm
+        self, step_func, tqdm, key: types.PRNGKeyArray,
+        state: types.ModelState, dataset: types.Dataset
     ) -> tuple[types.ModelState, float]:
         """Run training loop."""
         avg = types.Average(0.0, 0.0)
-        with tqdm(dataset) as epoch:
+        with tqdm(dataset, unit="batch") as epoch:
             for batch in epoch:
                 key, rng = jax.random.split(key, 2)
                 loss, state = step_func(state, rng, tf_to_jax(batch))
@@ -98,12 +98,12 @@ class DART:
         return state, avg.avg
 
     def _val(
-        self, loss_func, key: types.PRNGKeyArray, params: PyTree,
+        self, loss_func, tqdm, key: types.PRNGKeyArray, params: PyTree,
         dataset: types.Dataset
     ) -> float:
         """Run validation."""
         losses = []
-        for batch in dataset:
+        for batch in tqdm(dataset, unit="batch", desc="    Validating"):
             key, rng = jax.random.split(key, 2)
             losses.append(loss_func(params, rng, tf_to_jax(batch)))
         losses_np = np.array(losses)
@@ -142,18 +142,18 @@ class DART:
         k = to_prngkey(key)
 
         k, rng = jax.random.split(k, 2)
-        self._val(loss_func, rng, state.params, val)
+        self._val(loss_func, tqdm, rng, state.params, val)
 
         for i in range(epochs):
             try:
                 k, k1, k2 = jax.random.split(k, 3)
-                pbar = partial(tqdm, unit="batch", desc="Epoch {}".format(i))
-                state, loss = self._train(step, k1, state, train, pbar)
+                pbar = partial(tqdm, desc="Epoch {}".format(i))
+                state, loss = self._train(step, pbar, k1, state, train)
                 train_log.append(float(loss))
 
                 if val is not None:
                     val_log.append(float(
-                        self._val(loss_func, k2, state.params, val)))
+                        self._val(loss_func, tqdm, k2, state.params, val)))
                 if save is not None:
                     self.save("{}_{}".format(save, i), state)
             except KeyboardInterrupt:

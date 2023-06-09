@@ -122,11 +122,12 @@ class VirtualRadar(NamedTuple):
         -------
         Rendered column for one doppler value and a stack of range values.
         """
+        # Direction is the same for all ranges.
+        dx = jnp.matmul(pose.A, t)
+
         def project_rays(r):
             t_world = sensor_to_world(r=r, t=t, pose=pose)
-            dx = pose.x.reshape(-1, 1) - t_world
-            dx_norm = dx / jnp.linalg.norm(dx, axis=0)
-            return vmap(sigma)(t_world.T, dx=dx_norm.T)
+            return vmap(sigma)(t_world.T, dx=dx.T)
 
         # Field steps
         sigma_samples, alpha_samples = vmap(project_rays)(self.r)
@@ -137,7 +138,7 @@ class VirtualRadar(NamedTuple):
             jnp.cumsum(alpha_samples[:-1], axis=0)
         ], axis=0)
         gain = self.gain(*vec_to_angle(t))
-        amplitude = sigma_samples * gain * jnp.exp(transmitted * 0.1)
+        amplitude = sigma_samples * gain * jnp.exp(transmitted)
 
         constant = weight / self.n * self.r
         return jnp.sum(amplitude, axis=1) * constant

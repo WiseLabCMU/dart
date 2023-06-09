@@ -98,11 +98,12 @@ class VirtualCamera(NamedTuple):
         -------
         (d, sigma, alpha) pixel.
         """
+        # Direction is the same for all ranges.
+        dx = jnp.matmul(pose.A, t)
+
         def project(r):
             t_world = sensor_to_world(r=r, t=t.reshape(3, 1), pose=pose)[:, 0]
-            dx = pose.x - t_world
-            dx_norm = dx / jnp.linalg.norm(dx)
-            return field(t_world, dx=dx_norm)
+            return field(t_world, dx=dx)
 
         sigma, alpha = vmap(project)(jnp.linspace(0, self.max_depth, self.d))
 
