@@ -1,9 +1,0 @@
-power supply power button
-hold power supply AC button until AC is shown on screen
-connect laptop to dart-5 (wiselab2023)
-AFTER laptop is connected to wifi, plug in NUC + radar and press power on NUC
-run RDP on laptop
-connect to win-qbb0j8pltgl.local
-username Administrator
-password mmwave76GHz
-

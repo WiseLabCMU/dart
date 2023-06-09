@@ -1,7 +1,7 @@
 % ------------------- PARAMS ------------------------------- %
 
 DATADIR = '/media/john/HEADCOUNT/dartdata';
-DATASET = 'cichall-2';
+DATASET = 'cichall-3';
 BATCH_SIZE = 50000;
 
 USE_T265 = true;
