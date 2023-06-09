@@ -72,9 +72,10 @@ class NGP(hk.Module):
     ) -> Float32[Array, ""]:
         """Alpha clipping function."""
         if self.clip > 0:
-            return jnp.where(sigma > self.clip, jnp.minimum(alpha, 0.0), 0.0)
+            return 0.1 * jnp.where(
+                sigma > self.clip, jnp.minimum(alpha, 0.0), 0.0)
         else:
-            return jnp.minimum(alpha, 0.0)
+            return 0.1 * jnp.minimum(alpha, 0.0)
 
     def __call__(
         self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None
