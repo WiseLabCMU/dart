@@ -1,7 +1,7 @@
 % ------------------- PARAMS ------------------------------- %
 
 DATADIR = '/media/john/HEADCOUNT/dartdata';
-DATASET = 'cichall';
+DATASET = 'cichall-2';
 BATCH_SIZE = 50000;
 
 USE_T265 = true;
@@ -111,6 +111,9 @@ for b = 0 : nbatches - 1
     rad = cat(1, rad, new_rad);
 end
 
+% scan_t = scan_t(2400:end);
+% rad = rad(2400:end, :, :);
+
 [pos, rot, vel, wp_t, wp_pos, wp_quat] = traj_from_file( ...
     trajfile, ...
     scan_t, ...
@@ -124,7 +127,8 @@ t = scan_t;
 
 naan = isnan(pos(:,1));
 t(naan) = [];
-rad(naan, :, :, :) = [];
+% rad(naan, :, :, :) = [];
+rad(naan, :, :) = [];
 pos(naan, :) = [];
 rot(naan, :, :) = [];
 vel(naan, :) = [];
