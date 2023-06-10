@@ -1,18 +1,17 @@
 """Virtual Camera routines."""
 
-from matplotlib import colors
 from functools import partial
-from scipy.io import loadmat
 
-import numpy as np
 from jax import numpy as jnp
 from jax import vmap
 
 from jaxtyping import Float32, Array
 from beartype.typing import NamedTuple
 
+from .dataset import load_arrays
 from .pose import sensor_to_world
 from . import types
+from .jaxcolors import hsv_to_rgb
 
 
 class VirtualCameraImage(NamedTuple):
@@ -47,18 +46,18 @@ class VirtualCameraImage(NamedTuple):
         -------
         Image with floating point RGB in [0, 1].
         """
-        upper = np.percentile(self.sigma, 100 - clip)
-        sigma = np.clip(self.sigma, 0.0, upper) / upper
+        upper = jnp.percentile(self.sigma, 100 - clip)
+        sigma = jnp.clip(self.sigma, 0.0, upper) / upper
         sigma = sigma * (range[1] - range[0]) + range[0]
-        hsv = np.stack([
-            sigma, np.minimum(1, sigma * sat_decay_slope), 1 - self.d
+        hsv = jnp.stack([
+            sigma, jnp.minimum(1, sigma * sat_decay_slope), 1 - self.d
         ], axis=-1)
-        return (colors.hsv_to_rgb(hsv) * 255).astype(np.uint8)
+        return (hsv_to_rgb(hsv) * 255).astype(jnp.uint8)
 
     @classmethod
     def from_file(cls, file: str) -> "VirtualCameraImage":
         """Load from file."""
-        data = loadmat(file)
+        data = load_arrays(file)
         return cls(d=data["d"], sigma=data["sigma"], a=data["a"])
 
 

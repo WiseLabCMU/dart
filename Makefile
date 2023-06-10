@@ -1,38 +1,21 @@
-ifndef RADIUS
-RADIUS=0.6
-endif
 ifndef BATCH
-BATCH=32
+BATCH=4
 endif
 ifndef DART
 DART=python manage.py
 endif
-ifndef LOWER
-LOWER=-3 -3 -3
-endif
-ifndef UPPER
-UPPER=3 3 3
-endif
-ifndef RESOLUTION
-RESOLUTION=400 400 400
-endif
-
 
 .phony: eval typecheck video slices visualize
-
-eval:
-	$(DART) evaluate -p $(TARGET) -b $(BATCH)
-	$(DART) examples -p $(TARGET)
 
 visualize: video slices
 
 video:
-	$(DART) evaluate -p $(TARGET) -a -b 1
-	$(DART) evaluate -p $(TARGET) -ac -b 1
+	$(DART) evaluate -p $(TARGET) -a -b $(BATCH)
+	$(DART) evaluate -p $(TARGET) -ac -b $(BATCH)
 	$(DART) video -p $(TARGET)
 
 slices:
-	$(DART) map -p $(TARGET) -l $(LOWER) -u $(UPPER) -r $(RESOLUTION) -b 16
+	$(DART) map -p $(TARGET)
 	$(DART) slice -p $(TARGET)
 
 typecheck:

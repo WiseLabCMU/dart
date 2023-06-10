@@ -4,9 +4,15 @@ from argparse import ArgumentParser, _ArgumentGroup, Namespace
 
 import tensorflow as tf
 
-from jaxtyping import Array, Float32, UInt8, Int32, PyTree
+from jaxtyping import Array, Float32, Float16, UInt8, Int32, PyTree
 from beartype.typing import Union, Callable, NamedTuple
 from jax.random import PRNGKeyArray
+
+#: Radar data type
+RadarFloat = Float16
+
+#: Field data type
+FieldFloat = Float32
 
 #: Argument parser or parser group
 ParserLike = Union[ArgumentParser, _ArgumentGroup]
@@ -22,7 +28,7 @@ Dataset = tf.data.Dataset
 PRNGSeed = Union[PRNGKeyArray, int]
 
 #: Reflectance field
-SigmaField = Callable[[Float32[Array, "3"]], Float32[Array, "2"]]
+SigmaField = Callable[[FieldFloat[Array, "3"]], FieldFloat[Array, "2"]]
 
 #: Antenna gain pattern
 GainPattern = Callable[
@@ -82,14 +88,14 @@ class TrainingColumn(NamedTuple):
     pose: RadarPose
     valid: UInt8[Array, "n8"]
     weight: Float32[Array, ""]
-    doppler: Float32[Array, ""]
+    doppler: RadarFloat[Array, ""]
 
 
 #: Image data
-RangeDopplerData = tuple[RadarPose, Float32[Array, "N Nr Nd Na"]]
+RangeDopplerData = tuple[RadarPose, RadarFloat[Array, "N Nr Nd Na"]]
 
 #: Doppler column data
-DopplerColumnData = tuple[RadarPose, Float32[Array, "N Nr Na"]]
+DopplerColumnData = tuple[RadarPose, RadarFloat[Array, "N Nr Na"]]
 
 
 class ModelState(NamedTuple):

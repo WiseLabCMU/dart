@@ -1,16 +1,14 @@
 """Evaluate model."""
 
 import os
-import json
 from tqdm import tqdm
 from functools import partial
 
 import numpy as np
 from jax import numpy as jnp
 import jax
-from scipy.io import savemat
 
-from dart import dataset, DART, VirtualCamera, DartResult
+from dart import VirtualCamera, DartResult
 
 
 _desc = "Evaluate DART trained checkpoint for an input trajectory."
@@ -47,9 +45,9 @@ def _render_camera(dart, params, args, traj):
     d, s, a = [], [], []
     for batch in tqdm(traj.batch(args.batch)):
         res = render(batch=jax.tree_util.tree_map(jnp.array, batch))
-        d.append(np.asarray(res.d))
-        s.append(np.asarray(res.sigma))
-        a.append(np.asarray(res.a))
+        d.append(np.asarray(res.d, dtype=np.float16))
+        s.append(np.asarray(res.sigma, dtype=np.float16))
+        a.append(np.asarray(res.a, dtype=np.float16))
     return {
         "d": np.concatenate(d, axis=0),
         "sigma": np.concatenate(s, axis=0),
@@ -62,7 +60,8 @@ def _render_radar(dart, params, args, traj):
     frames = []
     for batch in tqdm(traj.batch(args.batch)):
         frames.append(np.asarray(
-            render(batch=jax.tree_util.tree_map(jnp.array, batch))))
+            render(batch=jax.tree_util.tree_map(jnp.array, batch)),
+            dtype=np.float16))
     return {"rad": np.concatenate(frames, axis=0)}
 
 
@@ -82,6 +81,8 @@ def _main(args):
     render_func = _render_camera if args.camera else _render_radar
     out = render_func(dart, params, args, traj)
 
-    outfile = "{}{}.mat".format(
-        "cam" if args.camera else "pred", "_all" if args.all else "")
+    outfile = DartResult.CAMERA if args.camera else DartResult.RADAR
+    if not args.all:
+        outfile.replace(".h5", "_val.h5")
+
     result.save(outfile, out)

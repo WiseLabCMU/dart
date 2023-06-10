@@ -46,7 +46,7 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
 
     g = p.add_argument_group(title="Dataset")
     g.add_argument(
-        "--norm", default=1e5, type=float,
+        "--norm", default=1e2, type=float,
         help="Normalization value.")
     g.add_argument(
         "--min_speed", default=0.2, type=float, help="Reject frames with "

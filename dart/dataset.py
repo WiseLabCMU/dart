@@ -16,20 +16,34 @@ from .sensor import VirtualRadar
 from . import types, utils
 
 
+def _load_h5(
+    file: str, keys: Optional[list[str]] = None, transpose: bool = False
+) -> Any:
+    """Load h5 file while handling matlab oddities."""
+    f = h5py.File(file, 'r')
+    key_res = f.keys() if keys is None else keys
+    if transpose:
+        return {k: np.array(f.get(k)).T for k in key_res}
+    else:
+        return {k: np.array(f.get(k)) for k in key_res}
+
+
 def load_arrays(file: str, keys: Optional[list[str]] = None) -> Any:
     """General load function."""
     if file.endswith(".npz"):
         return np.load(file)
+    elif file.endswith(".h5"):
+        return _load_h5(file, keys)
     elif file.endswith(".mat"):
         try:
             return loadmat(file)
         except NotImplementedError:
-            f = h5py.File(file, 'r')
-            key_res = f.keys() if keys is None else keys
-            return {k: np.array(f.get(k)).T for k in key_res}
+            return _load_h5(file, keys, transpose=True)
+        except ValueError:
+            return _load_h5(file, keys)
     else:
         raise TypeError(
-            "Unknown file type: {} (expected .npz or .mat)".format(file))
+            "Unknown file type: {} (expected .npz, .h5, or .mat)".format(file))
 
 
 def gt_map(file: str) -> GroundTruth:
@@ -69,9 +83,7 @@ def __raw_image_traj(
             crop = int((image.shape[2] - len(sensor.d)) / 2)
             image = image[:, :, crop:-crop]
         # Copy to garbage-collect the initial (larger) array
-        image = np.copy(image).astype(np.float32)
-    else:
-        image = np.array(image).astype(np.float32)
+        image = np.copy(image)
 
     if len(image.shape) < 4:
         image = image.reshape(*image.shape, 1)

@@ -69,7 +69,7 @@ class Position(Adjustment):
             right = jnp.ceil(raw).astype(jnp.int32)
 
             interp = (
-                deltas[left] * (raw - left) + deltas[right] * (right - raw))
+                deltas[left] * (right - raw) + deltas[right] * (raw - left))
             deltas_final = jnp.where(left == right, deltas[left], interp)
 
             return types.RadarPose(

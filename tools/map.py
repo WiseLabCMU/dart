@@ -5,12 +5,11 @@ import os
 from tqdm import tqdm
 from functools import partial
 
-from scipy.io import savemat
 import numpy as np
 from jax import numpy as jnp
 import jax
 
-from dart import DART, DartResult
+from dart import DartResult
 
 
 _desc = "Evaluate DART model in a grid."
@@ -20,15 +19,17 @@ def _parse(p):
     p.add_argument("-p", "--path", help="File path to output base name.")
     p.add_argument("-c", "--checkpoint", help="Load specific checkpoint.")
     p.add_argument(
-        "-l", "--lower", nargs='+', type=float, default=[-1.0, -1.0, -1.0],
+        "-l", "--lower", nargs='+', type=float, default=None,
         help="Lower coordinate in x y z form.")
     p.add_argument(
-        "-u", "--upper", nargs='+', type=float, default=[1.0, 1.0, 1.0],
+        "-u", "--upper", nargs='+', type=float, default=None,
         help="Upper coordinate in x y z form.")
     p.add_argument(
-        "-r", "--resolution", nargs='+', type=int, default=[512],
-        help="Map resolution; can be nx ny nz for an arbitrary shape, or a "
-        "single resolution for a cube.")
+        "--padding", type=float, nargs='+', default=[4.0, 4.0, 1.0],
+        help="Region padding relative to trajectory min/max.")
+    p.add_argument(
+        "-r", "--resolution", type=int, default=25,
+        help="Map resolution, in units per meter.")
     p.add_argument(
         "-b", "--batch", type=int, default=16, help="Batch size along the z "
         "axis for breaking up high resolution grids.")
@@ -36,23 +37,32 @@ def _parse(p):
 
 
 def _main(args):
-    assert len(args.lower) == 3
-    assert len(args.upper) == 3
-    args.resolution = (args.resolution * 3)[:3]
-
     result = DartResult(args.path)
-    dart = result.dart()
 
+    if args.lower is None or args.upper is None:
+        args.padding = np.array((args.padding * 3)[:3])
+        x = result.data(keys=["pos"])["pos"]
+        args.lower = np.min(x, axis=0) - args.padding
+        args.upper = np.max(x, axis=0) + args.padding
+        resolution = (args.resolution * (args.upper - args.lower)).astype(int)
+    else:
+        assert len(args.lower) == 3
+        assert len(args.upper) == 3
+        resolution = (args.resolution * 3)[:3]
+    print("Bounds: {:.1f}x{:.1f}x{:.1f}m ({}x{}x{}px)".format(
+        *(args.upper - args.lower), *resolution))
+
+    dart = result.dart()
     checkpoint = "model" if args.checkpoint is None else args.checkpoint
     params = dart.load(os.path.join(args.path, checkpoint))
 
     x, y, z = [
         jnp.linspace(lower, upper, res) for lower, upper, res in
-        zip(args.lower, args.upper, args.resolution)]
+        zip(args.lower, args.upper, resolution)]
 
     render = jax.jit(partial(dart.grid, params, x, y))
     sigma, alpha = [], []
-    for _ in tqdm(range(int(np.ceil(args.resolution[2] / args.batch)))):
+    for _ in tqdm(range(int(np.ceil(resolution[2] / args.batch)))):
         _sigma, _alpha = render(z=z[:args.batch])
         z = z[args.batch:]
         sigma.append(_sigma)
@@ -60,7 +70,7 @@ def _main(args):
     sigma = np.concatenate(sigma, axis=2)
     alpha = np.concatenate(alpha, axis=2)
 
-    result.save("map.mat", {
+    result.save("map.h5", {
         "sigma": sigma, "alpha": alpha,
         "lower": args.lower, "upper": args.upper
     })
