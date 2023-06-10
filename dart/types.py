@@ -5,7 +5,7 @@ from argparse import ArgumentParser, _ArgumentGroup, Namespace
 import tensorflow as tf
 
 from jaxtyping import Array, Float32, UInt8, Int32, PyTree
-from beartype.typing import Union, Callable, NamedTuple, Optional
+from beartype.typing import Union, Callable, NamedTuple
 from jax.random import PRNGKeyArray
 
 #: Argument parser or parser group
@@ -26,7 +26,7 @@ SigmaField = Callable[[Float32[Array, "3"]], Float32[Array, "2"]]
 
 #: Antenna gain pattern
 GainPattern = Callable[
-    [Float32[Array, "k"], Float32[Array, "k"]], Float32[Array, "k"]]
+    [Float32[Array, "k"], Float32[Array, "k"]], Float32[Array, "k Na"]]
 
 
 class CameraPose(NamedTuple):
@@ -86,10 +86,10 @@ class TrainingColumn(NamedTuple):
 
 
 #: Image data
-RangeDopplerData = tuple[RadarPose, Float32[Array, "N Nr Nd"]]
+RangeDopplerData = tuple[RadarPose, Float32[Array, "N Nr Nd Na"]]
 
 #: Doppler column data
-DopplerColumnData = tuple[RadarPose, Float32[Array, "N Nr"]]
+DopplerColumnData = tuple[RadarPose, Float32[Array, "N Nr Na"]]
 
 
 class ModelState(NamedTuple):

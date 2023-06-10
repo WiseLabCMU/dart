@@ -18,6 +18,7 @@ _desc = "Evaluate DART model in a grid."
 
 def _parse(p):
     p.add_argument("-p", "--path", help="File path to output base name.")
+    p.add_argument("-c", "--checkpoint", help="Load specific checkpoint.")
     p.add_argument(
         "-l", "--lower", nargs='+', type=float, default=[-1.0, -1.0, -1.0],
         help="Lower coordinate in x y z form.")
@@ -41,7 +42,9 @@ def _main(args):
 
     result = DartResult(args.path)
     dart = result.dart()
-    params = dart.load(os.path.join(args.path, "model"))
+
+    checkpoint = "model" if args.checkpoint is None else args.checkpoint
+    params = dart.load(os.path.join(args.path, checkpoint))
 
     x, y, z = [
         jnp.linspace(lower, upper, res) for lower, upper, res in

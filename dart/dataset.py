@@ -69,7 +69,12 @@ def __raw_image_traj(
             crop = int((image.shape[2] - len(sensor.d)) / 2)
             image = image[:, :, crop:-crop]
         # Copy to garbage-collect the initial (larger) array
-        image = jnp.copy(image)
+        image = np.copy(image).astype(np.float32)
+    else:
+        image = np.array(image).astype(np.float32)
+
+    if len(image.shape) < 4:
+        image = image.reshape(*image.shape, 1)
 
     return pose, image
 
@@ -152,7 +157,7 @@ def doppler_columns(
     validx: Indices of original images corresponding to the validation set.
     """
     pose, range_doppler = __raw_image_traj(path, norm=norm, sensor=sensor)
-    idx = jnp.arange(range_doppler.shape[0], dtype=jnp.int32)
+    idx = np.arange(range_doppler.shape[0], dtype=np.int32)
     valid_speed = pose.s > min_speed
 
     print("Loaded dataset: {} valid frames (speed > {}) / {}".format(
