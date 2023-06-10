@@ -1,4 +1,4 @@
-N = 256;
+N = 8;
 w=linspace(-pi, pi, 10*N);
 a = ones(N,1);
 n=0:N-1;
