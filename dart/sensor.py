@@ -108,7 +108,7 @@ class VirtualRadar(NamedTuple):
     def render_column(
         self, t: Float32[Array, "3 k"], sigma: types.SigmaField,
         pose: types.RadarPose, weight: Float32[Array, ""]
-    ) -> Float32[Array, "nr"]:
+    ) -> Float32[Array, "Nr Na"]:
         """Render a single doppler column for a radar image.
 
         Parameters
@@ -129,7 +129,6 @@ class VirtualRadar(NamedTuple):
             t_world = sensor_to_world(r=r, t=t, pose=pose)
             return vmap(sigma)(t_world.T, dx=dx.T)
 
-        # Field steps
         sigma_samples, alpha_samples = vmap(project_rays)(self.r)
 
         # Return signal
@@ -138,15 +137,17 @@ class VirtualRadar(NamedTuple):
             jnp.cumsum(alpha_samples[:-1], axis=0)
         ], axis=0)
         gain = self.gain(*vec_to_angle(t))
-        amplitude = sigma_samples * gain * jnp.exp(transmitted)
+        amplitude: Float32[Array, "Nr k Na"] = (
+            sigma_samples[..., jnp.newaxis] * gain
+            * jnp.exp(transmitted)[..., jnp.newaxis])
 
         constant = weight / self.n * self.r
-        return jnp.sum(amplitude, axis=1) * constant
+        return jnp.sum(amplitude, axis=1) * constant[..., jnp.newaxis]
 
     def column_forward(
         self, key: random.PRNGKeyArray, column: types.TrainingColumn,
         sigma: types.SigmaField, adjust: Adjustment
-    ) -> Float32[Array, "nr"]:
+    ) -> Float32[Array, "Nr Na"]:
         """Render a training column.
 
         Parameters
@@ -220,7 +221,7 @@ class VirtualRadar(NamedTuple):
     def render(
         self, key: random.PRNGKeyArray, sigma: types.SigmaField,
         pose: types.RadarPose
-    ) -> Float32[Array, "nr nd"]:
+    ) -> Float32[Array, "Nr Nd Na"]:
         """Render single (range, doppler) radar image.
 
         NOTE: This function is not vmap or jit safe.
@@ -241,8 +242,12 @@ class VirtualRadar(NamedTuple):
 
         keys = jnp.array(random.split(key, self.d.shape[0]))
 
-        t_sensor = vmap(partial(self.sample_rays, pose=pose))(
-            keys, d=self.d, valid_psi=valid_psi)
-        return vmap(
+        t_sensor: Float32[Array, "Nd 3"] = vmap(
+            partial(self.sample_rays, pose=pose)
+        )(keys, d=self.d, valid_psi=valid_psi)
+
+        out: Float32[Array, "Nd Nr Na"] = vmap(
             partial(self.render_column, sigma=sigma, pose=pose)
-        )(t_sensor, weight=weight).T
+        )(t_sensor, weight=weight)
+
+        return jnp.swapaxes(out, 0, 1)
