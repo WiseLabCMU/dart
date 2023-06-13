@@ -165,7 +165,7 @@ class NGPSH(NGP):
             components = mlp_out[2:] / jnp.linalg.norm(mlp_out[2:], ord=2)
             proj = jnp.sum(components * sh)
             sigma = sigma * proj
-            if not self.alpha_sh:
+            if self.alpha_sh:
                 alpha = alpha * proj
 
         return self._out(sigma, alpha, **kwargs)
