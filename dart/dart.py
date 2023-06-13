@@ -219,7 +219,7 @@ class DART:
         key: types.PRNGSeed = 42
     ) -> tuple[Float32[Array, "x y z"], Float32[Array, "x y z"]]:
         """Evaluate model as a fixed grid."""
-        def forward_grid(batch: Float32[Array, "n 2"]):
+        def forward_grid(batch: Float32[Array, "n 3"]):
             return jax.vmap(partial(self.sigma(), **self._hypers()))(batch)
 
         grid = jnp.meshgrid(x, y, z, indexing='ij')

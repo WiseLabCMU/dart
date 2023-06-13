@@ -39,6 +39,9 @@ GainPattern = Callable[
 #: Hyperparameters schedule
 HyperparameterSchedule = Callable[[int, int], PyTree]
 
+#: Numpy or JAX
+ArrayLike = Union[Array, np.ndarray]
+
 
 class CameraPose(NamedTuple):
     """Camera pose parameters for simple ray rendering.
@@ -97,12 +100,10 @@ class TrainingColumn(NamedTuple):
 
 
 #: Image data
-RangeDopplerData = tuple[
-    RadarPose, RadarFloat[Union[Array, np.ndarray], "Ni Nr Nd Na"]]
+RangeDopplerData = tuple[RadarPose, RadarFloat[ArrayLike, "Ni Nr Nd Na"]]
 
 #: Doppler column data
-DopplerColumnData = tuple[
-    TrainingColumn, RadarFloat[Union[Array, np.ndarray], "Nc Nr Na"]]
+DopplerColumnData = tuple[TrainingColumn, RadarFloat[ArrayLike, "Nc Nr Na"]]
 
 
 class ModelState(NamedTuple):

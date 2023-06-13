@@ -66,7 +66,7 @@ class DartResult:
 
     @staticmethod
     def colorize_map(
-        arr: Float[Array, "..."], sigma: bool = True,
+        arr: Float[types.ArrayLike, "..."], sigma: bool = True,
         clip: tuple[float, float] = (1.0, 99.0), conv: int = 0
     ) -> Float[Array, "... 3"]:
         """Colorize a sigma or alpha map.
