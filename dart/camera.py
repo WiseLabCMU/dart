@@ -5,7 +5,7 @@ from functools import partial
 from jax import numpy as jnp
 from jax import vmap
 
-from jaxtyping import Float32, Array
+from jaxtyping import Float, Float32, Array, UInt8
 from beartype.typing import NamedTuple
 
 from .dataset import load_arrays
@@ -25,14 +25,14 @@ class VirtualCameraImage(NamedTuple):
     a: amplitude contribution of that ray.
     """
 
-    d: Float32[Array, "w h"]
-    sigma: Float32[Array, "w h"]
-    a: Float32[Array, "w h"]
+    d: Float[Array, "... w h"]
+    sigma: Float[Array, "... w h"]
+    a: Float[Array, "... w h"]
 
     def to_rgb(
         self, clip: float = 5.0, range: tuple[float, float] = (0, 0.5),
         sat_decay_slope: float = 4.0
-    ) -> Float32[Array, "w h 3"]:
+    ) -> UInt8[types.ArrayLike, "... 3"]:
         """Convert to RGB image.
 
         Parameters
@@ -104,9 +104,10 @@ class VirtualCamera(NamedTuple):
             t_world = sensor_to_world(r=r, t=t.reshape(3, 1), pose=pose)[:, 0]
             return field(t_world, dx=dx)
 
-        sigma, alpha = vmap(project)(jnp.linspace(0, self.max_depth, self.d))
+        sigma, alpha, _ = vmap(project)(
+            jnp.linspace(0, self.max_depth, self.d))
 
-        tx = jnp.concatenate([jnp.zeros((1)), jnp.cumsum(alpha[:-1])])
+        # tx = jnp.concatenate([jnp.zeros((1)), jnp.cumsum(alpha[:-1])])
         rx = jnp.nan_to_num(sigma, nan=0.0, copy=False)
 
         d_idx = jnp.argmax(rx)

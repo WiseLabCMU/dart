@@ -6,8 +6,8 @@ import numpy as np
 import h5py
 import matplotlib as mpl
 
-from beartype.typing import Optional, Any, Union
-from jaxtyping import Integer, Array, Float
+from beartype.typing import Optional, Any
+from jaxtyping import Integer, Array, Float, UInt8
 
 from .dart import DART
 from .dataset import load_arrays, trajectory
@@ -68,7 +68,7 @@ class DartResult:
     def colorize_map(
         arr: Float[types.ArrayLike, "..."], sigma: bool = True,
         clip: tuple[float, float] = (1.0, 99.0), conv: int = 0
-    ) -> Float[Array, "... 3"]:
+    ) -> UInt8[types.ArrayLike, "... 3"]:
         """Colorize a sigma or alpha map.
 
         Sigma maps are colorized by clipping to the provided percentiles, then

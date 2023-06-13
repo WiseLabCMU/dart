@@ -2,10 +2,13 @@
 
 from jax import numpy as jnp
 
-from jaxtyping import Float32, Array
+from jaxtyping import Float, Array
+from dart import types
 
 
-def hsv_to_rgb(hsv: Float32[Array, "... 3"]) -> Float32[Array, "... 3"]:
+def hsv_to_rgb(
+    hsv: Float[types.ArrayLike, "... 3"]
+) -> Float[Array, "... 3"]:
     """Convert hsv values to rgb.
 
     Copied here, and modified for vectorization:
@@ -33,8 +36,9 @@ def hsv_to_rgb(hsv: Float32[Array, "... 3"]) -> Float32[Array, "... 3"]:
 
 
 def colormap(
-    colors: Float32[Array, "n 3"], data: Float32[Array, "..."]
-) -> Float32[Array, "... 3"]:
+    colors: Float[types.ArrayLike, "n 3"],
+    data: Float[types.ArrayLike, "..."]
+) -> Float[Array, "... 3"]:
     """Apply a discrete colormap."""
     fidx = data * (colors.shape[0] - 1)
     left = jnp.clip(jnp.floor(fidx).astype(int), 0, colors.shape[0] - 1)

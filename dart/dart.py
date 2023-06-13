@@ -200,7 +200,7 @@ class DART:
     def render(
         self, params: Union[types.ModelState, PyTree], batch: types.RadarPose,
         key: types.PRNGSeed = 42
-    ) -> Float32[Array, "w h b"]:
+    ) -> Float32[Array, "w h b a"]:
         """Render images from batch of poses."""
         def forward(batch: types.RadarPose):
             keys = jnp.array(
@@ -237,8 +237,7 @@ class DART:
         def forward(batch: types.RadarPose):
             vfwd = jax.vmap(partial(
                 camera.render, field=partial(self.sigma(), **self._hypers())))
-            sigma, alpha, _ = vfwd(pose=batch)
-            return sigma, alpha
+            return vfwd(pose=batch)
 
         return hk.transform(forward).apply(
             types.ModelState.get_params(params), to_prngkey(key), batch)
