@@ -3,6 +3,7 @@
 import os
 from tqdm import tqdm
 import matplotlib as mpl
+import time
 
 from jax import numpy as jnp
 import jax
@@ -45,7 +46,10 @@ def _loadrad(cmap, rad):
     rad = (rad - p5) / (p95 - p5)
     colors = (colormap(cmap, rad) * 255).astype(jnp.uint8)
     if len(rad.shape) == 4:
-        return _tile(colors)
+        if rad.shape[-1] > 1:
+            return _tile(colors)
+        else:
+            return colors[..., 0, :]
     else:
         return colors
 
@@ -63,11 +67,8 @@ def _main(args):
     if args.out is None:
         fname = "{}.video.mp4".format(os.path.basename(args.path))
         args.out = os.path.join(args.path, fname)
-    print(args.out)
 
     cmap = jnp.array(mpl.colormaps['viridis'].colors)
-
-    import time
 
     start = time.time()
     cam = np.asarray(

@@ -1,7 +1,7 @@
 """Main library."""
 
 from jaxtyping import install_import_hook
-with install_import_hook("foo", ("beartype", "beartype")):
+with install_import_hook("dart", ("beartype", "beartype")):
     from dart.sensor import VirtualRadar
     from dart.dart import DART
     from dart import dataset

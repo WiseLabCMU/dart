@@ -2,17 +2,14 @@
 
 from argparse import ArgumentParser, _ArgumentGroup, Namespace
 
+import numpy as np
 import tensorflow as tf
 
-from jaxtyping import Array, Float32, Float16, UInt8, Int32, PyTree
+from jaxtyping import Array, Float32, UInt8, Int32, UInt32, PyTree
+from jaxtyping import Float16 as RadarFloat
+
 from beartype.typing import Union, Callable, NamedTuple
 from jax.random import PRNGKeyArray
-
-#: Radar data type
-RadarFloat = Float16
-
-#: Field data type
-FieldFloat = Float32
 
 #: Argument parser or parser group
 ParserLike = Union[ArgumentParser, _ArgumentGroup]
@@ -24,15 +21,23 @@ ParsedArgs = Namespace
 #: https://github.com/microsoft/pylance-release/issues/1066
 Dataset = tf.data.Dataset
 
-#: PRNGKey seed
-PRNGSeed = Union[PRNGKeyArray, int]
+#: PRNGKey, according to JAX alias.
+PRNGKey = Union[PRNGKeyArray, UInt32[Array, "... 2"]]
+
+#: PRNGKey seed. Can be int (passed to jax.random.PRNGKey) or PRNGKey.
+PRNGSeed = Union[int, PRNGKey]
 
 #: Reflectance field
-SigmaField = Callable[[FieldFloat[Array, "3"]], FieldFloat[Array, "2"]]
+SigmaField = Callable[
+    [Float32[Array, "3"]],
+    tuple[Float32[Array, ""], Float32[Array, ""], Float32[Array, ""]]]
 
 #: Antenna gain pattern
 GainPattern = Callable[
     [Float32[Array, "k"], Float32[Array, "k"]], Float32[Array, "k Na"]]
+
+#: Hyperparameters schedule
+HyperparameterSchedule = Callable[[int, int], PyTree]
 
 
 class CameraPose(NamedTuple):
@@ -92,10 +97,12 @@ class TrainingColumn(NamedTuple):
 
 
 #: Image data
-RangeDopplerData = tuple[RadarPose, RadarFloat[Array, "N Nr Nd Na"]]
+RangeDopplerData = tuple[
+    RadarPose, RadarFloat[Union[Array, np.ndarray], "Ni Nr Nd Na"]]
 
 #: Doppler column data
-DopplerColumnData = tuple[RadarPose, RadarFloat[Array, "N Nr Na"]]
+DopplerColumnData = tuple[
+    TrainingColumn, RadarFloat[Union[Array, np.ndarray], "Nc Nr Na"]]
 
 
 class ModelState(NamedTuple):

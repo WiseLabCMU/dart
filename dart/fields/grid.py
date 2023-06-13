@@ -32,7 +32,8 @@ class SimpleGrid(hk.Module):
         self.size = size
 
     def __call__(
-        self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None
+        self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None,
+        **kwargs
     ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
         """Index into learned reflectance map."""
         grid = hk.get_parameter("grid", (*self.size, 2), init=jnp.zeros)

@@ -52,15 +52,22 @@ def _main(args):
     print("Bounds: {:.1f}x{:.1f}x{:.1f}m ({}x{}x{}px)".format(
         *(args.upper - args.lower), *resolution))
 
+    if args.checkpoint is None:
+        outfile = "map.h5"
+        args.checkpoint = "model"
+    else:
+        outfile = "map.{}.h5".format(args.checkpoint)
+        args.checkpoint = os.path.join("checkpoints", args.checkpoint)
+
     dart = result.dart()
-    checkpoint = "model" if args.checkpoint is None else args.checkpoint
-    params = dart.load(os.path.join(args.path, checkpoint))
+    params = dart.load(os.path.join(args.path, args.checkpoint))
 
     x, y, z = [
         jnp.linspace(lower, upper, res) for lower, upper, res in
         zip(args.lower, args.upper, resolution)]
 
     render = jax.jit(partial(dart.grid, params, x, y))
+
     sigma, alpha = [], []
     for _ in tqdm(range(int(np.ceil(resolution[2] / args.batch)))):
         _sigma, _alpha = render(z=z[:args.batch])
@@ -70,7 +77,7 @@ def _main(args):
     sigma = np.concatenate(sigma, axis=2)
     alpha = np.concatenate(alpha, axis=2)
 
-    result.save("map.h5", {
+    result.save(outfile, {
         "sigma": sigma, "alpha": alpha,
         "lower": args.lower, "upper": args.upper
     })

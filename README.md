@@ -28,21 +28,21 @@
 TL;DR:
 ```sh
 python train.py ngp -p path/to/dataset -o results/output --norm 1e5 --min_speed 0.25 --epochs 5
-TARGET=results/output make video
+TARGET=results/output make visualize
 ```
 
 For example:
 ```sh
 python train.py ngp -p data/aframe -o results/aframe --norm 1e4 --min_speed 0.25 --epochs 5
-TARGET=results/aframe make video
+TARGET=results/aframe make visualize
 ```
 
 - `ngp`: model to train (`ngp`, `ngpsh`, `grid`).
 - `path/to/dataset`: path to dataset files, organized as follows:
     ```
     path/to/dataset/
-        dataset.json    # Sensor configuration file
-        dataset.mat     # Data file with pose and range-doppler images.
+        sensor.json       # Sensor configuration file
+        data.mat          # Data file with pose and range-doppler images.
     ```
     *Note*: `dataset.json` and `dataset.mat` can also be specified by `-s path/to/dataset.json` and `-p path/to/dataset.mat`.
 - `results/output`: output directory.
@@ -53,13 +53,13 @@ This creates the following files in `results/output`:
 ```
 results/
     output/
-        metadata.json   # Model/dataset/training metadata
-        model.chkpt     # Model weights checkpoint
-        pred_all.mat    # Predicted range-doppler images
-        cam_all.mat     # Virtual camera renderings for the trajectory
-        pred.png        # Rendering of 18 random (obs, pred) pairs
-        map.png         # Visualization of horizontal slices of the scene
-    output.mp4
+        metadata.json     # Model/dataset/training metadata
+        model.chkpt       # Model weights checkpoint
+        pred.mat          # Predicted range-doppler images
+        cam.mat           # Virtual camera renderings for the trajectory
+        map.mat           # Map of the scene sampled at 25 units/meter
+        output.video.mp4  # Output camera + radar video
+        output.map.mp4    # Video where each frame is a horizontal slice
 ```
 
 Multiple models on the same trajectory can also be combined into a single output video:

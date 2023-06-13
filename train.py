@@ -12,14 +12,16 @@ from dart import fields, script_train
 def _parse_common(p: ArgumentParser) -> ArgumentParser:
 
     p.add_argument("-o", "--out", default="result", help="Output directory.")
+    p.add_argument(
+        "-v", "--overwrite", action='store_true', default=False,
+        help="Allow overwriting existing result.")
     p.add_argument("-r", "--key", default=42, type=int, help="Random key.")
     p.add_argument(
         "--device", default=0, type=int,
         help="GPU index to use for computation (default 0).")
 
     g = p.add_argument_group(title="Sensor")
-    g.add_argument(
-        "-s", "--sensor", default=None, help="Sensor parameters (.json).")
+    g.add_argument("--sensor", default=None, help="Sensor parameters (.json).")
     g.add_argument(
         "-n", default=256, type=int,
         help="Override on stochastic integration angular bin resolution (n).")
@@ -32,12 +34,12 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
     g.add_argument(
         "-e", "--epochs", default=1, type=int,
         help="Number of epochs to train.")
-    g.add_argument("-b", "--batch", default=2048, type=int, help="Batch size.")
+    g.add_argument("-b", "--batch", default=1024, type=int, help="Batch size.")
     g.add_argument(
         "--pval", default=0.2, type=float,
         help="Validation data holdout proportion.")
     g.add_argument(
-        "--iid", default=False, action='store_true',
+        "-i", "--iid", default=False, action='store_true',
         help="Use IID validation split.")
     g.add_argument("--loss", default="l2", help="Loss function.")
     g.add_argument("--weight", default=None, help="Loss weighting.")
@@ -73,12 +75,16 @@ if __name__ == '__main__':
         p.set_defaults(field=v)
     args = parser.parse_args()
 
+    if os.path.exists(args.out) and not args.overwrite:
+        print("Output path already exists!")
+        print("Use -v (--overwrite) if this is intended.")
+        exit(-1)
+
     # Directory input -> use default sensor, dataset name.
     if os.path.isdir(args.path):
-        bn = os.path.basename(args.path)
         if args.sensor is None:
-            args.sensor = os.path.join(args.path, "{}.json".format(bn))
-        args.path = os.path.join(args.path, "{}.mat".format(bn))
+            args.sensor = os.path.join(args.path, "sensor.json")
+        args.path = os.path.join(args.path, "data.mat")
 
     jax.default_device(jax.devices("gpu")[args.device])
 
@@ -95,7 +101,8 @@ if __name__ == '__main__':
             "pval": args.pval, "norm": args.norm, "iid_val": args.iid,
             "path": args.path, "min_speed": args.min_speed,
             "repeat": args.repeat
-        }
+        },
+        "schedules": {}
     }
 
     if args.adj < 0:

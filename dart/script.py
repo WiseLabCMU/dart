@@ -14,10 +14,10 @@ from .dataset import doppler_columns
 
 def script_train(cfg: dict) -> None:
     """Train DART model from configuration dictionary."""
+    print("Setting up...")
     os.makedirs(cfg["out"], exist_ok=True)
     print(json.dumps(cfg))
 
-    print("Setting up...")
     start = time.time()
 
     root = jax.random.PRNGKey(cfg["key"])

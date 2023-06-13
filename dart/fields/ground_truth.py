@@ -27,7 +27,7 @@ class GroundTruth:
         self.grid = grid
 
     def __call__(
-        self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None
+        self, x: Float32[Array, "3"], **kwargs
     ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
         """Index into reflectance map."""
         index = (x - self.lower) * self.resolution

@@ -7,7 +7,7 @@ import numpy as np
 from scipy.io import loadmat
 import h5py
 
-from jaxtyping import Integer, Array
+from jaxtyping import Integer, Array, Float
 from beartype.typing import Any, Optional
 
 from .fields import GroundTruth
@@ -128,7 +128,6 @@ def __make_dataset(
     # Remove invalid doppler columns
     not_empty = flattened[0].weight > 0
     dataset_valid = jax.tree_util.tree_map(lambda x: x[not_empty], flattened)
-
     return dataset_valid
 
 
@@ -169,7 +168,7 @@ def doppler_columns(
     validx: Indices of original images corresponding to the validation set.
     """
     pose, range_doppler = __raw_image_traj(path, norm=norm, sensor=sensor)
-    idx = np.arange(range_doppler.shape[0], dtype=np.int32)
+    idx = jnp.arange(range_doppler.shape[0], dtype=jnp.int32)
     valid_speed = pose.s > min_speed
 
     print("Loaded dataset: {} valid frames (speed > {}) / {}".format(

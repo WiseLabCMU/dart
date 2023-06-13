@@ -21,7 +21,7 @@ def tf_to_jax(batch: PyTree) -> PyTree:
     return jax.tree_util.tree_map(jnp.array, batch)
 
 
-def to_prngkey(key: types.PRNGSeed = 42) -> jax.random.PRNGKeyArray:
+def to_prngkey(key: types.PRNGSeed = 42) -> types.PRNGKey:
     """Accepts integer seeds or PRNGKeys."""
     if isinstance(key, int):
         return jax.random.PRNGKey(key)

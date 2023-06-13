@@ -20,19 +20,8 @@ def _parse(p):
     p.add_argument(
         "-f", "--fps", default=10.0, type=float, help="Video framerate.")
     p.add_argument(
-        "-r", "--radius", help="Smoothing window radius.", default=2, type=int)
+        "-r", "--radius", help="Smoothing window radius.", default=0, type=int)
     return p
-
-
-def _colorize(x, k=10):
-    conved = sum(x[:, :, i:x.shape[2] - (k - i)] for i in range(k + 1))
-    lower = np.percentile(conved, 1)
-    upper = np.percentile(conved, 99)
-    clipped = np.clip(conved, lower, upper)
-    scaled = (clipped - lower) / (upper - lower)
-    return (
-        mpl.colormaps['viridis'](scaled)[:, :, :, :3] * 255
-    ).astype(np.uint8)
 
 
 def _main(args):
@@ -43,8 +32,11 @@ def _main(args):
     res = DartResult(args.path)
     mapfile = res.load(DartResult.MAP)
 
-    sigma = _colorize(mapfile["sigma"], k=2)
-    alpha = _colorize(np.exp(mapfile["alpha"]), k=2)
+    sigma = res.colorize_map(
+        mapfile["sigma"], conv=args.radius * 2, sigma=True, clip=(1, 99))
+    alpha = res.colorize_map(
+        mapfile["alpha"], conv=args.radius * 2, sigma=False)
+
     lower = mapfile["lower"]
     upper = mapfile["upper"]
 

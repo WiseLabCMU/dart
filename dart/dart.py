@@ -2,7 +2,6 @@
 
 from tqdm import tqdm as default_tqdm
 from functools import partial
-import pickle
 import os
 
 import jax
@@ -32,23 +31,28 @@ class DART:
     sigma: Field function closure.
     loss: Loss function to use.
     adjust: Pose adjustment model.
+    schedules: Hyperparameter schedules to apply via kwargs to sigma.
     """
 
     def __init__(
-        self, sensor: VirtualRadar, optimizer: optax.GradientTransformation,
+        self, sensor: VirtualRadar,
+        optimizer: optax.GradientTransformation,
         sigma: Callable[[], types.SigmaField],
         adjust: Callable[[], adjustments.Adjustment],
         loss: components.LossFunc,
+        schedules: dict[str, types.HyperparameterSchedule] = {},
     ) -> None:
 
-        def forward(batch: types.TrainingColumn):
+        def forward(batch: types.TrainingColumn, **kwargs):
             _adjust = adjust()
 
             keys = jnp.array(
                 jax.random.split(hk.next_rng_key(), batch.doppler.shape[0]))
             vfwd = jax.vmap(partial(
-                sensor.column_forward, sigma=sigma(), adjust=_adjust))
-            return vfwd(keys, column=batch), _adjust(None)
+                sensor.column_forward, sigma=partial(sigma(), **kwargs),
+                adjust=_adjust))
+            pred, reg = vfwd(keys, column=batch)
+            return pred, jnp.mean(reg) + _adjust(None)
 
         self.sigma = sigma
         self.adjust = adjust
@@ -57,12 +61,13 @@ class DART:
         self.optimizer = optimizer
         self.sensor = sensor
         self.loss = loss
+        self.schedules = schedules
 
     @classmethod
     def from_config(
         cls, sensor: dict = {}, field_name: str = "NGP", field: dict = {},
         adjustment_name: str = "Identity", adjustment: dict = {},
-        lr: float = 0.01, loss: dict = {}, **_
+        lr: float = 0.01, loss: dict = {}, schedules: dict[str, dict] = {}, **_
     ) -> "DART":
         """Create DART from config items."""
         return cls(
@@ -71,7 +76,10 @@ class DART:
             sigma=getattr(fields, field_name).from_config(**field),
             adjust=getattr(
                 adjustments, adjustment_name).from_config(**adjustment),
-            loss=components.get_loss_func(**loss))
+            loss=components.get_loss_func(**loss),
+            schedules={
+                k: getattr(components.schedules, v["func"])(**v["args"])
+                for k, v in schedules.items()})
 
     def init(
         self, dataset: types.Dataset, key: types.PRNGSeed = 42
@@ -82,33 +90,46 @@ class DART:
         opt_state = self.optimizer.init(params)
         return types.ModelState(params=params, opt_state=opt_state)
 
+    def _hypers(
+        self, epoch: int = -1, step: int = -1, train: bool = True
+    ) -> dict[str, PyTree]:
+        """Get hyperparameter schedule values."""
+        res = {k: v(epoch, step) for k, v in self.schedules.items()}
+        res.update({"epoch": epoch, "step": step})
+        if not train:
+            res["reg"] = 0.0
+        return res
+
     def _train(
-        self, step_func, tqdm, key: types.PRNGKeyArray,
-        state: types.ModelState, dataset: types.Dataset
-    ) -> tuple[types.ModelState, float]:
+        self, step_func, tqdm, key: types.PRNGKey, state: types.ModelState,
+        dataset: types.Dataset, epoch: int = 0, step: int = 0
+    ) -> tuple[types.ModelState, float, int]:
         """Run training loop."""
         avg = types.Average(0.0, 0.0)
-        with tqdm(dataset, unit="batch") as epoch:
-            for batch in epoch:
+        with tqdm(dataset, unit="batch") as pbar:
+            for batch in pbar:
                 key, rng = jax.random.split(key, 2)
-                loss, state = step_func(state, rng, tf_to_jax(batch))
-                avg = update_avg(float(loss), avg, epoch)
+                hypers = self._hypers(epoch=epoch, step=step, train=True)
+                loss, state = step_func(state, rng, tf_to_jax(batch), **hypers)
+                avg = update_avg(float(loss), avg, pbar)
                 if jnp.isnan(loss):
                     print("WARNING: encountered NaN loss!")
-        return state, avg.avg
+                step += 1
+        return state, avg.avg, step
 
     def _val(
-        self, loss_func, tqdm, key: types.PRNGKeyArray, params: PyTree,
-        dataset: types.Dataset
+        self, loss_func, tqdm, key: types.PRNGKey, params: PyTree,
+        dataset: types.Dataset, epoch: int = 0, step: int = 0
     ) -> float:
         """Run validation."""
+        hypers = self._hypers(epoch=epoch, step=step, train=False)
         losses = []
         for batch in tqdm(dataset, unit="batch", desc="    Validating"):
             key, rng = jax.random.split(key, 2)
-            losses.append(loss_func(params, rng, tf_to_jax(batch)))
+            losses.append(loss_func(params, rng, tf_to_jax(batch), **hypers))
         losses_np = np.array(losses)
         losses_np = losses_np[~np.isnan(losses_np)]
-        loss_avg = np.mean(losses_np)
+        loss_avg = float(np.mean(losses_np))
         print("Val: {}".format(loss_avg))
         return loss_avg
 
@@ -119,17 +140,18 @@ class DART:
     ) -> tuple[types.ModelState, list, list]:
         """Train model."""
         @jax.jit
-        def loss_func(params, rng, batch):
+        def loss_func(params, rng, batch, **kwargs):
             columns, y_true = batch
-            y_pred, reg = self.model.apply(params, rng, columns)
-            return self.loss(y_pred, y_true) + reg
+            y_pred, reg = self.model.apply(params, rng, columns, **kwargs)
+            return self.loss(y_pred, y_true) + reg * kwargs.get("reg", 1.0)
 
         # Note: not putting step in a closure here (jitting grads and updates
         # separately) results in a ~100x performance penalty!
         @jax.jit
-        def step(state, rng, batch):
+        def step(state, rng, batch, **kwargs):
             loss, grads = jax.value_and_grad(
-                partial(loss_func, rng=rng, batch=batch))(state.params)
+                partial(loss_func, rng=rng, batch=batch, **kwargs)
+            )(state.params)
 
             clip = jax.tree_util.tree_map(jnp.nan_to_num, grads)
             updates, opt_state = self.optimizer.update(
@@ -139,21 +161,25 @@ class DART:
             return loss, types.ModelState(params, opt_state)
 
         train_log, val_log = [], []
+        stepidx = 0
         k = to_prngkey(key)
 
         k, rng = jax.random.split(k, 2)
         self._val(loss_func, tqdm, rng, state.params, val)
 
         for i in range(epochs):
+            print("Schedule:", self._hypers(epoch=i, step=stepidx))
             try:
                 k, k1, k2 = jax.random.split(k, 3)
                 pbar = partial(tqdm, desc="Epoch {}".format(i))
-                state, loss = self._train(step, pbar, k1, state, train)
+                state, loss, stepidx = self._train(
+                    step, pbar, k1, state, train, epoch=i, step=stepidx)
                 train_log.append(float(loss))
 
                 if val is not None:
-                    val_log.append(float(
-                        self._val(loss_func, tqdm, k2, state.params, val)))
+                    val_log.append(float(self._val(
+                        loss_func, tqdm, k2, state.params, val,
+                        epoch=i, step=stepidx)))
                 if save is not None:
                     self.save("{}_{}".format(save, i), state)
             except KeyboardInterrupt:
@@ -179,7 +205,9 @@ class DART:
         def forward(batch: types.RadarPose):
             keys = jnp.array(
                 jax.random.split(hk.next_rng_key(), batch.x.shape[0]))
-            vfwd = jax.vmap(partial(self.sensor.render, sigma=self.sigma()))
+            vfwd = jax.vmap(partial(
+                self.sensor.render,
+                sigma=partial(self.sigma(), **self._hypers())))
             return vfwd(keys, pose=batch)
 
         return hk.transform(forward).apply(
@@ -192,11 +220,11 @@ class DART:
     ) -> tuple[Float32[Array, "x y z"], Float32[Array, "x y z"]]:
         """Evaluate model as a fixed grid."""
         def forward_grid(batch: Float32[Array, "n 2"]):
-            return jax.vmap(self.sigma())(batch)
+            return jax.vmap(partial(self.sigma(), **self._hypers()))(batch)
 
         grid = jnp.meshgrid(x, y, z, indexing='ij')
         xyz = jnp.stack(grid, axis=-1).reshape(-1, 3)
-        sigma, alpha = hk.transform(forward_grid).apply(
+        sigma, alpha, _ = hk.transform(forward_grid).apply(
             types.ModelState.get_params(params), to_prngkey(key), xyz)
         shape = (x.shape[0], y.shape[0], z.shape[0])
         return sigma.reshape(shape), alpha.reshape(shape)
@@ -207,8 +235,10 @@ class DART:
     ) -> VirtualCameraImage:
         """Render camera images."""
         def forward(batch: types.RadarPose):
-            vfwd = jax.vmap(partial(camera.render, field=self.sigma()))
-            return vfwd(pose=batch)
+            vfwd = jax.vmap(partial(
+                camera.render, field=partial(self.sigma(), **self._hypers())))
+            sigma, alpha, _ = vfwd(pose=batch)
+            return sigma, alpha
 
         return hk.transform(forward).apply(
             types.ModelState.get_params(params), to_prngkey(key), batch)
