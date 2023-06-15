@@ -75,7 +75,7 @@ def _main(args):
     params = dart.load(os.path.join(args.path, "model"))
 
     subset = None if args.all else np.load(
-        os.path.join(args.path, "metadata.npz"))["validx"]
+        os.path.join(args.path, "metadata.npz"))["val"]
     traj = result.trajectory_dataset(subset=subset)
 
     render_func = _render_camera if args.camera else _render_radar

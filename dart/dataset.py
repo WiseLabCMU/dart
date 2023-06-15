@@ -7,7 +7,7 @@ import numpy as np
 from scipy.io import loadmat
 import h5py
 
-from jaxtyping import Integer, Array, Float
+from jaxtyping import Integer, Array, PyTree
 from beartype.typing import Any, Optional
 
 from .fields import GroundTruth
@@ -135,7 +135,7 @@ def doppler_columns(
     sensor: VirtualRadar, path: str = "data/cup.mat", norm: float = 1e4,
     pval: float = 0., iid_val: bool = False, min_speed: float = 0.1,
     repeat: int = 0, key: types.PRNGSeed = 42
-) -> tuple[types.Dataset, Optional[types.Dataset], Integer[Array, "nval"]]:
+) -> tuple[types.Dataset, Optional[types.Dataset], dict[str, PyTree]]:
     """Load dataset trajectory and images.
 
     The dataset is ordered by::
@@ -198,4 +198,4 @@ def doppler_columns(
     if repeat > 0:
         train = train.repeat(repeat)
 
-    return train, val, idx[-nval:]
+    return train, val, {"val": idx[-nval:]}

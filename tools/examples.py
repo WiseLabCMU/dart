@@ -31,7 +31,7 @@ def _main(args):
         y_pred_file = "pred_all.mat"
     else:
         y_pred_file = "pred.mat"
-        validx = np.load(os.path.join(args.path, "metadata.npz"))["validx"]
+        validx = np.load(os.path.join(args.path, "metadata.npz"))["val"]
         y_true = y_true[validx]
     y_pred = dataset.load_arrays(os.path.join(args.path, y_pred_file))["rad"]
     y_true = y_true[:, :y_pred.shape[1]] / result.metadata["dataset"]["norm"]

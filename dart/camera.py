@@ -5,7 +5,7 @@ from functools import partial
 from jax import numpy as jnp
 from jax import vmap
 
-from jaxtyping import Float, Float32, Array, UInt8
+from jaxtyping import Float, Float32, Float16, Array, UInt8
 from beartype.typing import NamedTuple
 
 from .dataset import load_arrays
@@ -84,7 +84,7 @@ class VirtualCamera(NamedTuple):
     def render_pixel(
         self, t: Float32[Array, "3"], pose: types.RadarPose,
         field: types.SigmaField
-    ) -> tuple[Float32[Array, ""], Float32[Array, ""], Float32[Array, ""]]:
+    ) -> tuple[Float16[Array, ""], Float16[Array, ""], Float16[Array, ""]]:
         """Render a single pixel along `linspace(0, d, max_depth)`.
 
         Parameters
@@ -108,12 +108,12 @@ class VirtualCamera(NamedTuple):
             jnp.linspace(0, self.max_depth, self.d))
 
         # tx = jnp.concatenate([jnp.zeros((1)), jnp.cumsum(alpha[:-1])])
-        rx = jnp.nan_to_num(sigma, nan=0.0, copy=False)
+        rx = jnp.nan_to_num(sigma, nan=0.0, copy=False).astype(jnp.float16)
 
         d_idx = jnp.argmax(rx)
-        d_clip = jnp.where(rx[d_idx] >= self.clip, d_idx / self.d, 1)
+        d_clip = jnp.where(rx[d_idx] >= self.clip, d_idx / self.d, 1.0)
 
-        return d_clip, rx[d_idx], jnp.sum(rx)
+        return d_clip.astype(jnp.float16), rx[d_idx], jnp.sum(rx)
 
     def render(
         self, pose: types.RadarPose, field: types.SigmaField

@@ -12,7 +12,7 @@ from ._spatial import interpolate, spherical_harmonics
 
 
 class NGP(hk.Module):
-    """NGP field [1].
+    """NGP field [1] with sigma (reflectance) and alpha (transmittance) output.
 
     Parameters
     ----------
@@ -127,6 +127,15 @@ class NGP(hk.Module):
 class NGPSH(NGP):
     """NGP [1] field with spherical harmonics [2].
 
+    Has two different behaviors:
+     1. Ray-tracing mode (dx=float[3]): Apply spherical harmonic coefficients,
+        normalized to 1. Sigma and alpha are then multiplied by the *shared*
+        spherical harmonics to obtain the final outputs.
+     2. Map mode (dx=None): Spherical harmonics are discarded; instead,
+        sigma and alpha are returned as `abs(sigma)` and `-abs(alpha)` to
+        account for the case that the spherical harmonics and sigma/alpha
+        happen to have opposite signs.
+
     Parameters
     ----------
     harmonics: Number of spherical harmonic coefficients.
@@ -167,6 +176,9 @@ class NGPSH(NGP):
             sigma = sigma * proj
             if self.alpha_sh:
                 alpha = alpha * proj
+        else:
+            sigma = jnp.abs(sigma)
+            alpha = -jnp.abs(alpha)
 
         return self._out(sigma, alpha, **kwargs)
 

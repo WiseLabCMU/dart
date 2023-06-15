@@ -88,7 +88,7 @@ def _main(args):
         gt.size / 1000 / 1000 / 1000, time.time() - start))
 
     validx = np.zeros(cam.shape[0], dtype=bool)
-    valset = np.load(os.path.join(args.path, "metadata.npz"))["validx"]
+    valset = np.load(os.path.join(args.path, "metadata.npz"))["val"]
     validx[valset] = True
 
     fourcc = cv2.VideoWriter_fourcc(*args.fourcc)

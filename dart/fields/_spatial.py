@@ -59,6 +59,12 @@ def spherical_harmonics(
     ----------
     dx: offset direction from the point to the sensor (on the unit sphere).
     harmonics: number of coefficients to compute.
+
+    References
+    ----------
+    https://en.wikipedia.org/wiki/Table_of_spherical_harmonics
+    https://github.com/nerfstudio-project/nerfstudio:
+        nerfstudio/utils/math.py
     """
     x, y, z = dx
     xx = x**2
@@ -92,11 +98,11 @@ def spherical_harmonics(
             2.5033429417967046 * x * y * (xx - yy),
             1.7701307697799304 * y * z * (3 * xx - yy),
             0.9461746957575601 * x * y * (7 * zz - 1),
-            0.6690465435572892 * y * (7 * zz - 3),
+            0.6690465435572892 * y * z * (7 * zz - 3),
             0.10578554691520431 * (35 * zz * zz - 30 * zz + 3),
             0.6690465435572892 * x * z * (7 * zz - 3),
             0.47308734787878004 * (xx - yy) * (7 * zz - 1),
             1.7701307697799304 * x * z * (xx - 3 * yy),
-            0.4425326924449826 * (xx * (xx - 3 * yy) - yy * (3 * xx - yy))]
+            0.6258357354491761 * (xx * (xx - 3 * yy) - yy * (3 * xx - yy))]
 
     return jnp.array(coef)
