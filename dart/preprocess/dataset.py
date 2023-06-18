@@ -53,12 +53,12 @@ class AWR1843BoostDataset(NamedTuple):
 
     def _get_times(self, packets, valid):
         """Get timestamps for each frame."""
-        start = np.arange(np.sum(valid)) * self.frame_size + self.start
+        start = np.arange(valid.shape[0]) * self.frame_size + self.start
         frame_start_packet = np.floor(start / self.packet_size).astype(int)
 
         timestamps = np.zeros(self.num_packets, dtype=np.float64)
         timestamps[packets["packet_num"] - self.start_packet] = packets['t']
-        return timestamps[frame_start_packet]
+        return timestamps[frame_start_packet][valid]
 
     def _to_iq(
         self, radar: AWR1843Boost, frames: Int16[np.ndarray, "frames len"]

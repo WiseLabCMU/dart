@@ -10,11 +10,12 @@ import jax
 
 from beartype.typing import NamedTuple
 from jaxtyping import Complex64, Array, Float64, Float32, Float16
+from dart import types
 
 
 def to_float16(
     arr: Float32[Array, "..."], max_normal: float = 65504.0
-) -> tuple[Float16[Array, "..."], float]:
+) -> Float16[Array, "..."]:
     """Convert array to float16.
 
     The largest observed value is scaled to the largest normal normal number
@@ -49,7 +50,7 @@ class AWR1843Boost(NamedTuple):
     rmax: float = 21.5991
     num_rx: int = 4
     num_tx: int = 3
-    artifact_threshold: float = 25.0
+    artifact_threshold: float = 50.0
 
     @property
     def frame_size(self):
@@ -58,13 +59,17 @@ class AWR1843Boost(NamedTuple):
 
     @property
     def frame_shape(self):
-        """Frame shape."""
+        """Radar chirp frame shape."""
         return (self.chirploops * self.num_tx, self.num_rx, self.chirplen)
 
+    @property
+    def image_shape(self):
+        """Radar range-azimuth-doppler image shape."""
+        return (self.max_range, self.framelen, 8)
 
     def range_doppler_azimuth(
         self, frames: Complex64[Array, "frame antenna range doppler"],
-    ) -> Float32[Array, "frame antenna range doppler"]:
+    ) -> Float32[Array, "frame range_clipped doppler antenna"]:
         """Process range-doppler-azimuth images.
 
         Parameters
@@ -89,11 +94,11 @@ class AWR1843Boost(NamedTuple):
         # fftshift along antenna, doppler axes
         rda = jnp.fft.fftshift(rda, axes=[1, 3])[..., :self.max_range, :]
 
-        return jnp.abs(rda)
+        return jnp.moveaxis(jnp.abs(rda), [1, 2, 3], [3, 1, 2])
 
     def remove_artifact(
-        self, images: Float32[Array, "frame antenna range doppler"],
-    ) -> Float16[Array, "frame antenna range doppler"]:
+        self, images: Float32[types.ArrayLike, "frame range doppler antenna"],
+    ) -> Float32[types.ArrayLike, "frame range doppler antenna"]:
         """Remove zero-doppler artifact from images.
 
         Collected range-doppler radar data will have an artifact at close
@@ -101,19 +106,20 @@ class AWR1843Boost(NamedTuple):
         of the data collection rig. We subtract the `threshold` percentile
         value from each range bin to get rid of this.
         """
-        zero = int(images.shape[3] / 2)
+        zero = int(images.shape[2] / 2)
         artifact = jnp.percentile(
-            images[..., zero - 1:zero + 2], self.artifact_threshold, axis=0)
-        return images.at[..., zero - 1:zero + 2].set(
-            images[..., zero - 1:zero + 2]
+            images[..., zero - 1:zero + 2, :], self.artifact_threshold, axis=0)
+        return images.at[..., zero - 1:zero + 2, :].set(
+            images[..., zero - 1:zero + 2, :]
             - artifact.reshape(1, *artifact.shape))
 
     def process_data(
-        self, chirps: Complex64[np.ndarray, "frame tx rx chirp"],
-        timestamps: Float64[np.ndarray, "frame"], stride: int = 64,
-        batch_size: int = 64, tqdm=default_tqdm
+        self, chirps: Complex64[types.ArrayLike, "frame tx rx chirp"],
+        timestamps: Float64[types.ArrayLike, "frame"], stride: int = 64,
+        batch_size: int = 64
     ) -> tuple[
-        Float16[Array, "idx antenna range doppler"], Float64[Array, "idx"]
+        Float16[types.ArrayLike, "idx antenna range doppler"],
+        Float64[types.ArrayLike, "idx"]
     ]:
         """Process radar data.
 
@@ -135,24 +141,22 @@ class AWR1843Boost(NamedTuple):
         # Discard the middle TX antenna, and flatten the antennas.
         chirps_flat = chirps[:, (0, 2)].reshape(-1, 8, chirps.shape[3])
 
-        # Sliding window over chirps using stride_tricks; the window contents axis
-        # (frame -> doppler) is put in the last axis.
+        # Sliding window over chirps using stride_tricks; the window contents
+        # axis (frame -> doppler) is put in the last axis.
         frames = sliding_window_view(
             chirps_flat, window_shape=self.framelen, axis=0)[::stride]
-        image_times = np.mean(
+        image_times = np.median(
             sliding_window_view(
                 timestamps, window_shape=self.framelen)[::stride], axis=1)
 
         process_func = jax.jit(partial(self.range_doppler_azimuth))
-
         res = []
-        for _ in tqdm(range(int(np.ceil(frames.shape[0] / batch_size)))):
+        for _ in range(int(np.ceil(frames.shape[0] / batch_size))):
             res.append(process_func(jnp.array(frames[:batch_size])))
             frames = frames[batch_size:]
-
-        res = to_float16(self.remove_artifact(jnp.concatenate(res, axis=0)))
-
-        return res, image_times
+        res_arr = to_float16(
+            self.remove_artifact(jnp.concatenate(res, axis=0)))
+        return res_arr, image_times
 
     def to_instrinsics(self) -> dict:
         """Export intrinsics configuration file."""
@@ -160,7 +164,7 @@ class AWR1843Boost(NamedTuple):
         bin_range = self.rmax / self.chirplen
         return {
             "gain": "awr1843boost_az8",
-            "n": 512, "d": 256,
+            "n": 512, "k": 256,
             "r": [
                 bin_range * 0.5,
                 bin_range * (min(self.max_range, self.chirplen) + 0.5),

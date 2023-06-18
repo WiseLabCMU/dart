@@ -84,7 +84,7 @@ if __name__ == '__main__':
     if os.path.isdir(args.path):
         if args.sensor is None:
             args.sensor = os.path.join(args.path, "sensor.json")
-        args.path = os.path.join(args.path, "data.mat")
+        args.path = os.path.join(args.path, "data.h5")
 
     jax.default_device(jax.devices("gpu")[args.device])
 
