@@ -66,7 +66,7 @@ class NGP(hk.Module):
 
     def _out(self, sigma, alpha, **kwargs):
         return (
-            jnp.where(sigma > kwargs.get("sigma_clip", -1.0), sigma, 0.0),
+            jnp.maximum(kwargs.get("sigma_clip", -1.0), sigma),
             jnp.minimum(0.0, alpha) * kwargs.get("alpha_scale", 0.1),
             jnp.array(0.0))
 
@@ -128,18 +128,14 @@ class NGPSH(NGP):
     """NGP [1] field with spherical harmonics [2].
 
     Has two different behaviors:
-     1. Ray-tracing mode (dx=float[3]): Apply spherical harmonic coefficients,
-        normalized to 1. Sigma and alpha are then multiplied by the *shared*
-        spherical harmonics to obtain the final outputs.
-     2. Map mode (dx=None): Spherical harmonics are discarded; instead,
-        sigma and alpha are returned as `abs(sigma)` and `-abs(alpha)` to
-        account for the case that the spherical harmonics and sigma/alpha
-        happen to have opposite signs.
+     1. Ray-tracing mode (dx=float[3]): apply spherical harmonic coefficients
+        to sigma and alpha.
+     2. Map mode (dx=None): return ||coef||_2 for sigma and alpha. This
+        corresponds to the L2 norm of sigma and alpha over the sphere.
 
     Parameters
     ----------
     harmonics: Number of spherical harmonic coefficients.
-    alpha_sh: Use spherical harmonics for alpha as well.
     kwargs: Passed to NGP.
 
     References
@@ -152,12 +148,9 @@ class NGPSH(NGP):
 
     _description = "NGP with view dependence using spherical harmonics"
 
-    def __init__(
-        self, harmonics: int = 25, alpha_sh: bool = True, **kwargs
-    ) -> None:
+    def __init__(self, harmonics: int = 25, **kwargs) -> None:
         assert harmonics in {1, 4, 9, 16, 25}
         self.harmonics = harmonics
-        self.alpha_sh = alpha_sh
         super().__init__(_head=harmonics + 2, **kwargs)
 
     def __call__(
@@ -174,10 +167,8 @@ class NGPSH(NGP):
             components = mlp_out[2:] / jnp.linalg.norm(mlp_out[2:], ord=2)
             proj = jnp.sum(components * sh)
             sigma = sigma * proj
-            if self.alpha_sh:
-                alpha = alpha * proj
+            alpha = alpha * proj
         else:
-            sigma = jnp.abs(sigma)
             alpha = -jnp.abs(alpha)
 
         return self._out(sigma, alpha, **kwargs)
@@ -188,9 +179,6 @@ class NGPSH(NGP):
         p.add_argument(
             "--harmonics", default=25, type=int,
             help="Number of spherical harmonics.")
-        p.add_argument(
-            "--no_alpha_sh", default=False, action='store_true',
-            help="Disable spherical harmonics for alpha.")
         NGP.to_parser(p)
 
     @staticmethod
@@ -199,5 +187,4 @@ class NGPSH(NGP):
         cfg = NGP.args_to_config(args)
         cfg["field_name"] = "NGPSH"
         cfg["field"]["harmonics"] = args.harmonics
-        cfg["field"]["alpha_sh"] = (not args.no_alpha_sh)
         return cfg

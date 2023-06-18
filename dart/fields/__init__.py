@@ -9,5 +9,5 @@ __all__ = ["GroundTruth", "SimpleGrid", "NGP", "NGPSH"]
 _fields = {
     "grid": SimpleGrid,
     "ngp": NGP,
-    "ngpsh": NGPSH
+    "ngpsh": NGPSH,
 }

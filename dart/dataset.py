@@ -76,6 +76,7 @@ def __raw_image_traj(
     idxs = jnp.arange(src["vel"].shape[0])
     pose = jax.vmap(make_pose)(src["vel"], src["pos"], src["rot"], idxs)
     image = src["rad"] / norm
+
     if sensor is not None:
         if image.shape[1] > len(sensor.r):
             image = image[:, :len(sensor.r)]

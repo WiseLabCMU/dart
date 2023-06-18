@@ -27,9 +27,10 @@
 
 ## Data Collection
 - walk slowly with battery in backpack
-- stay within wifi range of laptop
-- scan with varying heights and facing directions
-- try to move smoothly
+    - stay within wifi range of laptop
+    - scan with varying heights and facing directions
+    - try to move smoothly
+    - don't enter repetitive-looking spaces (i.e. cubicles) or get too-close to a wall or other non-trackable surface
 - when done (a few minutes, up to 20):
     - ctrl-c **exactly once**
     - unplug radar power

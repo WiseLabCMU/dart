@@ -1,7 +1,7 @@
 % ------------------- PARAMS ------------------------------- %
 
-DATADIR = '/media/john/HEADCOUNT/dartdata';
-DATASET = 'cichall';
+DATADIR = '../data';
+DATASET = 'wiselab-2';
 BATCH_SIZE = 50000;
 
 USE_T265 = true;
@@ -52,8 +52,8 @@ optitrackfile = fullfile(DATADIR, DATASET, 'optitrack.txt');
 
 scanfile = fullfile(DATADIR, DATASET, 'frames.h5');
 trajfile = fullfile(DATADIR, DATASET, 'traj.mat');
-outfile = fullfile(DATADIR, DATASET, append(DATASET, '.mat'));
-jsonfile = fullfile(DATADIR, DATASET, append(DATASET, '.json'));
+outfile = fullfile(DATADIR, DATASET, 'data.mat');
+jsonfile = fullfile(DATADIR, DATASET, 'sensor.json');
 mapfile = fullfile(DATADIR, DATASET, 'map.mat');
 dbgfile = fullfile(DATADIR, DATASET, 'dbg.mat');
 
@@ -142,7 +142,7 @@ pos(naan, :) = [];
 rot(naan, :, :) = [];
 vel(naan, :) = [];
 
-rad = half(rad);
+% rad = half(rad);
 
 save(outfile, 't', 'rad', 'pos', 'rot', 'vel', '-v7.3');
 save(dbgfile, '-v7.3');

@@ -63,8 +63,12 @@ def spherical_harmonics(
     References
     ----------
     https://en.wikipedia.org/wiki/Table_of_spherical_harmonics
+        *NOTE*: make sure to use the real spherical harmonics, not the complex
+        spherical harmonics.
     https://github.com/nerfstudio-project/nerfstudio:
-        nerfstudio/utils/math.py
+        Implementation here: nerfstudio/utils/math.py
+        With bugfix applied:
+        https://github.com/nerfstudio-project/nerfstudio/issues/2081
     """
     x, y, z = dx
     xx = x**2
