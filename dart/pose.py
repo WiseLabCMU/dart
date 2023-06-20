@@ -1,4 +1,14 @@
-"""Sensor pose utilities."""
+"""Sensor pose utilities.
+
+Conventions
+-----------
+FLU (Front-Left-Up) convention
+  - The sensor field of view is centered around +x.
+  - +y is left of +x.
+  - +z is straight up.
+  - The rotation matrix encodes the rotation from the current orientation
+    to front-left-up.
+"""
 
 from jaxtyping import Float32, Int32, Array
 from beartype.typing import Union

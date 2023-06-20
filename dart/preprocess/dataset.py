@@ -49,7 +49,8 @@ class AWR1843BoostDataset(NamedTuple):
         rad = np.zeros((self.num_packets, self.packet_size), dtype=np.int16)
         rad[packets["packet_num"] - self.start_packet] = packets['packet_data']
         rad = rad.reshape(-1)
-        return rad[self.start:self.end].reshape(-1, self.frame_size)[valid]
+        res = rad[self.start:self.end].reshape(-1, self.frame_size)[valid]
+        return res
 
     def _get_times(self, packets, valid):
         """Get timestamps for each frame."""

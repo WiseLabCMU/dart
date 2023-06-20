@@ -126,7 +126,17 @@ def _read_data_packet(data_socket):
         Current packet number, byte count of data that has already been read, raw ADC data in current packet
 
     """
-    data, _ = data_socket.recvfrom(MAX_PACKET_SIZE)
+    hit_timeout = False
+    while True:
+        try:
+            data = data_socket.recv(MAX_PACKET_SIZE)
+            if not hit_timeout:
+                print("Busy-wait did not spin at least once; "
+                      "possible deadline miss.")
+            break
+        except socket.timeout:
+            hit_timeout = True
+
     packet_num = struct.unpack('<1l', data[:4])[0]
     byte_count = struct.unpack('>Q', b'\x00\x00' + data[4:10][::-1])[0]
     packet_data = np.frombuffer(data[10:], dtype=np.uint16)

@@ -1,11 +1,4 @@
-"""Ray sampling routines.
-
-Conventions
------------
-- The sensor field of view is centered around +x.
-- +y is left of +x.
-- +z is straight up.
-"""
+"""Ray sampling routines."""
 
 from functools import partial
 

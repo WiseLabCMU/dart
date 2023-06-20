@@ -26,11 +26,13 @@ def _process_batch(radar: AWR1843Boost, file_batch, traj: Trajectory):
     dataset = AWR1843BoostDataset.from_packets(packets, radar.frame_size * 2)
 
     chirps, t_chirp = dataset.as_frames(radar, packets)
-    range_doppler, t_image = radar.process_data(chirps, t_chirp)
+    range_doppler, t_image, speed_est = radar.process_data(chirps, t_chirp)
 
     t_valid = traj.valid_mask(t_image)
     pose = traj.interpolate(t_image[t_valid])
     pose["t"] = t_image[t_valid]
+    pose["speed"] = speed_est[t_valid]
+
     return range_doppler[t_valid], pose
 
 
@@ -63,12 +65,21 @@ def _process(
 
         packet_dataset = packet_dataset[batch_size:]
 
+    poses_cat = {}
     for k in poses[0]:
-        val = np.concatenate([p[k] for p in poses])
-        if k == 'vel':
-            val = gaussian_filter1d(val, sigma=sigma, axis=0)
-        outfile.create_dataset(k, data=val)
+        poses_cat[k] = np.concatenate([p[k] for p in poses])
 
+    # Save raw velocity...
+    # outfile.create_dataset('vel_raw', data=poses_cat['vel'])
+    # Then scale by estimated velocity
+    # poses_cat['vel'] = gaussian_filter1d(poses_cat['vel'], sigma=sigma, axis=0)
+    # poses_cat['vel'] = (
+    #     poses_cat['vel']
+    #    / np.linalg.norm(poses_cat['vel'], axis=1).reshape(-1, 1)
+    #    * poses_cat['speed'].reshape(-1, 1))
+
+    for k, v in poses_cat.items():
+        outfile.create_dataset(k, data=v)
     packetfile.close()
     outfile.close()
 
@@ -83,7 +94,7 @@ def _parse(p):
         "-b", "--batch", help="Packet processing batch size.",
         type=int, default=1000000)
     p.add_argument(
-        "-s", "--smooth", type=float, default=10.0,
+        "-s", "--smooth", type=float, default=-1.0,
         help="Velocity smoothing sigma (for a gaussian filter).")
     return p
 

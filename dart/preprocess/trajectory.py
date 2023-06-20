@@ -32,18 +32,23 @@ class Trajectory(NamedTuple):
         path: Path to dataset. Should contain a cartographer-formatted output
             csv "trajectory.csv", with columns
             `field.header.stamp` (in ns), `field.transform.translation.{xyz}`,
-            `field.transform.rotation.{wxyz}`.
+            `field.transform.rotation.{xyzw}`.
         """
         df = pd.read_csv(os.path.join(path, "trajectory.csv"))
 
         t_slam = np.array(df["field.header.stamp"]) / 1e9
+
+        # temporary manual alignment
+        t_slam = t_slam[0] + (t_slam - t_slam[0]) * 1.26 + 1.0
+        # end tmp
+
         xyz = np.array(
             [df["field.transform.translation." + char] for char in "xyz"])
         spline = Akima1DInterpolator(t_slam, xyz.T)
 
-        rot = np.array(
-            [df["field.transform.rotation." + char] for char in "wxyz"])
-        slerp = Slerp(t_slam, Rotation.from_quat(rot.T))
+        rot = Rotation.from_quat(np.array(
+            [df["field.transform.rotation." + char] for char in "xyzw"]).T)
+        slerp = Slerp(t_slam, rot)
 
         return cls(spline=spline, slerp=slerp)
 
@@ -57,6 +62,6 @@ class Trajectory(NamedTuple):
         """Calculate poses."""
         return {
             "pos": self.spline(t),
-            "vel": self.spline.derivative()(t),
+            "vel": self.spline.derivative()(t) * 1.26,
             "rot": self.slerp(t).as_matrix()
         }

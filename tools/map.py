@@ -25,7 +25,7 @@ def _parse(p):
         "-u", "--upper", nargs='+', type=float, default=None,
         help="Upper coordinate in x y z form.")
     p.add_argument(
-        "--padding", type=float, nargs='+', default=[4.0, 4.0, 1.0],
+        "--padding", type=float, nargs='+', default=[4.0, 4.0, 2.0],
         help="Region padding relative to trajectory min/max.")
     p.add_argument(
         "-r", "--resolution", type=int, default=25,
