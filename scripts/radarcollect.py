@@ -67,13 +67,10 @@ def radarcollect(args):
     data_recv = (args.static_ip, args.data_port)
 
     # Create sockets
-    config_socket = socket.socket(socket.AF_INET,
-                                  socket.SOCK_DGRAM,
-                                  socket.IPPROTO_UDP)
-    data_socket = socket.socket(socket.AF_INET,
-                                socket.SOCK_DGRAM,
-                                socket.IPPROTO_UDP)
-    data_socket.setblocking(False)
+    config_socket = socket.socket(
+        socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    data_socket = socket.socket(
+        socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 
     # Bind data socket to fpga
     data_socket.bind(data_recv)
@@ -86,16 +83,14 @@ def radarcollect(args):
 
     with tb.open_file(outfile, mode='w', title='Packet file') as h5file:
         scan_group = h5file.create_group('/', 'scan', 'Scan information')
-        packet_table = h5file.create_table(scan_group, 'packet', Packet, 'Packet data')
+        packet_table = h5file.create_table(
+            scan_group, 'packet', Packet, 'Packet data')
         packet_in_chunk = 0
         num_all_packets = 0
         start_time = time.time()
         try:
-            deadline_misses = 1
             while True:
-                packet_num, byte_count, packet_data, hit_timeout = _read_data_packet(data_socket)
-                if not hit_timeout:
-                    deadline_misses += 1
+                packet_num, byte_count, packet_data = _read_data_packet(data_socket)
                 curr_time = time.time()
                 packet_table.row['t'] = curr_time
                 packet_table.row['packet_data'] = packet_data
@@ -105,9 +100,8 @@ def radarcollect(args):
                 packet_in_chunk += 1
                 num_all_packets += 1
                 if packet_in_chunk >= PACKET_BUFSIZE:
-                    print(f'Flushing {packet_in_chunk} packets.')
-                    print("t={:.3f}s ({} deadline misses)".format(
-                        curr_time - start_time, deadline_misses))
+                    print('[t={:.3f}s] Flushing {} packets'.format(
+                        curr_time - start_time, packet_in_chunk))
                     packet_table.flush()
                     packet_in_chunk = 0
 
@@ -130,18 +124,10 @@ def _read_data_packet(data_socket):
     Returns:
         Current packet number, byte count of data that has already been read, raw ADC data in current packet
     """
-    hit_timeout = False
-    while True:
-        try:
-            data = data_socket.recv(MAX_PACKET_SIZE)
-            break
-        except socket.timeout:
-            hit_timeout = True
-
-    packet_num = struct.unpack('<1l', data[:4])[0]
-    byte_count = struct.unpack('>Q', b'\x00\x00' + data[4:10][::-1])[0]
+    data = data_socket.recv(MAX_PACKET_SIZE)
+    packet_num, byte_count = struct.unpack('lQ', data[:10] + b'\x00\x00')
     packet_data = np.frombuffer(data[10:], dtype=np.uint16)
-    return packet_num, byte_count, packet_data, hit_timeout
+    return packet_num, byte_count, packet_data
 
 
 if __name__ == '__main__':
