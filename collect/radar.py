@@ -34,7 +34,10 @@ def _parse(p):
         '--data_port', '-d', type=int, default=4098,
         help='Port for data stream (eg. 4098)')
     p.add_argument(
-        '--timeout', '-t', type=float, default=20
+        '--config_port', '-c', type=int, default=4096,
+        help='Port for config stream (eg. 4096)')
+    p.add_argument(
+        '--timeout', '-t', type=float, default=20,
         help='Socket timeout in seconds (eg. 20)')
     p.add_argument(
         '--output', '-o', default=None, help="Output directory. If blank, "
@@ -56,11 +59,17 @@ def radarcollect(args):
     time.sleep(56.0)
     print('starting!')
 
+    cfg_recv = (args.static_ip, args.config_port)
     data_recv = (args.static_ip, args.data_port)
 
+    config_socket = socket.socket(
+        socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     data_socket = socket.socket(
         socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+
     data_socket.bind(data_recv)
+    config_socket.bind(cfg_recv)
+
     data_socket.settimeout(args.timeout)
 
     with tb.open_file(outfile, mode='w', title='Packet file') as h5file:
@@ -97,6 +106,7 @@ def radarcollect(args):
         packet_table.flush()
         packet_in_chunk = 0
         data_socket.close()
+        config_socket.close()
 
 
 def _read_data_packet(data_socket):
