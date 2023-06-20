@@ -73,6 +73,7 @@ def radarcollect(args):
     data_socket = socket.socket(socket.AF_INET,
                                 socket.SOCK_DGRAM,
                                 socket.IPPROTO_UDP)
+    data_socket.setblocking(False)
 
     # Bind data socket to fpga
     data_socket.bind(data_recv)
