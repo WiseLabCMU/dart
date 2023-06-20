@@ -91,8 +91,11 @@ def radarcollect(args):
         num_all_packets = 0
         start_time = time.time()
         try:
+            deadline_misses = 1
             while True:
-                packet_num, byte_count, packet_data = _read_data_packet(data_socket)
+                packet_num, byte_count, packet_data, hit_timeout = _read_data_packet(data_socket)
+                if not hit_timeout:
+                    deadline_misses += 1
                 curr_time = time.time()
                 packet_table.row['t'] = curr_time
                 packet_table.row['packet_data'] = packet_data
@@ -103,7 +106,8 @@ def radarcollect(args):
                 num_all_packets += 1
                 if packet_in_chunk >= PACKET_BUFSIZE:
                     print(f'Flushing {packet_in_chunk} packets.')
-                    print(f'Capture time: {curr_time - start_time}s\n')
+                    print("t={:.3f}s ({} deadline misses)".format(
+                        curr_time - start_time, deadline_misses))
                     packet_table.flush()
                     packet_in_chunk = 0
 
@@ -125,15 +129,11 @@ def _read_data_packet(data_socket):
 
     Returns:
         Current packet number, byte count of data that has already been read, raw ADC data in current packet
-
     """
     hit_timeout = False
     while True:
         try:
             data = data_socket.recv(MAX_PACKET_SIZE)
-            if not hit_timeout:
-                print("Busy-wait did not spin at least once; "
-                      "possible deadline miss.")
             break
         except socket.timeout:
             hit_timeout = True
@@ -141,7 +141,7 @@ def _read_data_packet(data_socket):
     packet_num = struct.unpack('<1l', data[:4])[0]
     byte_count = struct.unpack('>Q', b'\x00\x00' + data[4:10][::-1])[0]
     packet_data = np.frombuffer(data[10:], dtype=np.uint16)
-    return packet_num, byte_count, packet_data
+    return packet_num, byte_count, packet_data, hit_timeout
 
 
 if __name__ == '__main__':
