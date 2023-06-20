@@ -9,6 +9,7 @@ import os
 import socket
 import struct
 import tables as tb
+from datetime import datetime
 
 
 CMD_DIR = 'C:/ti/mmwave_studio_02_01_01_00/mmWaveStudio/RunTime'
@@ -24,35 +25,27 @@ class Packet(tb.IsDescription):
     byte_count  = tb.UInt64Col()
 
 
-def add_args(parser):
-    parser.add_argument(
+def _parse(p):
+    p.add_argument(
         '--static_ip', '-i',
         help='Static IP address (eg 192.168.33.30)',
-        default='192.168.33.30'
-    )
-    parser.add_argument(
-        '--data_port', '-d',
-        help='Port for data stream (eg. 4098)',
-        type=int,
-        default=4098
-    )
-    parser.add_argument(
-        '--config_port', '-c',
-        help='Port for config stream (eg. 4096)',
-        type=int,
-        default=4096
-    )
-    parser.add_argument(
-        '--timeout', '-t',
-        help='Socket timeout in seconds (eg. 20)',
-        type=float,
-        default=20
-    )
+        default='192.168.33.30')
+    p.add_argument(
+        '--data_port', '-d', type=int, default=4098,
+        help='Port for data stream (eg. 4098)')
+    p.add_argument(
+        '--timeout', '-t', type=float, default=20
+        help='Socket timeout in seconds (eg. 20)')
+    p.add_argument(
+        '--output', '-o', default=None, help="Output directory. If blank, "
+        "creates a folder with the current datetime.")
+    return p
 
 
 def radarcollect(args):
-    if not os.path.exists(args.output):
-        os.makedirs(args.output)
+    if args.output is None:
+        args.output = datetime.now().strftime("%Y.%m.%d-%H.%M.%S")
+    os.makedirs(args.output, exist_ok=True)
     outfile = os.path.join(args.output, 'radarpackets.h5')
 
     cwd = os.getcwd()
@@ -63,22 +56,11 @@ def radarcollect(args):
     time.sleep(56.0)
     print('starting!')
 
-    cfg_recv = (args.static_ip, args.config_port)
     data_recv = (args.static_ip, args.data_port)
 
-    # Create sockets
-    config_socket = socket.socket(
-        socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     data_socket = socket.socket(
         socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-
-    # Bind data socket to fpga
     data_socket.bind(data_recv)
-
-    # Bind config socket to fpga
-    config_socket.bind(cfg_recv)
-
-    # Configure
     data_socket.settimeout(args.timeout)
 
     with tb.open_file(outfile, mode='w', title='Packet file') as h5file:
@@ -115,28 +97,31 @@ def radarcollect(args):
         packet_table.flush()
         packet_in_chunk = 0
         data_socket.close()
-        config_socket.close()
 
 
 def _read_data_packet(data_socket):
-    """Helper function to read in a single ADC packet via UDP
+    """Helper function to read in a single ADC packet via UDP.
 
-    Returns:
-        Current packet number, byte count of data that has already been read, raw ADC data in current packet
+    The format is described in the [DCA1000EVM user guide](
+        https://www.ti.com/tool/DCA1000EVM#tech-docs)::
+
+        | packet_num (u4) | byte_count (u6) | data ... |
+
+    The packet_num and byte_count appear to be in little-endian order.
+
+    Returns
+    -------
+    packet_num: current packet number
+    byte_count: byte count of data that has already been read
+    data: raw ADC data in current packet
     """
     data = data_socket.recv(MAX_PACKET_SIZE)
-    packet_num, byte_count = struct.unpack('lQ', data[:10] + b'\x00\x00')
+    # Little-endian, no padding
+    packet_num, byte_count = struct.unpack('<LQ', data[:10] + b'\x00\x00')
     packet_data = np.frombuffer(data[10:], dtype=np.uint16)
     return packet_num, byte_count, packet_data
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    add_args(parser)
-    parser.add_argument(
-        '--output', '-o',
-        help='Output directory (eg. C:/Users/Administrator/Desktop/dartdata/dataset0',
-        default='./'
-    )
-    args = parser.parse_args()
+    args = _parse(argparse.ArgumentParser()).parse_args()
     radarcollect(args)
