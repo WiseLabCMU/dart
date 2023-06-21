@@ -32,7 +32,7 @@
 
 wiselab@lidar-nuc.local
 
-0. Time sync: `sudo ntpdate -u time.windows.com`
+0. Time sync: `sudo ntpdate -u pool.ntp.org`
 1. `roslaunch slam ouster.launch`
 2. `roslaunch xsens_mti_driver xsens_mti_node.launch`
 3. go into `/home/wiselab/catkin_ws/src/data_collection/src/`, then execute `./gt_collect.sh {filename}`
@@ -44,5 +44,5 @@ wiselab@touriga
 0. Check that rosbag is good shape: `rosbag info {filename}.bag`
     - If an issue is found: `rosbag reindex {filename}.bag`
 1. `roslaunch slam offine_cart_3d.launch bag_filenames:=/home/wiselab/ws/dart/{filename}.bag`
-2. `roslaunch slam asset_writer_cart_3d.launch bag_filenames:=/home/wiselab/ws/dart/{filename}.bag pose_graph_filename:=/home/wiselab/ws/dart/{filename}.bag.pbstream`
-3. go to `/home/wiselab/catkin_ws/src/slam/src/`, execute `./get_pose {filename}`
+2. `roslaunch slam assets_writer_cart_3d.launch bag_filenames:=/home/wiselab/ws/dart/{filename}.bag pose_graph_filename:=/home/wiselab/ws/dart/{filename}.bag.pbstream`
+3. go to `/home/wiselab/catkin_ws/src/slam/src/`, execute `./get_pose.sh {filename}`
