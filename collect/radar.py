@@ -62,6 +62,8 @@ def radarcollect(args):
     cfg_recv = (args.static_ip, args.config_port)
     data_recv = (args.static_ip, args.data_port)
 
+    # Need to open the config socket, even if we don't use it, in order to
+    # "steal" it from mmwave studo.
     config_socket = socket.socket(
         socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     data_socket = socket.socket(

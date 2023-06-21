@@ -1,7 +1,6 @@
 """Radar processing routines."""
 
 from functools import partial
-from tqdm import tqdm as default_tqdm
 
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
@@ -39,6 +38,7 @@ class AWR1843Boost(NamedTuple):
     rmax: Radar max range.
     num_rx: Number of rx antenna.
     num_tx: Number of tx antenna.
+    scan_dt: Period of radar chirps, in seconds.
     artifact_threshold: Zero-doppler artifact clipping threshold (in percent).
     """
 
@@ -50,6 +50,7 @@ class AWR1843Boost(NamedTuple):
     rmax: float = 21.5991
     num_rx: int = 4
     num_tx: int = 2
+    scan_dt: float = 0.0005
     artifact_threshold: float = 50.0
 
     @property
@@ -61,6 +62,11 @@ class AWR1843Boost(NamedTuple):
     def frame_shape(self):
         """Radar chirp frame shape."""
         return (self.chirploops * self.num_tx, self.num_rx, self.chirplen)
+
+    @property
+    def frame_time(self):
+        """Time per frame (in seconds)."""
+        return self.framelen * self.scan_dt
 
     @property
     def image_shape(self):
@@ -137,13 +143,34 @@ class AWR1843Boost(NamedTuple):
             - artifact.reshape(1, *artifact.shape), 0)
         return images.at[..., zero - 1:zero + 2, :].set(removed)
 
+    def process_timestamps(
+        self, timestamps: Float64[types.ArrayLike, "frame"], stride: int = 128
+    ) -> Float64[types.ArrayLike, "idx"]:
+        """Compute timestamps for each image when frames are processed.
+
+        NOTE: Timestamps are measured at the mean chirp corresponding to each
+        frame. The mean chirp is used to smooth the effect of 15ms jitter which
+        we observe in the timestamp, likely due to software timestamping
+        interacting with scheduling effects in windows on the data capture
+        computer.
+
+        Parameters
+        ----------
+        timestamps: timestamps of each chirp, measured at the beginning.
+        stride: radar processing stride, in chirps.
+
+        Returns
+        -------
+        Timestamp of each radar frame.
+        """
+        return np.mean(sliding_window_view(
+            timestamps, window_shape=self.framelen)[::stride], axis=1)
+
     def process_data(
         self, chirps: Complex64[types.ArrayLike, "frame tx rx chirp"],
-        timestamps: Float64[types.ArrayLike, "frame"], stride: int = 128,
-        batch_size: int = 64
+        stride: int = 128, batch_size: int = 64
     ) -> tuple[
         Float16[types.ArrayLike, "idx antenna range doppler"],
-        Float64[types.ArrayLike, "idx"],
         Float32[types.ArrayLike, "idx"]
     ]:
         """Process radar data.
@@ -152,17 +179,14 @@ class AWR1843Boost(NamedTuple):
         ----------
         chirps: Raw chirp data. The number of samples per chirp corresponds to
             the maximum number of range bins available.
-        timestamps: timestamps of each frame.
         stride: Stride between successive frames for rolling frame processing.
         batch_size: Frame processing batch. 32/64/128 seems to be the fastest
             based on some rough experiments on a RTX 4090 and 7950X.
-        tqdm: Progress bar class.
 
         Returns
         -------
         [0] processed azimuth-range-doppler images.
-        [1] timestamps for each output.
-        [2] estimated speed of this frame.
+        [1] estimated speed of this frame based on max observed doppler.
         """
         # Discard the middle TX antenna, and flatten the antennas.
         chirps_flat = chirps.reshape(-1, 8, chirps.shape[3])
@@ -171,9 +195,6 @@ class AWR1843Boost(NamedTuple):
         # axis (frame -> doppler) is put in the last axis.
         frames = sliding_window_view(
             chirps_flat, window_shape=self.framelen, axis=0)[::stride]
-        image_times = np.median(
-            sliding_window_view(
-                timestamps, window_shape=self.framelen)[::stride], axis=1)
 
         process_func = jax.jit(partial(self.range_doppler_azimuth))
         res, speed = [], []
@@ -183,7 +204,7 @@ class AWR1843Boost(NamedTuple):
             speed.append(s)
             frames = frames[batch_size:]
         res_arr = self.remove_artifact(jnp.concatenate(res, axis=0))
-        return to_float16(res_arr), image_times, jnp.concatenate(speed)
+        return to_float16(res_arr), jnp.concatenate(speed)
 
     def to_instrinsics(self) -> dict:
         """Export intrinsics configuration file."""

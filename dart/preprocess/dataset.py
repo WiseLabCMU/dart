@@ -53,7 +53,12 @@ class AWR1843BoostDataset(NamedTuple):
         return res
 
     def _get_times(self, packets, valid):
-        """Get timestamps for each frame."""
+        """Get timestamps for each frame.
+
+        Timestamps are denoted by the first packet corresponding to data
+        from this frame, where the first packet is assumed to be closest
+        to the actual time where the radar chirped.
+        """
         start = np.arange(valid.shape[0]) * self.frame_size + self.start
         frame_start_packet = np.floor(start / self.packet_size).astype(int)
 

@@ -6,8 +6,6 @@ import json
 from tqdm import tqdm
 import numpy as np
 
-from scipy.ndimage import gaussian_filter1d
-
 from dart.preprocess import AWR1843Boost, AWR1843BoostDataset, Trajectory
 
 
@@ -26,10 +24,11 @@ def _process_batch(radar: AWR1843Boost, file_batch, traj: Trajectory):
     dataset = AWR1843BoostDataset.from_packets(packets, radar.frame_size * 2)
 
     chirps, t_chirp = dataset.as_frames(radar, packets)
-    range_doppler, t_image, speed_est = radar.process_data(chirps, t_chirp)
+    range_doppler, speed_est = radar.process_data(chirps)
+    t_image = radar.process_timestamps(t_chirp)
 
     t_valid = traj.valid_mask(t_image)
-    pose = traj.interpolate(t_image[t_valid])
+    pose = traj.interpolate(t_image[t_valid], window=radar.frame_time * 0.5)
     pose["t"] = t_image[t_valid]
     pose["speed"] = speed_est[t_valid]
 
@@ -38,7 +37,7 @@ def _process_batch(radar: AWR1843Boost, file_batch, traj: Trajectory):
 
 def _process(
         path: str, radar: AWR1843Boost, batch_size: int = 1000000,
-        overwrite: bool = False, sigma: float = 10.0):
+        overwrite: bool = False):
 
     traj = Trajectory.from_csv(path)
     packetfile = h5py.File(os.path.join(path, "radarpackets.h5"), 'r')
@@ -68,15 +67,6 @@ def _process(
     poses_cat = {}
     for k in poses[0]:
         poses_cat[k] = np.concatenate([p[k] for p in poses])
-
-    # Save raw velocity...
-    # outfile.create_dataset('vel_raw', data=poses_cat['vel'])
-    # Then scale by estimated velocity
-    # poses_cat['vel'] = gaussian_filter1d(poses_cat['vel'], sigma=sigma, axis=0)
-    # poses_cat['vel'] = (
-    #     poses_cat['vel']
-    #    / np.linalg.norm(poses_cat['vel'], axis=1).reshape(-1, 1)
-    #    * poses_cat['speed'].reshape(-1, 1))
 
     for k, v in poses_cat.items():
         outfile.create_dataset(k, data=v)
