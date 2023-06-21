@@ -3,7 +3,7 @@
 import numpy as np
 
 from beartype.typing import NamedTuple
-from jaxtyping import Complex64, Int16
+from jaxtyping import Complex64, Int16, Float64
 
 from .radar import AWR1843Boost
 
@@ -52,7 +52,7 @@ class AWR1843BoostDataset(NamedTuple):
         res = rad[self.start:self.end].reshape(-1, self.frame_size)[valid]
         return res
 
-    def _get_times(self, packets, valid):
+    def _get_times(self, packets, valid) -> Float64[np.ndarray, "frames"]:
         """Get timestamps for each frame.
 
         Timestamps are denoted by the first packet corresponding to data
@@ -75,7 +75,12 @@ class AWR1843BoostDataset(NamedTuple):
         iq[:, 1::2] = frames[:, 1::4] + 1j * frames[:, 3::4]
         return iq.reshape((-1, *radar.frame_shape))
 
-    def as_frames(self, radar, packets):
+    def as_frames(
+        self, radar: AWR1843Boost, packets
+    ) -> tuple[
+        Complex64[np.ndarray, "frames tx rx chirp"],
+        Float64[np.ndarray, "frames"]
+    ]:
         """Convert packets to frames."""
         valid = self._get_valid(packets)
         data = self._get_frames(packets, valid)

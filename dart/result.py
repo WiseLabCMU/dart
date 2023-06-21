@@ -5,11 +5,13 @@ import json
 import numpy as np
 import h5py
 import matplotlib as mpl
+from jax import numpy as jnp
 
 from beartype.typing import Optional, Any
 from jaxtyping import Integer, Array, Float, UInt8
 
 from .dart import DART
+from dart.jaxcolors import colormap
 from .dataset import load_arrays, trajectory
 from . import types
 
@@ -39,6 +41,8 @@ class DartResult:
         with open(_meta) as f:
             self.metadata = json.load(f)
 
+        self.DATASET = self.metadata["dataset"]["path"]
+
     def dart(self) -> DART:
         """Get DART object."""
         return DART.from_config(**self.metadata)
@@ -63,6 +67,10 @@ class DartResult:
     def load(self, path: str, keys: Optional[list[str]] = None) -> Any:
         """Load file inside this result."""
         return load_arrays(os.path.join(self.path, path), keys=keys)
+
+    def open(self, path: str) -> Any:
+        """Load h5py file in this scope."""
+        return h5py.File(os.path.join(self.path, path))
 
     @staticmethod
     def colorize_map(
@@ -99,3 +107,35 @@ class DartResult:
             arr = np.exp(arr)  # type: ignore
 
         return (mpl.colormaps['viridis'](arr)[..., :3] * 255).astype(np.uint8)
+
+    @staticmethod
+    def colorize_radar(
+        cmap: Float[types.ArrayLike, "..."],
+        rad: Float[types.ArrayLike, "..."],
+        clip: tuple[float, float] = (5.0, 99.9)
+    ) -> UInt8[types.ArrayLike, "... 3"]:
+        """Colorize a radar intensity map in a jax-friendly way.
+
+        Parameters
+        ----------
+        cmap: color map to apply.
+        rad: input array. If range-doppler, colorize directly; if
+            range-doppler-azimuth, tiles into 2 columns x 4 rows.
+        clip: percentile clipping range.
+        """
+        def _tile(arr):
+            unpack = [arr[:, :, :, i] for i in range(arr.shape[3])]
+            left = jnp.concatenate(unpack[:4], axis=1)
+            right = jnp.concatenate(unpack[4:], axis=1)
+            return jnp.concatenate([left, right], axis=2)
+
+        p5, p95 = jnp.nanpercentile(rad, jnp.array(clip))
+        rad = (rad - p5) / (p95 - p5)
+        colors = (colormap(cmap, rad) * 255).astype(jnp.uint8)
+        if len(rad.shape) == 4:
+            if rad.shape[-1] > 1:
+                return _tile(colors)
+            else:
+                return colors[..., 0, :]
+        else:
+            return colors

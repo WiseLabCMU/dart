@@ -13,8 +13,8 @@ from dart import types
 
 
 def to_float16(
-    arr: Float32[Array, "..."], max_normal: float = 65504.0
-) -> Float16[Array, "..."]:
+    arr: Float32[types.ArrayLike, "..."], max_normal: float = 65504.0
+) -> Float16[types.ArrayLike, "..."]:
     """Convert array to float16.
 
     The largest observed value is scaled to the largest normal normal number
@@ -79,14 +79,18 @@ class AWR1843Boost(NamedTuple):
         """Estimate speed for this frame using doppler spectrum."""
         nd_half = int(self.framelen / 2)
 
-        # Spectrum across doppler bins; folded in half
-        _spectrum = np.sum(rda, axis=(1, 3))
-        spectrum = _spectrum[:, :nd_half] + _spectrum[:, nd_half:][:, ::-1]
+        percentile = 99.75
+        min_count = 10
 
-        threshold = jnp.min(spectrum, axis=1).reshape(-1, 1)
-        speed_nd = jnp.argmax(
-            (jnp.diff(spectrum, axis=1) > threshold)
-            & (spectrum[:, :-1] > (threshold * 2)), axis=1)
+        # Threshold for each frame, antenna (over=1,2)
+        threshold = jnp.percentile(
+            rda, percentile, axis=(1, 2))[:, None, None, ...]
+        # Count across range, antenna (over=2,3)
+        valid = jnp.sum(rda > threshold, axis=(1, 3)) > min_count
+
+        left = jnp.argmax(valid, axis=1)
+        right = jnp.argmax(valid[:, ::-1], axis=1)
+        speed_nd = jnp.minimum(left, right)
 
         return (nd_half - speed_nd) / nd_half * self.dmax / 2
 
@@ -126,8 +130,8 @@ class AWR1843Boost(NamedTuple):
         return rda[:, :self.max_range], self.estimate_speed(rda)
 
     def remove_artifact(
-        self, images: Float32[types.ArrayLike, "frame range doppler antenna"],
-    ) -> Float32[types.ArrayLike, "frame range doppler antenna"]:
+        self, images: Float32[Array, "frame range doppler antenna"],
+    ) -> Float32[Array, "frame range doppler antenna"]:
         """Remove zero-doppler artifact from images.
 
         Collected range-doppler radar data will have an artifact at close
@@ -138,7 +142,7 @@ class AWR1843Boost(NamedTuple):
         zero = int(images.shape[2] / 2)
         artifact = jnp.percentile(
             images[..., zero - 1:zero + 2, :], self.artifact_threshold, axis=0)
-        removed = np.maximum(
+        removed = jnp.maximum(
             images[..., zero - 1:zero + 2, :]
             - artifact.reshape(1, *artifact.shape), 0)
         return images.at[..., zero - 1:zero + 2, :].set(removed)
@@ -197,6 +201,7 @@ class AWR1843Boost(NamedTuple):
             chirps_flat, window_shape=self.framelen, axis=0)[::stride]
 
         process_func = jax.jit(partial(self.range_doppler_azimuth))
+        # process_func = partial(self.range_doppler_azimuth)
         res, speed = [], []
         for _ in range(int(np.ceil(frames.shape[0] / batch_size))):
             r, s = process_func(jnp.array(frames[:batch_size]))
