@@ -1,5 +1,5 @@
 ifndef BATCH
-BATCH=4
+BATCH=2
 endif
 ifndef DART
 DART=python manage.py

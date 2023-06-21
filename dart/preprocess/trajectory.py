@@ -38,9 +38,8 @@ class Trajectory(NamedTuple):
 
         t_slam = np.array(df["field.header.stamp"]) / 1e9
 
-        # temporary manual alignment
-        t_slam = t_slam[0] + (t_slam - t_slam[0]) * 1.26 + 1.0
-        # end tmp
+        # tmp
+        t_slam = t_slam + 0.5
 
         xyz = np.array(
             [df["field.transform.translation." + char] for char in "xyz"])
@@ -57,11 +56,29 @@ class Trajectory(NamedTuple):
         return (t >= self.spline.x[0]) & (t <= self.spline.x[-1])
 
     def interpolate(
-        self, t: Float64[np.ndarray, "N"]
+        self, t: Float64[np.ndarray, "N"], window: float = 0.1,
+        samples: int = 25
     ) -> dict[str, Float32[np.ndarray, "N ..."]]:
-        """Calculate poses."""
+        """Calculate poses, averaging along a window.
+
+        Parameters
+        ----------
+        t: Radar frame timestamps, measured at the middle of each frame.
+        window: Frame size (end - start), in seconds.
+        samples: Number of samples to use for averaging.
+
+        Returns
+        -------
+        Dictionary with pos, vel, and rot entries.
+        """
+        window_offsets = np.linspace(-window / 2, window / 2, samples)
+        samples = t[..., None] + window_offsets[None, ...]
+
+        # Rotation unfortunately does not allow vectorization at this time.
+        rot = Rotation.concatenate([self.slerp(row).mean() for row in samples])
+
         return {
-            "pos": self.spline(t),
-            "vel": self.spline.derivative()(t) * 1.26,
-            "rot": self.slerp(t).as_matrix()
+            "pos": np.mean(self.spline(samples), axis=1),
+            "vel": np.mean(self.spline.derivative()(samples), axis=1),
+            "rot": rot.as_matrix()
         }
