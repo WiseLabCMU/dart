@@ -13,8 +13,8 @@ BATCH_SIZE = 500000
 
 class Frame(tb.IsDescription):
     t           = tb.Float64Col()
-    frames_real = tb.Int16Col(shape=(3, 4, 512))
-    frames_imag = tb.Int16Col(shape=(3, 4, 512))
+    frames_real = tb.Int16Col(shape=(2, 4, 512))
+    frames_imag = tb.Int16Col(shape=(2, 4, 512))
 
 
 def preprocess(args):
@@ -39,7 +39,7 @@ def preprocess(args):
             timestamps = [row['t'] for row in packet_table.iterrows(start, end)]
             print(f'Total time: {timestamps[-1] - timestamps[0]}s')
             print('Organizing frames...')
-            o = org.Organizer((data, num, count), timestamps, 1, 4, 3, 512)
+            o = org.Organizer((data, num, count), timestamps, 1, 4, 2, 512)
             frames, frametimes = o.organize()
             frames_real = np.real(frames).astype(np.int16)
             frames_imag = np.imag(frames).astype(np.int16)

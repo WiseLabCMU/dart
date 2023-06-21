@@ -1,23 +1,24 @@
 % ------------------- PARAMS ------------------------------- %
 
-DATADIR = '../data';
-DATASET = 'wiselab-2';
+DATADIR = '/media/john/Extreme Pro/dart/';
+DATASET = 'cichall-3';
 BATCH_SIZE = 50000;
 
-USE_T265 = true;
+USE_T265 = false;
+USE_OPTITRACK = false;
 FORCE_REPROCESS_TRAJ = true;
 INTERP_TRAJ = false;
 INTERP_TRAJ_FS = 200;
 
 RANGE_DECIMATION = 4;      % max_range=21m when range_decimation=1
 DOPPLER_DECIMATION = 1;    % max_velocity=2m/s when doppler_decimation=1
-FRAMELEN = 256;
-STRIDE = 64;
+FRAMELEN = 512;
+STRIDE = 128;
 PROCESS_AZIMUTH = true;
 
 CHIRPLEN = 512;
-CHIRP_DT = 1e-3;
-DMAX = 1.8949;
+CHIRP_DT = 5e-4;
+DMAX = 3.7898;
 RMAX = 21.5991;
 
 GEN_MAP = false;
@@ -27,17 +28,23 @@ if USE_T265
                     0,  0, -1,  0;
                    -1,  0,  0,  0;
                     0,  0,  0,  1];
-else
+    GLOBAL_TFORM = [ 1,  0,  0,  0;
+                     0,  0, -1,  0;
+                     0,  1,  0,  0;
+                     0,  0,  0,  1];
+elseif USE_OPTITRACK
     LOCAL_TFORM = [ 1,  0,  0,  0;
                     0,  0,  1,  0;
                     0, -1,  0,  0;
                     0,  0,  0,  1];
+    GLOBAL_TFORM = [ 1,  0,  0,  0;
+                     0,  0, -1,  0;
+                     0,  1,  0,  0;
+                     0,  0,  0,  1];
+else
+    LOCAL_TFORM = eye(4);
+    GLOBAL_TFORM = eye(4);
 end
-
-GLOBAL_TFORM = [ 1,  0,  0,  0;
-                 0,  0, -1,  0;
-                 0,  1,  0,  0;
-                 0,  0,  0,  1];
 
 if PROCESS_AZIMUTH
     GAIN = 'awr1843boost_az8';
@@ -49,6 +56,7 @@ end
 
 t265file = fullfile(DATADIR, DATASET, 't265.h5');
 optitrackfile = fullfile(DATADIR, DATASET, 'optitrack.txt');
+cartographerfile = fullfile(DATADIR, DATASET, DATASET + ".csv");
 
 scanfile = fullfile(DATADIR, DATASET, 'frames.h5');
 trajfile = fullfile(DATADIR, DATASET, 'traj.mat');
@@ -95,8 +103,10 @@ end
 if ~exist(trajfile, 'file') || FORCE_REPROCESS_TRAJ
     if USE_T265
         preprocess_t265(t265file, trajfile);
-    else
+    elseif USE_OPTITRACK
         preprocess_optitrack(optitrackfile, trajfile);
+    else
+        preprocess_cartographer(cartographerfile, trajfile);
     end
 end
 

@@ -1,6 +1,6 @@
 close all;
 
-real_rad = rad;
+real_rad = rad(:,:,:,1);
 % load(simfile, 'rad');
 % sim_rad = rad;
 rad = real_rad;

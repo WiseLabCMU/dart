@@ -20,6 +20,16 @@ chirplen = size(frames, 4); % before decmiation
 numchirps_in = size(frames, 1);
 
 numframes = floor((numchirps_in - framelen) / stride) + 1;
+ntx = size(frames, 2);
+% nrx = size(frames, 3);
+
+if ntx == 2
+    tx0 = 1;
+    tx2 = 2;
+elseif ntx == 3
+    tx0 = 1;
+    tx2 = 3;
+end
 
 w_d = hann(framelen).';
 w_r = hann(chirplen);
@@ -36,14 +46,14 @@ for i = 1:numframes
     chirp_idx = startchirp : startchirp + framelen - 1;
     timestamps(i) = mean(frametimes(chirp_idx));
     if process_azimuth
-        scans(:, :, 1, i) = double(squeeze(frames(chirp_idx, 1, 1, :))).' .* w;
-        scans(:, :, 2, i) = double(squeeze(frames(chirp_idx, 1, 2, :))).' .* w;
-        scans(:, :, 3, i) = double(squeeze(frames(chirp_idx, 1, 3, :))).' .* w;
-        scans(:, :, 4, i) = double(squeeze(frames(chirp_idx, 1, 4, :))).' .* w;
-        scans(:, :, 5, i) = double(squeeze(frames(chirp_idx, 3, 1, :))).' .* w;
-        scans(:, :, 6, i) = double(squeeze(frames(chirp_idx, 3, 2, :))).' .* w;
-        scans(:, :, 7, i) = double(squeeze(frames(chirp_idx, 3, 3, :))).' .* w;
-        scans(:, :, 8, i) = double(squeeze(frames(chirp_idx, 3, 4, :))).' .* w;
+        scans(:, :, 1, i) = double(squeeze(frames(chirp_idx, tx0, 1, :))).' .* w;
+        scans(:, :, 2, i) = double(squeeze(frames(chirp_idx, tx0, 2, :))).' .* w;
+        scans(:, :, 3, i) = double(squeeze(frames(chirp_idx, tx0, 3, :))).' .* w;
+        scans(:, :, 4, i) = double(squeeze(frames(chirp_idx, tx0, 4, :))).' .* w;
+        scans(:, :, 5, i) = double(squeeze(frames(chirp_idx, tx2, 1, :))).' .* w;
+        scans(:, :, 6, i) = double(squeeze(frames(chirp_idx, tx2, 2, :))).' .* w;
+        scans(:, :, 7, i) = double(squeeze(frames(chirp_idx, tx2, 3, :))).' .* w;
+        scans(:, :, 8, i) = double(squeeze(frames(chirp_idx, tx2, 4, :))).' .* w;
     else
         scans(:, :, i) = double(squeeze(frames(chirp_idx, 1, 1, :))).' .* w;
     end
