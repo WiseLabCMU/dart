@@ -5,6 +5,7 @@ import os
 import json
 from tqdm import tqdm
 import numpy as np
+from scipy.ndimage import gaussian_filter1d
 
 from dart.preprocess import AWR1843Boost, AWR1843BoostDataset, Trajectory
 
@@ -27,7 +28,7 @@ def _process_batch(radar: AWR1843Boost, file_batch, traj: Trajectory):
     range_doppler, speed_est = radar.process_data(chirps)
     t_image = radar.process_timestamps(t_chirp)
 
-    t_valid = traj.valid_mask(t_image)
+    t_valid = traj.valid_mask(t_image, window=radar.frame_time * 0.5)
     pose = traj.interpolate(t_image[t_valid], window=radar.frame_time * 0.5)
     pose["t"] = t_image[t_valid]
     pose["speed"] = speed_est[t_valid]
@@ -37,7 +38,7 @@ def _process_batch(radar: AWR1843Boost, file_batch, traj: Trajectory):
 
 def _process(
         path: str, radar: AWR1843Boost, batch_size: int = 1000000,
-        overwrite: bool = False):
+        overwrite: bool = False, sigma: float = 2.0):
 
     traj = Trajectory.from_csv(path)
     packetfile = h5py.File(os.path.join(path, "radarpackets.h5"), 'r')
@@ -53,10 +54,10 @@ def _process(
         "rad", (1, *rs), dtype='f2', chunks=(1, *rs), maxshape=(None, *rs))
 
     total_size = 0
-    poses = []
+    _poses = []
     for _ in tqdm(range(int(np.ceil(packet_dataset.shape[0] / batch_size)))):
         rda, pose = _process_batch(radar, packet_dataset[:batch_size], traj)
-        poses.append(pose)
+        _poses.append(pose)
 
         total_size += rda.shape[0]
         range_doppler_azimuth.resize((total_size, *radar.image_shape))
@@ -64,11 +65,14 @@ def _process(
 
         packet_dataset = packet_dataset[batch_size:]
 
-    poses_cat = {}
-    for k in poses[0]:
-        poses_cat[k] = np.concatenate([p[k] for p in poses])
+    poses = {}
+    for k in _poses[0]:
+        poses[k] = np.concatenate([p[k] for p in _poses])
 
-    for k, v in poses_cat.items():
+    if sigma > 0:
+        poses['vel'] = gaussian_filter1d(poses['vel'], sigma=sigma, axis=0)
+
+    for k, v in poses.items():
         outfile.create_dataset(k, data=v)
     packetfile.close()
     outfile.close()

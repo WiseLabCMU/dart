@@ -10,6 +10,8 @@ from scipy.spatial.transform import Slerp, Rotation
 from beartype.typing import NamedTuple
 from jaxtyping import Float32, Float64, Bool
 
+from dart import types
+
 
 class Trajectory(NamedTuple):
     """Sensor trajectory.
@@ -36,10 +38,8 @@ class Trajectory(NamedTuple):
         """
         df = pd.read_csv(os.path.join(path, "trajectory.csv"))
 
-        t_slam = np.array(df["field.header.stamp"]) / 1e9
-
-        # tmp
-        t_slam = t_slam + 0.5
+        # Manual 0.5s offset, likely due to buffering the DCA1000
+        t_slam = np.array(df["field.header.stamp"]) / 1e9 + 0.5
 
         xyz = np.array(
             [df["field.transform.translation." + char] for char in "xyz"])
@@ -51,14 +51,18 @@ class Trajectory(NamedTuple):
 
         return cls(spline=spline, slerp=slerp)
 
-    def valid_mask(self, t: Float64[np.ndarray, "N"]) -> Bool[np.ndarray, "N"]:
+    def valid_mask(
+        self, t: Float64[types.ArrayLike, "N"], window: float = 0.1
+    ) -> Bool[types.ArrayLike, "N"]:
         """Get mask of valid timestamps (within the trajectory timestamps)."""
-        return (t >= self.spline.x[0]) & (t <= self.spline.x[-1])
+        return (
+            (t - window >= self.spline.x[0])
+            & (t + window <= self.spline.x[-1]))
 
     def interpolate(
-        self, t: Float64[np.ndarray, "N"], window: float = 0.1,
+        self, t: Float64[types.ArrayLike, "N"], window: float = 0.1,
         samples: int = 25
-    ) -> dict[str, Float32[np.ndarray, "N ..."]]:
+    ) -> dict[str, Float32[types.ArrayLike, "N ..."]]:
         """Calculate poses, averaging along a window.
 
         Parameters
@@ -72,13 +76,13 @@ class Trajectory(NamedTuple):
         Dictionary with pos, vel, and rot entries.
         """
         window_offsets = np.linspace(-window / 2, window / 2, samples)
-        samples = t[..., None] + window_offsets[None, ...]
+        tt = t[..., None] + window_offsets[None, ...]
 
         # Rotation unfortunately does not allow vectorization at this time.
-        rot = Rotation.concatenate([self.slerp(row).mean() for row in samples])
+        rot = Rotation.concatenate([self.slerp(row).mean() for row in tt])
 
         return {
-            "pos": np.mean(self.spline(samples), axis=1),
-            "vel": np.mean(self.spline.derivative()(samples), axis=1),
+            "pos": np.mean(self.spline(tt), axis=1),
+            "vel": np.mean(self.spline.derivative()(tt), axis=1),
             "rot": rot.as_matrix()
         }

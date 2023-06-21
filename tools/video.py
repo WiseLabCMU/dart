@@ -3,15 +3,14 @@
 import os
 from tqdm import tqdm
 import matplotlib as mpl
-import time
 
 from jax import numpy as jnp
 import jax
 import numpy as np
 import cv2
+import h5py
 
 from dart import VirtualCameraImage, DartResult
-from dart.jaxcolors import colormap
 
 
 _desc = "Create a video from radar and virtual camera renderings."
@@ -28,30 +27,9 @@ def _parse(p):
     p.add_argument(
         "-s", "--size", type=int, default=512,
         help="Vertical/horizontal size to rescale each plot to.")
+    p.add_argument(
+        "-b", "--batch", type=int, default=1024, help="Batch size.")
     return p
-
-
-def _tile(videos):
-    videos_unpack = [videos[:, :, :, i] for i in range(videos.shape[3])]
-    left = jnp.concatenate(videos_unpack[:4], axis=1)
-    right = jnp.concatenate(videos_unpack[4:], axis=1)
-    return jnp.concatenate([left, right], axis=2)
-
-
-@jax.jit
-def _loadrad(cmap, rad):
-    p5 = jnp.nanpercentile(rad, 5)
-    p95 = jnp.nanpercentile(rad, 99.9)
-    rad = jnp.nan_to_num(rad, nan=p5).astype(jnp.float32)
-    rad = (rad - p5) / (p95 - p5)
-    colors = (colormap(cmap, rad) * 255).astype(jnp.uint8)
-    if len(rad.shape) == 4:
-        if rad.shape[-1] > 1:
-            return _tile(colors)
-        else:
-            return colors[..., 0, :]
-    else:
-        return colors
 
 
 def _resize(img, size):
@@ -70,40 +48,44 @@ def _main(args):
 
     cmap = jnp.array(mpl.colormaps['viridis'].colors)
 
-    start = time.time()
-    cam = np.asarray(
-        VirtualCameraImage(**res.load(DartResult.CAMERA)).to_rgb())
-    print("loaded cam: {:.3f}gb ({:.3f}s)".format(
-        cam.size / 1000 / 1000 / 1000, time.time() - start))
+    cam = dict(res.open(res.CAMERA))
+    rad = res.open(res.RADAR)["rad"]
+    gt = h5py.File(res.DATASET)["rad"]
 
-    start = time.time()
-    rad = np.asarray(
-        _loadrad(cmap, res.load(DartResult.RADAR, keys=["rad"])["rad"]))
-    print("loaded rad.pred: {:.3f}gb ({:.3f}s)".format(
-        rad.size / 1000 / 1000 / 1000, time.time() - start))
-
-    start = time.time()
-    gt = np.asarray(_loadrad(cmap, res.data(keys=["rad"])["rad"]))
-    print("loaded rad.gt: {:.3f}gb ({:.3f}s)".format(
-        gt.size / 1000 / 1000 / 1000, time.time() - start))
-
-    validx = np.zeros(cam.shape[0], dtype=bool)
+    validx = np.zeros(rad.shape[0], dtype=bool)
     valset = np.load(os.path.join(args.path, "metadata.npz"))["val"]
     validx[valset] = True
 
     fourcc = cv2.VideoWriter_fourcc(*args.fourcc)
     out = cv2.VideoWriter(
         args.out, fourcc, args.fps, (args.size * 3, args.size))
-    for i, (fc, fr, fg) in enumerate(tqdm(zip(cam, rad, gt), total=len(cam))):
-        fc = _resize(fc, (args.size, args.size))
-        fr = _resize(fr, (args.size, args.size))
-        fg = _resize(fg, (args.size, args.size))
-        f = np.concatenate([fc, fr, fg], axis=1)
 
-        cv2.putText(
-            f, "{}{}".format("v" if validx[i] else "t", i), (20, 50),
-            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+    _loadrad = jax.jit(res.colorize_radar)
 
-        # RGB -> BGR since OpenCV assumes BGR
-        out.write(f[:, :, [2, 1, 0]])
+    frame_idx = 0
+    for _ in range(int(np.ceil(rad.shape[0]) / args.batch)):
+        cam_frames = np.asarray(VirtualCameraImage(
+            **{k: v[:args.batch] for k, v in cam.items()}).to_rgb())
+        rad_frames = np.asarray(_loadrad(cmap, rad[:args.batch]))
+        gt_frames = np.asarray(_loadrad(cmap, gt[:args.batch]))
+
+        cam = {k: v[args.batch:] for k, v in cam.items()}
+        rad = rad[args.batch:]
+        gt = gt[args.batch:]
+
+        for fc, fr, fg in zip(tqdm(cam_frames), rad_frames, gt_frames):
+            fc = _resize(fc, (args.size, args.size))
+            fr = _resize(fr, (args.size, args.size))
+            fg = _resize(fg, (args.size, args.size))
+            f = np.concatenate([fc, fr, fg], axis=1)
+
+            label = "{}{}".format("v" if validx[frame_idx] else "t", frame_idx)
+            cv2.putText(
+                f, label, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                (255, 255, 255), 2, cv2.LINE_AA)
+            frame_idx += 1
+
+            # RGB -> BGR since OpenCV assumes BGR
+            out.write(f[:, :, [2, 1, 0]])
+
     out.release()

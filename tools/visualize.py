@@ -2,11 +2,10 @@ import h5py
 import numpy as np
 from matplotlib import pyplot as plt
 import pandas as pd
-from scipy import ndimage
 
 
-f = h5py.File("data/cichall-3/data.h5")
-start = 100
+f = h5py.File("data/cichall-4/data.h5")
+start = 500
 end = -1
 step = 1
 
@@ -32,10 +31,10 @@ for idx in range(rad.shape[0]):
 
     for i, ax in enumerate(axs.reshape(-1)):
         ax.imshow(rad[idx][..., i])
-        ax.axvline(left[idx], color='C0')
-        ax.axvline(right[idx], color='C0')
-        ax.axvline(lefts[idx], color='C1')
-        ax.axvline(rights[idx], color='C1')
+        ax.axvline(left[idx], color='C1')
+        ax.axvline(right[idx], color='C1')
+        ax.axvline(lefts[idx], color='C0')
+        ax.axvline(rights[idx], color='C0')
 
     fig.canvas.draw()
     fig.canvas.flush_events()
