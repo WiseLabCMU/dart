@@ -4,6 +4,15 @@ s = readlines(infile);
 N = size(s, 1) - 1; % Skip last line to handle EOF
 fprintf('Converting %s...\n', infile);
 
+LOCAL_TFORM = [ 1,  0,  0,  0;
+                0,  0,  1,  0;
+                0, -1,  0,  0;
+                0,  0,  0,  1];
+GLOBAL_TFORM = [ 1,  0,  0,  0;
+                 0,  0, -1,  0;
+                 0,  1,  0,  0;
+                 0,  0,  0,  1];
+
 rt = zeros(N, 1);
 t = zeros(N, 1);
 x = zeros(N, 1);
@@ -26,6 +35,8 @@ for i = 1:N
     qz(i) = pose.rotation.z;
     qw(i) = pose.rotation.w;
 end
+
+[x, y, z, qx, qy, qz, qw] = transform_poses(x, y, z, qx, qy, qz, qw, LOCAL_TFORM, GLOBAL_TFORM);
 
 save(outfile, 'rt', 't', 'x', 'y', 'z', 'qx', 'qy', 'qz', 'qw', '-v7.3');
 
