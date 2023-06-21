@@ -1,5 +1,4 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+"""Main collection script (wsl)"""
 
 import argparse
 import subprocess
@@ -12,8 +11,6 @@ import tables as tb
 from datetime import datetime
 
 
-CMD_DIR = 'C:/ti/mmwave_studio_02_01_01_00/mmWaveStudio/RunTime'
-SCRIPT_FILE = 'C:/Users/Administrator/git/dart/scripts/radar/Automation.lua'
 PACKET_BUFSIZE = 8192
 MAX_PACKET_SIZE = 4096
 
@@ -51,19 +48,12 @@ def radarcollect(args):
     os.makedirs(args.output, exist_ok=True)
     outfile = os.path.join(args.output, 'radarpackets.h5')
 
-    cwd = os.getcwd()
-    os.chdir(CMD_DIR)
-    subprocess.Popen(['mmWaveStudio.exe', '/lua', SCRIPT_FILE])
-    os.chdir(cwd)
-    print('waiting 56 seconds...')
-    time.sleep(56.0)
-    print('starting!')
-
     cfg_recv = (args.static_ip, args.config_port)
     data_recv = (args.static_ip, args.data_port)
 
     # Need to open the config socket, even if we don't use it, in order to
     # "steal" it from mmwave studo.
+    # Otherwise, this script will crash after 
     config_socket = socket.socket(
         socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     data_socket = socket.socket(
