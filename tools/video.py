@@ -23,7 +23,8 @@ def _parse(p):
         "-c", "--fourcc", help="Format fourcc code.", default="mp4v")
     p.add_argument("-o", "--out", help="Output file.")
     p.add_argument(
-        "-f", "--fps", default=30.0, type=float, help="Video framerate.")
+        "-f", "--fps", default=15.625, type=float,
+        help="Video framerate; set as 1 / (scan_dt * stride) for 1:1 time.")
     p.add_argument(
         "-s", "--size", type=int, default=512,
         help="Vertical/horizontal size to rescale each plot to.")
