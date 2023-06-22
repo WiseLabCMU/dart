@@ -3,9 +3,11 @@
 import numpy as np
 
 from beartype.typing import NamedTuple
-from jaxtyping import Complex64, Int16, Float64
+from jaxtyping import Complex64, Int16, Float64, Float16, Float
 
 from .radar import AWR1843Boost
+from .trajectory import Trajectory
+from dart import types
 
 
 class AWR1843BoostDataset(NamedTuple):
@@ -20,15 +22,26 @@ class AWR1843BoostDataset(NamedTuple):
 
     @classmethod
     def from_packets(cls, packets, frame_size: int):
-        """Initialize from packet dictionary / h5file."""
+        """Initialize from packet dictionary / h5file.
+
+        Parameters
+        ----------
+        packets: hdf5 dataset/group.
+        frame_size: Number of entries per frame; each entry is 4 bytes
+            (int16 real and imaginary parts of the IQ stream).
+        """
         packet_num = packets['packet_num']
         num_packets = np.max(packet_num) - np.min(packet_num) + 1
 
         byte_count = packets["byte_count"]
-        first_frame = np.ceil(byte_count[0] / 2 / frame_size).astype(int)
-        last_frame = np.floor(byte_count[-1] / 2 / frame_size).astype(int)
-        start = int(first_frame * frame_size - byte_count[0] / 2)
-        end = int(last_frame * frame_size - byte_count[0] / 2)
+
+        # 4 bytes per frame entry.
+        frame_bytes = frame_size * 4
+        first_frame = np.ceil(byte_count[0] / frame_bytes).astype(int)
+        last_frame = np.floor(byte_count[-1] / frame_bytes).astype(int)
+        # Start, end indices are measured in int16s
+        start = int(first_frame * frame_size * 2 - byte_count[0] / 2)
+        end = int(last_frame * frame_size * 2 - byte_count[0] / 2)
 
         return cls(
             start=start, end=end, start_packet=np.min(packet_num),
@@ -75,14 +88,57 @@ class AWR1843BoostDataset(NamedTuple):
         iq[:, 1::2] = frames[:, 1::4] + 1j * frames[:, 3::4]
         return iq.reshape((-1, *radar.frame_shape))
 
-    def as_frames(
+    def as_chirps(
         self, radar: AWR1843Boost, packets
     ) -> tuple[
         Complex64[np.ndarray, "frames tx rx chirp"],
         Float64[np.ndarray, "frames"]
     ]:
-        """Convert packets to frames."""
+        """Convert packets to chirps.
+
+        Parameters
+        ----------
+        radar: Radar object.
+        packets: input data hdf5 dataset/group.
+
+        Returns
+        -------
+        iq: IQ complex-value chirps for processing.
+        times: Timestamps of each chirp.
+        """
         valid = self._get_valid(packets)
         data = self._get_frames(packets, valid)
         times = self._get_times(packets, valid)
         return self._to_iq(radar, data), times
+
+    def process_data(
+        self, radar: AWR1843Boost, trajectory: Trajectory, packets
+    ) -> tuple[
+        Float16[types.ArrayLike, "idx antenna range doppler"],
+        dict[str, Float[types.ArrayLike, "idx ..."]]
+    ]:
+        """Process dataset.
+
+        Parameters
+        ----------
+        radar: Radar object with radar processing routines.
+        trajectory: Dataset trajectory for pose interpolation / smoothing.
+        packets: Radar packet dataset.
+
+        Returns
+        -------
+        rda: Processed range-doppler-azimuth images.
+        pose: Pose information (position, rotation, velocity, time) formatted
+            as a dictionary.
+        """
+        chirps, t_chirp = self.as_chirps(radar, packets)
+        rda, speed_radar = radar.process_data(chirps)
+        t_image = radar.process_timestamps(t_chirp)
+
+        window_size = radar.frame_time * 0.5
+        t_valid = trajectory.valid_mask(t_image, window=window_size)
+        pose = trajectory.interpolate(t_image[t_valid], window=window_size)
+        pose["t"] = t_image[t_valid]
+        pose["speed"] = speed_radar[t_valid]
+
+        return rda, pose

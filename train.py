@@ -32,7 +32,7 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
     g = p.add_argument_group(title="Training")
     g.add_argument("--lr", default=0.01, type=float, help="Learning Rate.")
     g.add_argument(
-        "-e", "--epochs", default=1, type=int,
+        "-e", "--epochs", default=10, type=int,
         help="Number of epochs to train.")
     g.add_argument("-b", "--batch", default=1024, type=int, help="Batch size.")
     g.add_argument(

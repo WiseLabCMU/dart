@@ -4,6 +4,8 @@ import os
 import numpy as np
 import pandas as pd
 
+from scipy.signal import medfilt
+from scipy.ndimage import gaussian_filter1d
 from scipy.interpolate import Akima1DInterpolator
 from scipy.spatial.transform import Slerp, Rotation
 
@@ -65,6 +67,8 @@ class Trajectory(NamedTuple):
     ) -> dict[str, Float32[types.ArrayLike, "N ..."]]:
         """Calculate poses, averaging along a window.
 
+        A hanning window weighting is used to match the radar FFT processing.
+
         Parameters
         ----------
         t: Radar frame timestamps, measured at the middle of each frame.
@@ -77,12 +81,60 @@ class Trajectory(NamedTuple):
         """
         window_offsets = np.linspace(-window / 2, window / 2, samples)
         tt = t[..., None] + window_offsets[None, ...]
+        hann = np.hanning(samples)
 
         # Rotation unfortunately does not allow vectorization at this time.
-        rot = Rotation.concatenate([self.slerp(row).mean() for row in tt])
+        rot = Rotation.concatenate([
+            self.slerp(row).mean(weights=hann) for row in tt])
 
         return {
-            "pos": np.mean(self.spline(tt), axis=1),
-            "vel": np.mean(self.spline.derivative()(tt), axis=1),
-            "rot": rot.as_matrix()
+            "pos": np.average(
+                self.spline(tt), axis=1, weights=hann).astype(np.float32),
+            "vel": np.average(
+                self.spline.derivative()(tt), axis=1, weights=hann
+            ).astype(np.float32),
+            "rot": rot.as_matrix().astype(np.float32)
         }
+
+    def postprocess(
+        self, velocity: Float32[types.ArrayLike, "N 3"],
+        speed_radar: Float32[types.ArrayLike, "N"],
+        smoothing: float = -1.0,
+        reject_threshold: float = 0.3, reject_kernel: int = 7,
+        max_adjustment: float = 0.2, adjust_kernel: int = 15
+    ) -> Float32[types.ArrayLike, "N 3"]:
+        """Apply smoothing and velocity scaling.
+
+        Parameters
+        ----------
+        velocity: SLAM system velocity estimates.
+        speed: Estimated speed from radar doppler images.
+        smoothing: Gaussian filter to apply to the velocity before fusing.
+        reject_threshold, reject_kernel: The radar speed estimate is rejected
+            when it exceeds the SLAM velocity by `reject_threshold` for more
+            than half of a sliding window with size `reject_kernel`.
+        max_adjustment: Maximum speed increase permitted by postprocessing.
+        adjust_kernel: Speed increase is limited to the median-filtered
+            speed estimate with this kernel size.
+
+        Returns
+        -------
+        Post-processed velocity.
+        """
+        speed_raw = np.linalg.norm(velocity, axis=1)
+        if smoothing > 0.0:
+            speed_slam = gaussian_filter1d(speed_raw, sigma=smoothing)
+        else:
+            speed_slam = speed_raw
+
+        reject = medfilt(
+            (speed_slam + reject_threshold < speed_radar).astype(int),
+            kernel_size=reject_kernel)
+        speed_fused = np.where(
+            reject | (speed_slam > speed_radar), speed_slam,
+            np.minimum(
+                speed_slam + max_adjustment, speed_radar,
+                medfilt(speed_radar, kernel_size=adjust_kernel)))
+
+        vel_out = speed_fused[..., None] * velocity / speed_raw[..., None]
+        return np.nan_to_num(vel_out, nan=0.0, posinf=0.0, neginf=0.0)

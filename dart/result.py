@@ -2,9 +2,12 @@
 
 import os
 import json
-import numpy as np
 import h5py
+
 import matplotlib as mpl
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+import numpy as np
 from jax import numpy as jnp
 
 from beartype.typing import Optional, Any
@@ -30,8 +33,9 @@ class DartResult:
     CAMERA = "cam.h5"
     RADAR = "rad.h5"
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str, name: str = None) -> None:
         self.path = path
+        self.name = path if name is None else name
 
         _meta = os.path.join(self.path, self.METADATA)
         if not os.path.exists(_meta):
@@ -139,3 +143,39 @@ class DartResult:
                 return colors[..., 0, :]
         else:
             return colors
+
+    def plot_map(
+        self, fig, ax, layer: int = 50, checkpoint: str = "map.h5",
+        key: str = "sigma", trajectory: bool = True,
+        clip: tuple[float, float] = (1.0, 99.0), filter: int = -1
+    ) -> None:
+        """Draw map."""
+        mapfile = self.load(checkpoint)
+
+        if filter <= 0:
+            layer = mapfile[key][:, :, layer]
+        else:
+            layer = np.median(
+                mapfile[key][:, :, layer - filter:layer + filter], axis=2)
+
+        if key == "alpha":
+            layer = np.exp(layer)
+        else:
+            lower, upper = np.percentile(layer, clip)
+            layer = np.clip(layer, max(lower, 0.0), upper)
+
+        xmin, ymin, zmin = mapfile["lower"].reshape(-1)
+        xmax, ymax, zmax = mapfile["upper"].reshape(-1)
+        extents = [xmin, xmax, ymin, ymax]
+
+        ims = ax.imshow(np.rot90(layer, k=1), extent=extents, aspect='equal')
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.1)
+        fig.colorbar(ims, cax)
+
+        if trajectory:
+            traj = self.data(["pos"])["pos"]
+            ax.plot(traj[:, 0], traj[:, 1], color='red', linewidth=0.5)
+
+        ax.set_title(self.name)
+        ax.grid()

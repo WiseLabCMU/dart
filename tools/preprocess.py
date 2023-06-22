@@ -5,7 +5,6 @@ import os
 import json
 from tqdm import tqdm
 import numpy as np
-from scipy.ndimage import gaussian_filter1d
 
 from dart.preprocess import AWR1843Boost, AWR1843BoostDataset, Trajectory
 
@@ -22,29 +21,23 @@ range-doppler-azimuth images and poses.
 def _process_batch(radar: AWR1843Boost, file_batch, traj: Trajectory):
     fields = ["byte_count", "packet_data", "packet_num", "t"]
     packets = {k: file_batch[k] for k in fields}
-    dataset = AWR1843BoostDataset.from_packets(packets, radar.frame_size * 2)
-
-    chirps, t_chirp = dataset.as_frames(radar, packets)
-    range_doppler, speed_est = radar.process_data(chirps)
-    t_image = radar.process_timestamps(t_chirp)
-
-    t_valid = traj.valid_mask(t_image, window=radar.frame_time * 0.5)
-    pose = traj.interpolate(t_image[t_valid], window=radar.frame_time * 0.5)
-    pose["t"] = t_image[t_valid]
-    pose["speed"] = speed_est[t_valid]
-
-    return range_doppler[t_valid], pose
+    dataset = AWR1843BoostDataset.from_packets(packets, radar.frame_size)
+    return dataset.process_data(radar, traj, packets)
 
 
 def _process(
         path: str, radar: AWR1843Boost, batch_size: int = 1000000,
-        overwrite: bool = False, sigma: float = 2.0):
+        overwrite: bool = False, smoothing: float = 2.0):
 
     traj = Trajectory.from_csv(path)
     packetfile = h5py.File(os.path.join(path, "radarpackets.h5"), 'r')
     packet_dataset = packetfile["scan"]["packet"]
-    mode = 'w' if overwrite else 'w-'
-    outfile = h5py.File(os.path.join(path, "data.h5"), mode)
+    if overwrite:
+        try:
+            os.remove(os.path.join(path, 'data.h5'))
+        except OSError:
+            pass
+    outfile = h5py.File(os.path.join(path, "data.h5"), 'w')
 
     with open(os.path.join(path, "sensor.json"), 'w') as f:
         json.dump(radar.to_instrinsics(), f, indent=4)
@@ -69,8 +62,9 @@ def _process(
     for k in _poses[0]:
         poses[k] = np.concatenate([p[k] for p in _poses])
 
-    if sigma > 0:
-        poses['vel'] = gaussian_filter1d(poses['vel'], sigma=sigma, axis=0)
+    poses['vel_raw'] = poses['vel']
+    poses['vel'] = traj.postprocess(
+        poses['vel'], poses['speed'], smoothing=smoothing)
 
     for k, v in poses.items():
         outfile.create_dataset(k, data=v)
@@ -79,8 +73,7 @@ def _process(
 
 
 def _parse(p):
-    p.add_argument(
-        "-p", "--path", help="Dataset path.")
+    p.add_argument("-p", "--path", help="Dataset path.")
     p.add_argument(
         "-v", "--overwrite", help="Overwrite existing data file.",
         default=False, action='store_true')
@@ -97,4 +90,4 @@ def _main(args):
 
     _process(
         args.path, AWR1843Boost(), batch_size=args.batch,
-        overwrite=args.overwrite, sigma=args.smooth)
+        overwrite=args.overwrite, smoothing=args.smooth)

@@ -102,6 +102,9 @@ class AWR1843Boost(NamedTuple):
     ]:
         """Process range-doppler-azimuth images.
 
+        A hanning window is used along range and doppler axes to suppress
+        range and doppler bleed.
+
         Parameters
         ----------
         frames: radar frames to process, with axis order
