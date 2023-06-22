@@ -1,9 +1,9 @@
 close all;
 
-real_rad = rad;
+real_rad = rad(:,:,:,5);
 % load(simfile, 'rad');
 % sim_rad = rad;
-rad = real_rad;
+% rad = real_rad;
 
 x = linspace(min_doppler, max_doppler, res_doppler);
 y = linspace(min_range, max_range, res_range);

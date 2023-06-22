@@ -1,43 +1,27 @@
 % ------------------- PARAMS ------------------------------- %
 
-DATADIR = '../data';
-DATASET = 'wiselab-2';
+DATADIR = '/media/john/Extreme Pro/dart/';
+DATASET = 'cichall-4';
 BATCH_SIZE = 50000;
 
-USE_T265 = true;
-FORCE_REPROCESS_TRAJ = true;
+% TRAJ_METHOD = 'optitrack';
+% TRAJ_METHOD = 't265';
+TRAJ_METHOD = 'cartographer';
 INTERP_TRAJ = false;
 INTERP_TRAJ_FS = 200;
 
 RANGE_DECIMATION = 4;      % max_range=21m when range_decimation=1
 DOPPLER_DECIMATION = 1;    % max_velocity=2m/s when doppler_decimation=1
-FRAMELEN = 256;
-STRIDE = 64;
+FRAMELEN = 512;
+STRIDE = 128;
 PROCESS_AZIMUTH = true;
 
 CHIRPLEN = 512;
-CHIRP_DT = 1e-3;
-DMAX = 1.8949;
+CHIRP_DT = 5e-4;
+DMAX = 3.7898;
 RMAX = 21.5991;
 
 GEN_MAP = false;
-
-if USE_T265
-    LOCAL_TFORM = [ 0,  1,  0,  0;
-                    0,  0, -1,  0;
-                   -1,  0,  0,  0;
-                    0,  0,  0,  1];
-else
-    LOCAL_TFORM = [ 1,  0,  0,  0;
-                    0,  0,  1,  0;
-                    0, -1,  0,  0;
-                    0,  0,  0,  1];
-end
-
-GLOBAL_TFORM = [ 1,  0,  0,  0;
-                 0,  0, -1,  0;
-                 0,  1,  0,  0;
-                 0,  0,  0,  1];
 
 if PROCESS_AZIMUTH
     GAIN = 'awr1843boost_az8';
@@ -49,6 +33,7 @@ end
 
 t265file = fullfile(DATADIR, DATASET, 't265.h5');
 optitrackfile = fullfile(DATADIR, DATASET, 'optitrack.txt');
+cartographerfile = fullfile(DATADIR, DATASET, DATASET + ".csv");
 
 scanfile = fullfile(DATADIR, DATASET, 'frames.h5');
 trajfile = fullfile(DATADIR, DATASET, 'traj.mat');
@@ -64,8 +49,10 @@ max_doppler = bin_doppler * (res_doppler * 0.5 - 1);
 
 bin_range = RMAX / CHIRPLEN;
 res_range = CHIRPLEN / RANGE_DECIMATION;
-min_range = bin_range * 0.5;
-max_range = bin_range * (res_range + 0.5);
+% min_range = bin_range * 0.5;
+% max_range = bin_range * (res_range + 0.5);
+min_range = 0;
+max_range = bin_range * res_range;
 
 scan_window = CHIRP_DT * FRAMELEN;
 
@@ -92,12 +79,14 @@ if GEN_MAP
     save(mapfile, 'x', 'y', 'z', 'v', 'cx', 'cy', 'cz', '-v7.3');
 end
 
-if ~exist(trajfile, 'file') || FORCE_REPROCESS_TRAJ
-    if USE_T265
-        preprocess_t265(t265file, trajfile);
-    else
-        preprocess_optitrack(optitrackfile, trajfile);
-    end
+if strcmpi(TRAJ_METHOD, 't265')
+    preprocess_t265(t265file, trajfile);
+elseif strcmpi(TRAJ_METHOD, 'optitrack')
+    preprocess_optitrack(optitrackfile, trajfile);
+elseif strcmpi(TRAJ_METHOD, 'cartographer')
+    preprocess_cartographer(cartographerfile, trajfile);
+else
+    error('Unrecognized TRAJ_METHOD: %s', TRAJ_METHOD);
 end
 
 nrows = h5info(scanfile).Groups.Datasets.Dataspace.Size;
@@ -124,8 +113,6 @@ end
     trajfile, ...
     scan_t, ...
     scan_window, ...
-    LOCAL_TFORM, ...
-    GLOBAL_TFORM, ...
     INTERP_TRAJ, ...
     INTERP_TRAJ_FS ...
 );
@@ -141,8 +128,6 @@ end
 pos(naan, :) = [];
 rot(naan, :, :) = [];
 vel(naan, :) = [];
-
-% rad = half(rad);
 
 save(outfile, 't', 'rad', 'pos', 'rot', 'vel', '-v7.3');
 save(dbgfile, '-v7.3');
