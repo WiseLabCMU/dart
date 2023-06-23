@@ -64,7 +64,7 @@ def _main(args):
     _loadrad = jax.jit(res.colorize_radar)
 
     frame_idx = 0
-    for _ in range(int(np.ceil(rad.shape[0]) / args.batch)):
+    for _ in range(int(np.ceil(rad.shape[0] / args.batch))):
         cam_frames = np.asarray(VirtualCameraImage(
             **{k: v[:args.batch] for k, v in cam.items()}).to_rgb())
         rad_frames = np.asarray(_loadrad(cmap, rad[:args.batch]))

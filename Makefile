@@ -20,7 +20,7 @@ train:
 	$(TRAIN) $(METHOD) -p data/$(DATASET) -o results/$(TARGET) $(FLAGS)
 
 slices:
-	$(DART) map -p results/$(TARGET)
+	$(DART) map -p results/$(TARGET) --resolution 50
 	$(DART) slice -p results/$(TARGET)
 
 video:

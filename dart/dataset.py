@@ -69,13 +69,14 @@ def trajectory(
 
 
 def __raw_image_traj(
-    path: str, norm: float = 1e4, sensor: Optional[VirtualRadar] = None
+    path: str, norm: float = 1e4, sensor: Optional[VirtualRadar] = None,
+    threshold: float = 0.0
 ) -> types.RangeDopplerData:
     """Load image-trajectory data."""
     src = load_arrays(path)
     idxs = jnp.arange(src["vel"].shape[0])
     pose = jax.vmap(make_pose)(src["vel"], src["pos"], src["rot"], idxs)
-    image = src["rad"] / norm
+    image = jnp.where(src["rad"] > threshold, src["rad"], threshold) / norm
 
     if sensor is not None:
         if image.shape[1] > len(sensor.r):
@@ -135,7 +136,7 @@ def __make_dataset(
 def doppler_columns(
     sensor: VirtualRadar, path: str = "data/cup.mat", norm: float = 1e4,
     pval: float = 0., iid_val: bool = False, min_speed: float = 0.1,
-    repeat: int = 0, key: types.PRNGSeed = 42
+    repeat: int = 0, threshold: float = 0.0, key: types.PRNGSeed = 42
 ) -> tuple[types.Dataset, Optional[types.Dataset], dict[str, PyTree]]:
     """Load dataset trajectory and images.
 
@@ -160,6 +161,7 @@ def doppler_columns(
     min_speed: Minimum speed for usable samples. Images with lower
         velocities are rejected.
     repeat: Repeat dataset within each epoch to reduce overhead.
+    threshold: Mask out values less than the provided threshold (set to 0).
     key: Random key to shuffle dataset frames. Does not shuffle columns.
 
     Returns
@@ -168,9 +170,10 @@ def doppler_columns(
     val: Val dataset.
     validx: Indices of original images corresponding to the validation set.
     """
-    pose, range_doppler = __raw_image_traj(path, norm=norm, sensor=sensor)
+    pose, range_doppler = __raw_image_traj(
+        path, norm=norm, sensor=sensor, threshold=threshold)
     idx = jnp.arange(range_doppler.shape[0], dtype=jnp.int32)
-    valid_speed = pose.s > min_speed
+    valid_speed = (pose.s > min_speed) & (pose.s < sensor.d[-1])
 
     print("Loaded dataset: {} valid frames (speed > {}) / {}".format(
         jnp.sum(valid_speed), min_speed, range_doppler.shape[0]))

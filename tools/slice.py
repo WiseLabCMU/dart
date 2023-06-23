@@ -2,7 +2,6 @@
 
 import os
 from tqdm import tqdm
-import matplotlib as mpl
 
 from dart import DartResult
 import numpy as np

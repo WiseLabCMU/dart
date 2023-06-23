@@ -41,7 +41,7 @@ class Trajectory(NamedTuple):
         df = pd.read_csv(os.path.join(path, "trajectory.csv"))
 
         # Manual 0.5s offset, likely due to buffering the DCA1000
-        t_slam = np.array(df["field.header.stamp"]) / 1e9 + 0.5
+        t_slam = np.array(df["field.header.stamp"]) / 1e9   # + 0.5
 
         xyz = np.array(
             [df["field.transform.translation." + char] for char in "xyz"])
@@ -99,7 +99,7 @@ class Trajectory(NamedTuple):
     def postprocess(
         self, velocity: Float32[types.ArrayLike, "N 3"],
         speed_radar: Float32[types.ArrayLike, "N"],
-        smoothing: float = -1.0,
+        smoothing: float = -1.0, adjust: bool = False,
         reject_threshold: float = 0.3, reject_kernel: int = 7,
         max_adjustment: float = 0.2, adjust_kernel: int = 15
     ) -> Float32[types.ArrayLike, "N 3"]:
@@ -110,6 +110,7 @@ class Trajectory(NamedTuple):
         velocity: SLAM system velocity estimates.
         speed: Estimated speed from radar doppler images.
         smoothing: Gaussian filter to apply to the velocity before fusing.
+        adjust: Adjust velocity based on estimated velocity.
         reject_threshold, reject_kernel: The radar speed estimate is rejected
             when it exceeds the SLAM velocity by `reject_threshold` for more
             than half of a sliding window with size `reject_kernel`.
@@ -121,12 +122,12 @@ class Trajectory(NamedTuple):
         -------
         Post-processed velocity.
         """
-        speed_raw = np.linalg.norm(velocity, axis=1)
         if smoothing > 0.0:
-            speed_slam = gaussian_filter1d(speed_raw, sigma=smoothing)
-        else:
-            speed_slam = speed_raw
+            velocity = gaussian_filter1d(velocity, sigma=smoothing, axis=0)
+        if not adjust:
+            return velocity
 
+        speed_slam = np.linalg.norm(velocity, axis=1)
         reject = medfilt(
             (speed_slam + reject_threshold < speed_radar).astype(int),
             kernel_size=reject_kernel)
@@ -136,5 +137,5 @@ class Trajectory(NamedTuple):
                 speed_slam + max_adjustment, speed_radar,
                 medfilt(speed_radar, kernel_size=adjust_kernel)))
 
-        vel_out = speed_fused[..., None] * velocity / speed_raw[..., None]
+        vel_out = speed_fused[..., None] * velocity / speed_slam[..., None]
         return np.nan_to_num(vel_out, nan=0.0, posinf=0.0, neginf=0.0)

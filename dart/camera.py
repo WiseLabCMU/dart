@@ -11,7 +11,7 @@ from beartype.typing import NamedTuple
 from .dataset import load_arrays
 from .pose import sensor_to_world
 from . import types
-from .jaxcolors import hsv_to_rgb
+from .utils import hsv_to_rgb
 
 
 class VirtualCameraImage(NamedTuple):

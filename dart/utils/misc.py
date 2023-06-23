@@ -13,7 +13,7 @@ import numpy as np
 
 from jaxtyping import PyTree
 from beartype.typing import TypeVar, Optional, Union
-from . import types
+from dart import types
 
 
 def tf_to_jax(batch: PyTree) -> PyTree:

@@ -27,27 +27,24 @@
 
 TL;DR:
 ```sh
-python train.py ngp -p path/to/dataset -o results/output --norm 1e5 --min_speed 0.25 --epochs 5
-TARGET=results/output make visualize
+TARGET=output DATASET=data/aframe make experiment
 ```
 
-For example:
+With arguments:
 ```sh
-python train.py ngp -p data/aframe -o results/aframe --norm 1e4 --min_speed 0.25 --epochs 5
-TARGET=results/aframe make visualize
+TARGET=output METHOD=ngp DATASET=data/aframe FLAGS="--min_speed 0.25 --epochs 5" make experiment
 ```
 
-- `ngp`: model to train (`ngp`, `ngpsh`, `grid`).
-- `path/to/dataset`: path to dataset files, organized as follows:
+- `METHOD=ngp`: model to train (`ngp`, `ngpsh`, `grid`).
+- `TARGET=path/to/dataset`: path to dataset files, organized as follows:
     ```
-    path/to/dataset/
+    results/path/to/dataset/
         sensor.json       # Sensor configuration file
         data.mat          # Data file with pose and range-doppler images.
     ```
     *Note*: `dataset.json` and `dataset.mat` can also be specified by `-s path/to/dataset.json` and `-p path/to/dataset.mat`.
-- `results/output`: output directory.
-- `--norm`: normalization factor; divides the input by this number. This will require tuning, and will most likely be somewhere in the range of `1e3` to `1e5`.
-- `--min_speed`: speed threshold to reject frames with insufficient velocity (to have enough valid doppler columns). Will require tuning depending on the sampling rate used to generate the frame.
+- `TARGET=path/to/output`: save results (checkpoints, evaluation, and configuration) to `results/path/to/output`.
+- `FLAGS=...`: arguments to pass to `train.py`; see `python train.py -h` and `python train.py ngp -h`, replacing `ngp` with the target method.
 
 This creates the following files in `results/output`:
 ```
@@ -55,9 +52,9 @@ results/
     output/
         metadata.json     # Model/dataset/training metadata
         model.chkpt       # Model weights checkpoint
-        pred.mat          # Predicted range-doppler images
-        cam.mat           # Virtual camera renderings for the trajectory
-        map.mat           # Map of the scene sampled at 25 units/meter
+        pred.h5           # Predicted range-doppler images
+        cam.h5            # Virtual camera renderings for the trajectory
+        map.h5            # Map of the scene sampled at 25 units/meter
         output.video.mp4  # Output camera + radar video
         output.map.mp4    # Video where each frame is a horizontal slice
 ```

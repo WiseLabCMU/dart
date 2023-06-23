@@ -11,23 +11,29 @@ from dart import types
 
 
 class AWR1843BoostDataset(NamedTuple):
-    """Radar raw dataset."""
+    """Radar raw dataset.
+
+    Attributes
+    ----------
+    start: index of the first chirp.
+    end: index of the last chirp.
+    """
 
     start: int
     end: int
     start_packet: int
-    frame_size: int
+    chirp_size: int
     packet_size: int
     num_packets: int
 
     @classmethod
-    def from_packets(cls, packets, frame_size: int):
+    def from_packets(cls, packets, chirp_size: int):
         """Initialize from packet dictionary / h5file.
 
         Parameters
         ----------
         packets: hdf5 dataset/group.
-        frame_size: Number of entries per frame; each entry is 4 bytes
+        chirp_size: Number of entries per chirp; each entry is 4 bytes
             (int16 real and imaginary parts of the IQ stream).
         """
         packet_num = packets['packet_num']
@@ -35,64 +41,69 @@ class AWR1843BoostDataset(NamedTuple):
 
         byte_count = packets["byte_count"]
 
-        # 4 bytes per frame entry.
-        frame_bytes = frame_size * 4
-        first_frame = np.ceil(byte_count[0] / frame_bytes).astype(int)
-        last_frame = np.floor(byte_count[-1] / frame_bytes).astype(int)
+        # 4 bytes (int16 IQ) per chirp entry.
+        chirp_bytes = chirp_size * 4
+        first_chirp = np.ceil(byte_count[0] / chirp_bytes).astype(int)
+        last_chirp = np.floor(byte_count[-1] / chirp_bytes).astype(int)
         # Start, end indices are measured in int16s
-        start = int(first_frame * frame_size * 2 - byte_count[0] / 2)
-        end = int(last_frame * frame_size * 2 - byte_count[0] / 2)
+        start = int(first_chirp * chirp_size * 2 - byte_count[0] / 2)
+        end = int(last_chirp * chirp_size * 2 - byte_count[0] / 2)
 
         return cls(
             start=start, end=end, start_packet=np.min(packet_num),
             packet_size=packets["packet_data"].shape[1],
-            frame_size=frame_size, num_packets=num_packets)
+            chirp_size=chirp_size, num_packets=num_packets)
 
     def _get_valid(self, packets):
-        """Get valid frame mask."""
+        """Get valid chirp mask.
+
+        Valid chirps are defined as chirps where each packet that would make up
+        the chirp has not been dropped.
+        """
         valid = np.zeros(self.num_packets, dtype=bool)
         valid[packets["packet_num"] - self.start_packet] = True
         valid = np.repeat(valid, self.packet_size)
-        valid_frames = np.all(
-            valid[self.start:self.end].reshape(-1, self.frame_size), axis=1)
-        return valid_frames
+        valid_chirps = np.all(
+            valid[self.start:self.end].reshape(-1, self.chirp_size * 2),
+            axis=1)
+        return valid_chirps
 
-    def _get_frames(self, packets, valid):
-        """Get frames."""
+    def _get_chirps(self, packets, valid):
+        """Get chirp data as a int16 array."""
         rad = np.zeros((self.num_packets, self.packet_size), dtype=np.int16)
         rad[packets["packet_num"] - self.start_packet] = packets['packet_data']
         rad = rad.reshape(-1)
-        res = rad[self.start:self.end].reshape(-1, self.frame_size)[valid]
+        res = rad[self.start:self.end].reshape(-1, self.chirp_size * 2)[valid]
         return res
 
-    def _get_times(self, packets, valid) -> Float64[np.ndarray, "frames"]:
-        """Get timestamps for each frame.
+    def _get_times(self, packets, valid) -> Float64[np.ndarray, "chirps"]:
+        """Get timestamps for each chirp.
 
         Timestamps are denoted by the first packet corresponding to data
-        from this frame, where the first packet is assumed to be closest
+        from this chirp, where the first packet is assumed to be closest
         to the actual time where the radar chirped.
         """
-        start = np.arange(valid.shape[0]) * self.frame_size + self.start
-        frame_start_packet = np.floor(start / self.packet_size).astype(int)
+        start = np.arange(valid.shape[0]) * self.chirp_size * 2 + self.start
+        start_packet = np.floor(start / self.packet_size).astype(int)
 
         timestamps = np.zeros(self.num_packets, dtype=np.float64)
         timestamps[packets["packet_num"] - self.start_packet] = packets['t']
-        return timestamps[frame_start_packet][valid]
+        return timestamps[start_packet][valid]
 
     def _to_iq(
-        self, radar: AWR1843Boost, frames: Int16[np.ndarray, "frames len"]
-    ) -> Complex64[np.ndarray, "frames tx rx chirp"]:
-        """Convert frames to a complex IQ array."""
-        iq = np.zeros((frames.shape[0], radar.frame_size), dtype=np.complex64)
-        iq[:, 0::2] = frames[:, 0::4] + 1j * frames[:, 2::4]
-        iq[:, 1::2] = frames[:, 1::4] + 1j * frames[:, 3::4]
-        return iq.reshape((-1, *radar.frame_shape))
+        self, radar: AWR1843Boost, raw: Int16[np.ndarray, "chirps len"]
+    ) -> Complex64[np.ndarray, "chirps tx rx chirp"]:
+        """Convert chirps to a complex IQ array."""
+        iq = np.zeros((raw.shape[0], radar.chirp_size), dtype=np.complex64)
+        iq[:, 0::2] = raw[:, 0::4] + 1j * raw[:, 2::4]
+        iq[:, 1::2] = raw[:, 1::4] + 1j * raw[:, 3::4]
+        return iq.reshape((-1, *radar.chirp_shape))
 
     def as_chirps(
         self, radar: AWR1843Boost, packets
     ) -> tuple[
-        Complex64[np.ndarray, "frames tx rx chirp"],
-        Float64[np.ndarray, "frames"]
+        Complex64[np.ndarray, "chirps tx rx chirp"],
+        Float64[np.ndarray, "chirps"]
     ]:
         """Convert packets to chirps.
 
@@ -107,7 +118,7 @@ class AWR1843BoostDataset(NamedTuple):
         times: Timestamps of each chirp.
         """
         valid = self._get_valid(packets)
-        data = self._get_frames(packets, valid)
+        data = self._get_chirps(packets, valid)
         times = self._get_times(packets, valid)
         return self._to_iq(radar, data), times
 
@@ -141,4 +152,4 @@ class AWR1843BoostDataset(NamedTuple):
         pose["t"] = t_image[t_valid]
         pose["speed"] = speed_radar[t_valid]
 
-        return rda, pose
+        return rda[t_valid], pose

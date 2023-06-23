@@ -13,7 +13,7 @@ LossFunc = Callable[
 
 def get_loss_func(
     loss: str = "l2", weight: Optional[str] = None, eps: float = 1e-8,
-    delta: float = 0.1
+    delta: float = 1.0
 ) -> LossFunc:
     """Create loss function (as closure).
 

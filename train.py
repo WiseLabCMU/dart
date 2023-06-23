@@ -32,7 +32,7 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
     g = p.add_argument_group(title="Training")
     g.add_argument("--lr", default=0.01, type=float, help="Learning Rate.")
     g.add_argument(
-        "-e", "--epochs", default=10, type=int,
+        "-e", "--epochs", default=5, type=int,
         help="Number of epochs to train.")
     g.add_argument("-b", "--batch", default=1024, type=int, help="Batch size.")
     g.add_argument(
@@ -42,13 +42,14 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
         "-i", "--iid", default=False, action='store_true',
         help="Use IID validation split.")
     g.add_argument("--loss", default="l2", help="Loss function.")
+    g.add_argument("--loss_delta", default=1.0, help="Delta for huber loss.")
     g.add_argument("--weight", default=None, help="Loss weighting.")
     g.add_argument(
         "--adj", type=float, default=-1, help="Adjustment regularization.")
 
     g = p.add_argument_group(title="Dataset")
     g.add_argument(
-        "--norm", default=1e2, type=float,
+        "--norm", default=1.0, type=float,
         help="Normalization value.")
     g.add_argument(
         "--min_speed", default=0.2, type=float, help="Reject frames with "
@@ -94,9 +95,12 @@ if __name__ == '__main__':
 
     cfg = {
         "sensor": sensor_cfg,
-        "shuffle_buffer": 200 * 1000, "lr": args.lr, "batch": args.batch,
+        "shuffle_buffer": 500 * 1000, "lr": args.lr, "batch": args.batch,
         "epochs": args.epochs, "key": args.key, "out": args.out,
-        "loss": {"weight": args.weight, "loss": args.loss, "eps": 1e-6},
+        "loss": {
+            "weight": args.weight, "loss": args.loss, "eps": 1e-6,
+            "delta": args.loss_delta
+        },
         "dataset": {
             "pval": args.pval, "norm": args.norm, "iid_val": args.iid,
             "path": args.path, "min_speed": args.min_speed,

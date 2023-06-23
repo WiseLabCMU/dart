@@ -14,7 +14,7 @@ from beartype.typing import Optional, Any
 from jaxtyping import Integer, Array, Float, UInt8
 
 from .dart import DART
-from dart.jaxcolors import colormap
+from .utils import colormap
 from .dataset import load_arrays, trajectory
 from . import types
 
@@ -33,7 +33,7 @@ class DartResult:
     CAMERA = "cam.h5"
     RADAR = "rad.h5"
 
-    def __init__(self, path: str, name: str = None) -> None:
+    def __init__(self, path: str, name: Optional[str] = None) -> None:
         self.path = path
         self.name = path if name is None else name
 

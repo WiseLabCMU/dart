@@ -94,12 +94,12 @@ class NGP(hk.Module):
     def to_parser(p: types.ParserLike) -> None:
         """Create NGP command line arguments."""
         p.add_argument(
-            "--levels", default=8, type=int, help="Hash table levels.")
+            "--levels", default=12, type=int, help="Hash table levels.")
         p.add_argument(
             "--exponent", default=0.43, type=float,
             help="Hash table level exponent, in powers of 2.")
         p.add_argument(
-            "--base", default=2., type=float,
+            "--base", default=4., type=float,
             help="Size of base (most coarse) hash table level.")
         p.add_argument(
             "--size", default=16, type=int,
