@@ -129,5 +129,6 @@ pos(naan, :) = [];
 rot(naan, :, :) = [];
 vel(naan, :) = [];
 
+fprintf('Saving output...\n');
 save(outfile, 't', 'rad', 'pos', 'rot', 'vel', '-v7.3');
 save(dbgfile, '-v7.3');
