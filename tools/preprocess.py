@@ -25,14 +25,12 @@ def _process_batch(radar: AWR1843Boost, file_batch, traj: Trajectory):
     return dataset.process_data(radar, traj, packets)
 
 
-def _process(
-        args, path: str, radar: AWR1843Boost, batch_size: int = 1000000,
-        overwrite: bool = False, smoothing: float = 2.0):
+def _process(args, path: str, radar: AWR1843Boost, batch_size: int = 1000000):
 
-    traj = Trajectory.from_csv(path)
+    traj = Trajectory.from_csv(path, offset=args.offset)
     packetfile = h5py.File(os.path.join(path, "radarpackets.h5"), 'r')
     packet_dataset = packetfile["scan"]["packet"]
-    if overwrite:
+    if args.overwrite:
         try:
             os.remove(os.path.join(path, 'data.h5'))
         except OSError:
@@ -69,7 +67,8 @@ def _process(
 
     poses['vel_raw'] = poses['vel']
     poses['vel'] = traj.postprocess(
-        poses['vel'], poses['speed'], smoothing=smoothing, adjust=args.adjust)
+        poses['vel'], poses['speed'],
+        smoothing=args.smooth, adjust=args.adjust)
 
     for k, v in poses.items():
         outfile.create_dataset(k, data=v)
@@ -91,11 +90,12 @@ def _parse(p):
     p.add_argument(
         "-a", "--adjust", default=False, action='store_true',
         help="Adjust velocity based on doppler speed estimate.")
+    p.add_argument(
+        "-o", "--offset", default=0.0, type=float,
+        help="Manual time-sync adjustment (added to ground truth timestamps.)")
     return p
 
 
 def _main(args):
 
-    _process(
-        args, args.path, AWR1843Boost(), batch_size=args.batch,
-        overwrite=args.overwrite, smoothing=args.smooth)
+    _process(args, args.path, AWR1843Boost(), batch_size=args.batch)

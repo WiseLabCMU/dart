@@ -28,7 +28,7 @@ class Trajectory(NamedTuple):
     slerp: Slerp
 
     @classmethod
-    def from_csv(cls, path: str) -> "Trajectory":
+    def from_csv(cls, path: str, offset: float = 0.0) -> "Trajectory":
         """Initialize from dataframe output from cartographer.
 
         Parameters
@@ -37,11 +37,12 @@ class Trajectory(NamedTuple):
             csv "trajectory.csv", with columns
             `field.header.stamp` (in ns), `field.transform.translation.{xyz}`,
             `field.transform.rotation.{xyzw}`.
+        offset: Time sync offset (seconds) to apply to the timestamps.
         """
         df = pd.read_csv(os.path.join(path, "trajectory.csv"))
 
         # Manual 0.5s offset, likely due to buffering the DCA1000
-        t_slam = np.array(df["field.header.stamp"]) / 1e9   # + 0.5
+        t_slam = np.array(df["field.header.stamp"]) / 1e9 + offset
 
         xyz = np.array(
             [df["field.transform.translation." + char] for char in "xyz"])

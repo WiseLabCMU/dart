@@ -10,21 +10,23 @@ from jaxtyping import Float, Float32, Array
 def ssim(
     img0: Float[Array, "width height channels"],
     img1: Float[Array, "width height channels"],
-    max_val: float, filter_size: int = 11, filter_sigma: float = 1.5,
-    k1: float = 0.01, k2: float = 0.03
+    max_val: float = 1.0, filter_size: int = 11, filter_sigma: float = 1.5,
+    k1: float = 0.01, k2: float = 0.03, eps: float = 1e-2
 ) -> Float32[Array, ""]:
     """Jax jit+vmap-friendly SSIM computation from two images.
 
-    This function was modeled after tf.image.ssim, and should produce
-    comparable output.
+    The SSIM calculation has been modified to exclude regions which are
+    approximately zero in img0 (assumed to be the ground truth) from the SSIM
+    calculation.
 
     Parameters
     ----------
-    img0, img1: input images.
+    img0, img1: input images; img0 is considered the 'ground truth'.
     max_val: maximum magnitude that `img0` or `img1` can have.
     filter_size: window size (>1).
     filter_sigma: Bandwidth of the gaussian used for filtering (>0).
     k1, k2: SSIM dampening parameters.
+    eps: near-zero exclusion tolerance.
 
     Returns
     -------
@@ -79,5 +81,7 @@ def ssim(
     numer = (2 * mu01 + c1) * (2 * sigma01 + c2)
     denom = (mu00 + mu11 + c1) * (sigma00 + sigma11 + c2)
     ssim_map = numer / denom
-    ssim = jnp.mean(ssim_map, list(range(num_dims - 3, num_dims)))
+
+    mask = (mu0 > eps)
+    ssim = jnp.sum(ssim_map * mask) / jnp.sum(mask)
     return ssim

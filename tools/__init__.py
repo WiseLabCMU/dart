@@ -7,6 +7,9 @@ from . import simulate
 from . import video
 from . import slice
 from . import preprocess
+from . import ssim
+
+from . import tmp
 
 
 commands = {
@@ -16,5 +19,7 @@ commands = {
     "slice": slice,
     "examples": examples,
     "map": map,
-    "preprocess": preprocess
+    "preprocess": preprocess,
+    "ssim": ssim,
+    "tmp": tmp
 }

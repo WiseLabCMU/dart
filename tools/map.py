@@ -31,7 +31,7 @@ def _parse(p):
         "-r", "--resolution", type=int, default=25,
         help="Map resolution, in units per meter.")
     p.add_argument(
-        "-b", "--batch", type=int, default=16, help="Batch size along the z "
+        "-b", "--batch", type=int, default=4, help="Batch size along the z "
         "axis for breaking up high resolution grids.")
     return p
 

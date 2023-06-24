@@ -15,7 +15,7 @@ endif
 experiment: train visualize
 visualize: slices video
 
-.phony: train slices video
+.phony: train slices video metrics
 train:
 	$(TRAIN) $(METHOD) -p data/$(DATASET) -o results/$(TARGET) $(FLAGS)
 
@@ -27,6 +27,9 @@ video:
 	$(DART) evaluate -p results/$(TARGET) -a -b $(BATCH)
 	$(DART) evaluate -p results/$(TARGET) -ac -b $(BATCH)
 	$(DART) video -p results/$(TARGET)
+
+metrics:
+	$(DART) ssim -p results/$(TARGET)
 
 .phony: typecheck
 typecheck:
