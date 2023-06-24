@@ -104,8 +104,7 @@ class VirtualCamera(NamedTuple):
             t_world = sensor_to_world(r=r, t=t.reshape(3, 1), pose=pose)[:, 0]
             return field(t_world, dx=dx)
 
-        sigma, alpha, _ = vmap(project)(
-            jnp.linspace(0, self.max_depth, self.d))
+        sigma, alpha = vmap(project)(jnp.linspace(0, self.max_depth, self.d))
 
         # tx = jnp.concatenate([jnp.zeros((1)), jnp.cumsum(alpha[:-1])])
         rx = jnp.nan_to_num(sigma, nan=0.0, copy=False).astype(jnp.float16)

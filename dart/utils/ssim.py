@@ -28,7 +28,7 @@ def ssim(
 
     Returns
     -------
-    Mean SSIM of each image.
+    Mean SSIM of the image.
 
     References
     ----------

@@ -28,6 +28,7 @@ class DartResult:
     """
 
     METADATA = "metadata.json"
+    VALSET = "metadata.npz"
     MAP = "map.h5"
     WEIGHTS = "model.npz"
     CAMERA = "cam.h5"

@@ -20,6 +20,7 @@ class NGP(hk.Module):
         number of hash tables.
     size: Hash table size (and feature dimension).
     units: MLP network parameters.
+    alpha_scale: Transmittance scale factor (for initialization stability).
     _head: MLP output dimensionality (should always be 2).
 
     References
@@ -32,10 +33,12 @@ class NGP(hk.Module):
 
     def __init__(
             self, levels: Float32[Array, "n"], _head: int = 2,
-            size: tuple[int, int] = (16384, 2), units: list[int] = [64, 32]):
+            size: tuple[int, int] = (16384, 2), units: list[int] = [64, 32],
+            alpha_scale: float = 0.1):
         super().__init__()
         self.size = size
         self.levels = levels
+        self.alpha_scale = alpha_scale
         mlp: list[Callable] = []
         for u in units:
             mlp += [hk.Linear(u), jax.nn.leaky_relu]
@@ -64,20 +67,14 @@ class NGP(hk.Module):
 
         return jax.vmap(interpolate_level)(xscales, grid)
 
-    def _out(self, sigma, alpha, **kwargs):
-        return (
-            jnp.maximum(kwargs.get("sigma_clip", -1.0), sigma),
-            jnp.minimum(0.0, alpha) * kwargs.get("alpha_scale", 0.1),
-            jnp.array(0.0))
-
     def __call__(
         self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None,
         **kwargs
-    ) -> tuple[Float32[Array, ""], Float32[Array, ""], Float32[Array, ""]]:
+    ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
         """Index into learned reflectance map."""
         table_out = self.lookup(x)
         sigma, alpha = self.head(table_out.reshape(-1))
-        return self._out(sigma, alpha, **kwargs)
+        return sigma, jnp.minimum(0.0, alpha) * self.alpha_scale
 
     @classmethod
     def from_config(
@@ -110,6 +107,9 @@ class NGP(hk.Module):
         p.add_argument(
             "--units", default=[64, 32], nargs='+', type=int,
             help="Number of hidden units in the MLP head.")
+        p.add_argument(
+            "--alpha_scale", default=0.1, type=float,
+            help="Transmittance scale factor for intialization stability.")
 
     @staticmethod
     def args_to_config(args: types.Namespace) -> dict:
@@ -119,7 +119,8 @@ class NGP(hk.Module):
             "field": {
                 "levels": args.levels, "exponent": args.exponent,
                 "base": args.base, "size": args.size,
-                "features": args.features, "units": args.units
+                "features": args.features, "units": args.units,
+                "alpha_scale": args.alpha_scale
             }
         }
 
@@ -156,7 +157,7 @@ class NGPSH(NGP):
     def __call__(
         self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None,
         **kwargs
-    ) -> tuple[Float32[Array, ""], Float32[Array, ""], Float32[Array, ""]]:
+    ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
         """Index into learned reflectance map."""
         table_out = self.lookup(x)
         mlp_out = self.head(table_out.reshape(-1))
@@ -171,7 +172,7 @@ class NGPSH(NGP):
         else:
             alpha = -jnp.abs(alpha)
 
-        return self._out(sigma, alpha, **kwargs)
+        return sigma, jnp.minimum(0.0, alpha) * self.alpha_scale
 
     @staticmethod
     def to_parser(p: types.ParserLike) -> None:

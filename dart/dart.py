@@ -51,8 +51,8 @@ class DART:
             vfwd = jax.vmap(partial(
                 sensor.column_forward, sigma=partial(sigma(), **kwargs),
                 adjust=_adjust))
-            pred, reg = vfwd(keys, column=batch)
-            return pred, jnp.mean(reg) + _adjust(None)
+            pred = vfwd(keys, column=batch)
+            return pred, _adjust(None)
 
         self.sigma = sigma
         self.adjust = adjust
@@ -224,7 +224,7 @@ class DART:
 
         grid = jnp.meshgrid(x, y, z, indexing='ij')
         xyz = jnp.stack(grid, axis=-1).reshape(-1, 3)
-        sigma, alpha, _ = hk.transform(forward_grid).apply(
+        sigma, alpha = hk.transform(forward_grid).apply(
             types.ModelState.get_params(params), to_prngkey(key), xyz)
         shape = (x.shape[0], y.shape[0], z.shape[0])
         return sigma.reshape(shape), alpha.reshape(shape)
