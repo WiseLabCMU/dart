@@ -6,7 +6,7 @@ from tools import commands
 
 if __name__ == '__main__':
     parser = ArgumentParser(
-        description="DART Evaluation & Visualization scripts.",
+        description="DART Preprocessing, Evaluation & Visualization scripts.",
         formatter_class=RawTextHelpFormatter)
 
     subparsers = parser.add_subparsers()

@@ -49,11 +49,8 @@ def load_arrays(file: str, keys: Optional[list[str]] = None) -> Any:
 def gt_map(file: str) -> GroundTruth:
     """Load ground truth reflectance map."""
     data = load_arrays(file)
-    x, y, z = data['x'], data['y'], data['z']
-    lower = jnp.array([np.min(x), np.min(y), np.min(z)])
-    upper = jnp.array([np.max(x), np.max(y), np.max(z)])
     return GroundTruth.from_occupancy(
-        jnp.array(data['v'], dtype=float), lower, upper, alpha=-100)
+        jnp.array(data['grid']), data["lower"], data["upper"])
 
 
 def trajectory(

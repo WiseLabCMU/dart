@@ -41,7 +41,7 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
     g.add_argument(
         "-i", "--iid", default=False, action='store_true',
         help="Use IID validation split.")
-    g.add_argument("--loss", default="l2", help="Loss function.")
+    g.add_argument("--loss", default="l1", help="Loss function.")
     g.add_argument(
         "--loss_delta", default=1.0, type=float,
         help="Delta for huber loss.")

@@ -67,7 +67,6 @@ class DartResult:
         with h5py.File(os.path.join(self.path, path), 'w') as hf:
             for k, v in contents.items():
                 hf.create_dataset(k, data=v)
-            hf.close()
 
     def load(self, path: str, keys: Optional[list[str]] = None) -> Any:
         """Load file inside this result."""
@@ -117,7 +116,8 @@ class DartResult:
     def colorize_radar(
         cmap: Float[types.ArrayLike, "..."],
         rad: Float[types.ArrayLike, "..."],
-        clip: tuple[float, float] = (5.0, 99.9)
+        clip: tuple[float, float] = (5.0, 99.9),
+        square: bool = True
     ) -> UInt8[types.ArrayLike, "... 3"]:
         """Colorize a radar intensity map in a jax-friendly way.
 
@@ -127,12 +127,16 @@ class DartResult:
         rad: input array. If range-doppler, colorize directly; if
             range-doppler-azimuth, tiles into 2 columns x 4 rows.
         clip: percentile clipping range.
+        square: tile into a square (4x2). Otherwise, tiles horizontally.
         """
         def _tile(arr):
             unpack = [arr[:, :, :, i] for i in range(arr.shape[3])]
-            left = jnp.concatenate(unpack[:4], axis=1)
-            right = jnp.concatenate(unpack[4:], axis=1)
-            return jnp.concatenate([left, right], axis=2)
+            if square:
+                left = jnp.concatenate(unpack[:4], axis=1)
+                right = jnp.concatenate(unpack[4:], axis=1)
+                return jnp.concatenate([left, right], axis=2)
+            else:
+                return jnp.concatenate(unpack, axis=2)
 
         p5, p95 = jnp.nanpercentile(rad, jnp.array(clip))
         rad = (rad - p5) / (p95 - p5)
@@ -154,10 +158,10 @@ class DartResult:
         mapfile = self.load(checkpoint)
 
         if filter <= 0:
-            layer = mapfile[key][:, :, layer]
+            layer = mapfile[key][..., layer]
         else:
             layer = np.median(
-                mapfile[key][:, :, layer - filter:layer + filter], axis=2)
+                mapfile[key][..., layer - filter:layer + filter], axis=2)
 
         if key == "alpha":
             layer = np.exp(layer)
@@ -167,9 +171,9 @@ class DartResult:
 
         xmin, ymin, zmin = mapfile["lower"].reshape(-1)
         xmax, ymax, zmax = mapfile["upper"].reshape(-1)
-        extents = [xmin, xmax, ymin, ymax]
+        extents = [ymin, ymax, xmin, xmax]
 
-        ims = ax.imshow(np.rot90(layer, k=1), extent=extents, aspect='equal')
+        ims = ax.imshow(layer, extent=extents, aspect=1)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.1)
         fig.colorbar(ims, cax)
@@ -179,4 +183,21 @@ class DartResult:
             ax.plot(traj[:, 0], traj[:, 1], color='red', linewidth=0.5)
 
         ax.set_title(self.name)
+        ax.grid()
+
+    def plot_gt_map(self, fig, ax, layer: int = 50):
+        """Draw ground truth map."""
+        mapfile = np.load(os.path.join(
+            os.path.dirname(self.DATASET), "map.npz"))
+
+        xmin, ymin, zmin = mapfile["lower"].reshape(-1)
+        xmax, ymax, zmax = mapfile["upper"].reshape(-1)
+        extents = [ymin, ymax, xmin, xmax]
+
+        ims = ax.imshow(
+            mapfile["grid"][..., layer], extent=extents, aspect=1)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.1)
+        fig.colorbar(ims, cax)
+        ax.set_title("Ground Truth")
         ax.grid()

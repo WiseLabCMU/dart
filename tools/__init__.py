@@ -8,6 +8,8 @@ from . import video
 from . import slice
 from . import preprocess
 from . import ssim
+from . import ssim_synthetic
+from . import gt_map
 
 from . import tmp
 
@@ -21,5 +23,7 @@ commands = {
     "map": map,
     "preprocess": preprocess,
     "ssim": ssim,
-    "tmp": tmp
+    "ssim_synthetic": ssim_synthetic,
+    "gt_map": gt_map,
+    "tmp": tmp,
 }

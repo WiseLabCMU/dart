@@ -1,4 +1,4 @@
-"""SSIM evaluation metric."""
+"""SSIM baseline with synthetic noise."""
 
 import os
 import numpy as np
@@ -11,7 +11,7 @@ from functools import partial
 from dart import DartResult
 
 
-_desc = "Compute SSIM for range-doppler-azimuth images."
+_desc = "Compute SSIM references for synthetic noise."
 
 
 def _parse(p):
@@ -28,8 +28,8 @@ def _parse(p):
     p.add_argument(
         "--sigma", type=float, default=1.5, help="Filter gaussian sigma.")
     p.add_argument(
-        "--baseline", default=False, action='store_true',
-        help="Run baseline SSIM on the validation set for this method.")
+        "--psnr", type=int, nargs='+', default=[20, 30],
+        help="PSNR Values to use for reference.")
     return p
 
 
@@ -39,32 +39,25 @@ def _main(args):
     result = DartResult(args.path)
     validx = result.load(result.VALSET)["val"]
 
-    gt = h5py.File(result.DATASET)['rad'][validx]
-    if args.baseline:
-        dsdir = os.path.dirname(result.DATASET)
-        pred = h5py.File(
-            os.path.join(dsdir, "simulated.h5"))["rad"][validx]
-    else:
-        pred = result.open(result.RADAR)['rad'][validx]
-
     def _scale(x):
         pmax = np.percentile(x, args.clip)
         return jnp.clip(x, 0.0, pmax) / pmax
 
+    gt = h5py.File(result.DATASET)['rad'][validx]
     gt_clip = _scale(gt)
-    pred_clip = _scale(pred)
 
-    print("Running...")
-    ssim_func = jax.jit(jax.vmap(partial(
-        ssim, max_val=1.0, eps=args.eps, filter_size=args.size,
-        filter_sigma=args.sigma)))
+    for psnr_target_db in args.psnr:
+        sigma = 1 / np.sqrt(10**(psnr_target_db / 10.0))
+        noise = np.random.normal(size=gt_clip.shape, scale=sigma)
+        pred_clip = np.clip(gt_clip + noise, 0, 1)
 
-    res, weight = ssim_func(gt_clip, pred_clip)
-    print("SSIM:", np.mean(res))
+        print("Running...")
+        ssim_func = jax.jit(jax.vmap(partial(
+            ssim, max_val=1.0, eps=args.eps, filter_size=args.size,
+            filter_sigma=args.sigma)))
 
-    if args.baseline:
-        out = "ssim_baseline.npz"
-    else:
-        out = "ssim.npz"
+        res, weight = ssim_func(gt_clip, pred_clip)
+        print("SSIM @ {}db: {}".format(psnr_target_db, np.mean(res)))
 
-    np.savez(os.path.join(args.path, out), ssim=res, weight=weight)
+        out = "ssim_{}db.npz".format(psnr_target_db)
+        np.savez(os.path.join(args.path, out), ssim=res, weight=weight)
