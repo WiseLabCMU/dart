@@ -15,7 +15,7 @@ endif
 experiment: train visualize
 visualize: slices video
 
-.phony: train slices video metrics
+.phony: train slices video
 train:
 	$(TRAIN) $(METHOD) -p data/$(DATASET) -o results/$(TARGET) $(FLAGS)
 
@@ -26,12 +26,17 @@ slices:
 video:
 	$(DART) evaluate -p results/$(TARGET) -a -b $(BATCH)
 	$(DART) evaluate -p results/$(TARGET) -ac -b $(BATCH)
-	$(DART) video -p results/$(TARGET)
-
-metrics:
 	$(DART) ssim -p results/$(TARGET)
+	$(DART) video -p results/$(TARGET)
 
 .phony: typecheck
 typecheck:
 	python -m mypy train.py
 	python -m mypy manage.py
+
+.phony: baselines
+baselines:
+	$(DART) gt_map -p data/$(DATASET) $(FLAGS)
+	$(DART) simulate -p data/$(DATASET)
+	$(DART) ssim --baseline -p results/$(TARGET)
+	$(DART) ssim_synthetic -p results/$(TARGET)

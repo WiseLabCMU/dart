@@ -1,6 +1,6 @@
 """Spatial utilities."""
 
-from jaxtyping import Float32, Integer, Array
+from jaxtyping import Float32, Integer, Array, Float
 from beartype.typing import Union, Callable
 
 from jax import numpy as jnp
@@ -9,8 +9,8 @@ from jax import numpy as jnp
 def interpolate(
     x: Float32[Array, "3"],
     grid: Union[
-        Float32[Array, "nx ny nz d"],
-        Callable[[Integer[Array, "8 3"]], Float32[Array, "8 d"]]
+        Float[Array, "nx ny nz d"],
+        Callable[[Integer[Array, "8 3"]], Float[Array, "8 d"]]
     ]
 ) -> Float32[Array, "d"]:
     """Trilinear 3D Interpolation (jit + vmap safe).

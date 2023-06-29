@@ -1,13 +1,14 @@
 """Generate simulated data."""
 
 import json
+import os
 from tqdm import tqdm
+import h5py
 from functools import partial
 
 import numpy as np
 from jax import numpy as jnp
 import jax
-from scipy.io import savemat
 
 from dart import VirtualRadar, dataset
 
@@ -18,28 +19,25 @@ _desc = (
 
 
 def _parse(p):
-    p.add_argument(
-        "-s", "--sensor", default="data/sim96.json",
-        help="Sensor configuration.")
+    p.add_argument("-p", "--path", help="Path to data directory.")
     p.add_argument(
         "-r", "--key", default=42, type=int, help="Random seed.")
-    p.add_argument("-o", "--out", default="simulated", help="Save path.")
-    p.add_argument(
-        "-g", "--gt", default="data/map.mat", help="Ground truth reflectance.")
-    p.add_argument(
-        "-j", "--traj", default="data/traj.mat", help="Sensor trajectory.")
-    p.add_argument("-b", "--batch", default=64, type=int, help="Batch size")
+    p.add_argument("-o", "--out", default=None, help="Save path.")
+    p.add_argument("-b", "--batch", default=16, type=int, help="Batch size")
     return p
 
 
 def _main(args):
 
-    with open(args.sensor) as f:
+    if args.out is None:
+        args.out = os.path.join(args.path, "simulated.h5")
+
+    with open(os.path.join(args.path, "sensor.json")) as f:
         cfg = json.load(f)
     sensor = VirtualRadar.from_config(**cfg)
 
-    gt = dataset.gt_map(args.gt)
-    traj = dataset.trajectory(args.traj)
+    gt = dataset.gt_map(os.path.join(args.path, "map.npz"))
+    traj = dataset.trajectory(os.path.join(args.path, "data.h5"))
 
     render = partial(sensor.render, sigma=gt)
     render = jax.jit(jax.vmap(render))
@@ -53,8 +51,10 @@ def _main(args):
 
         frames.append(np.asarray(render(pose=pose, key=keys)))
 
-    out = dataset.load_arrays(args.traj)
-    out = {k: v for k, v in out.items() if not k.startswith("__")}
+    out = dataset.load_arrays(
+        os.path.join(args.path, "data.h5"), keys=["pos", "vel"])
     out["rad"] = np.concatenate(frames, axis=0)
 
-    savemat(args.out, out)
+    with h5py.File(args.out, 'w') as hf:
+        for k, v in out.items():
+            hf.create_dataset(k, data=v)

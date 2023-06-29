@@ -20,12 +20,15 @@ def _parse(p):
         "-f", "--fps", default=10.0, type=float, help="Video framerate.")
     p.add_argument(
         "-r", "--radius", help="Smoothing window radius.", default=0, type=int)
+    p.add_argument(
+        "--axis", help="Slicing axis (x=0, y=1, z=2).", type=int, default=2)
     return p
 
 
 def _main(args):
     if args.out is None:
-        fname = "{}.slice.mp4".format(os.path.basename(args.path))
+        fname = "{}.slice.{}.mp4".format(
+            os.path.basename(args.path), "xyz"[args.axis])
         args.out = os.path.join(args.path, fname)
 
     res = DartResult(args.path)
@@ -40,16 +43,31 @@ def _main(args):
     upper = mapfile["upper"]
 
     fourcc = cv2.VideoWriter_fourcc(*args.fourcc)
-    out = cv2.VideoWriter(
-        args.out, fourcc, args.fps, (sigma.shape[1] * 2, sigma.shape[0]))
+    if args.axis == 2:
+        shape = [sigma.shape[1], sigma.shape[0]]
+    elif args.axis == 1:
+        shape = [sigma.shape[2], sigma.shape[0]]
+    else:
+        shape = [sigma.shape[2], sigma.shape[1]]
 
-    for i in tqdm(range(sigma.shape[2])):
-        fs = sigma[:, :, i, :]
-        fa = alpha[:, :, i, :]
+    out = cv2.VideoWriter(
+        args.out, fourcc, args.fps, (shape[0] * 2, shape[1]))
+
+    for i in tqdm(range(sigma.shape[args.axis])):
+        if args.axis == 2:
+            fs = sigma[:, :, i, :]
+            fa = alpha[:, :, i, :]
+        elif args.axis == 1:
+            fs = sigma[:, i, :, :]
+            fa = alpha[:, i, :, :]
+        else:
+            fs = sigma[i, :, :, :]
+            fa = alpha[i, :, :, :]
+
         f = np.concatenate([fs, fa], axis=1)
 
-        z = lower[2] + (upper[2] - lower[2]) * (
-            (i + args.radius) / (sigma.shape[2] + args.radius * 2))
+        z = lower[args.axis] + (upper[args.axis] - lower[args.axis]) * (
+            (i + args.radius) / (sigma.shape[args.axis] + args.radius * 2))
         cv2.putText(
             f, "[{:03}] {:.1f}m".format(i + args.radius, z), (20, 50),
             cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)

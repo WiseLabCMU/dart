@@ -12,7 +12,7 @@ def ssim(
     img1: Float[Array, "width height channels"],
     max_val: float = 1.0, filter_size: int = 11, filter_sigma: float = 1.5,
     k1: float = 0.01, k2: float = 0.03, eps: float = 1e-2
-) -> Float32[Array, ""]:
+):  #  -> Float32[Array, ""]:
     """Jax jit+vmap-friendly SSIM computation from two images.
 
     The SSIM calculation has been modified to exclude regions which are
@@ -84,4 +84,4 @@ def ssim(
 
     mask = (mu0 > eps)
     ssim = jnp.sum(ssim_map * mask) / jnp.sum(mask)
-    return ssim
+    return ssim, jnp.sum(mask)

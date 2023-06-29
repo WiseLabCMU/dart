@@ -2,33 +2,38 @@
 
 from jax import numpy as jnp
 import haiku as hk
+import math
 from jaxtyping import Float32, Array
-from beartype.typing import Union, Optional, Callable
+from beartype.typing import Optional, Callable
 
 from dart import types
 from ._spatial import interpolate
 
 
-class SimpleGrid(hk.Module):
-    """Simple reflectance/log-transmittance grid.
+class VoxelGrid(hk.Module):
+    """Reflectance/log-transmittance voxel grid.
 
     Parameters
     ----------
     size: Grid size (x, y, z) dimensions.
     lower: Lower corner of the grid.
-    resolution: Resolution in units per grid cell. Can have the same resolution
-        for each axis or different resolutions.
+    upper: Upper corner of the grid.
+    size: Size of the grid.
+    resolution: Resolution in units per grid cell; must be precomputed and
+        provided.
     """
 
     _description = "voxel grid with trilinear interpolation"
 
     def __init__(
-        self, size: tuple[int, int, int], lower: Float32[Array, "3"],
-        resolution: Union[Float32[Array, "3"], Float32[Array, ""]],
+        self, lower: Float32[Array, "3"], upper: Float32[Array, "3"],
+        resolution: float, size: list[int], do_alpha: bool = False
     ) -> None:
         super().__init__()
         self.lower = lower
+        self.upper = upper
         self.resolution = resolution
+        self.do_alpha = do_alpha
         self.size = size
 
     def __call__(
@@ -36,49 +41,63 @@ class SimpleGrid(hk.Module):
         **kwargs
     ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
         """Index into learned reflectance map."""
-        grid = hk.get_parameter("grid", (*self.size, 2), init=jnp.zeros)
         index = (x - self.lower) * self.resolution
         valid = jnp.all((0 <= index) & (index <= jnp.array(self.size) - 1))
-        sigma, alpha = jnp.where(
-            valid, interpolate(index, grid), jnp.zeros((2,)))
+        grid = jnp.array(hk.get_parameter(
+            "grid", (*self.size, 2 if self.do_alpha else 1), init=jnp.zeros))
+
+        if self.do_alpha:
+            sigma, alpha = jnp.where(
+                valid, interpolate(index, grid), jnp.zeros((2,)))
+        else:
+            sigma = jnp.where(
+                valid, interpolate(index, grid), jnp.zeros((1,)))[0]
+            alpha = jnp.array(0.0)
+
         return sigma, alpha
 
     @classmethod
     def from_config(
-        cls, size: list[int] = [512, 512, 256],
-        lower: list[float] = [-4, -4, -1],
-        resolution: Union[list[float], float] = [64.0, 64.0, 64.0]
-    ) -> Callable[[], "SimpleGrid"]:
+        cls, lower: list[float] = [-4.0, -4.0, -1.0], do_alpha: bool = False,
+        upper: list[float] = [4.0, 4.0, 1.0], resolution: float = 25.0,
+        size: list[int] = [100, 100, 100]
+    ) -> Callable[[], "VoxelGrid"]:
         """Create simple grid haiku closure from config items."""
         def closure():
             return cls(
-                size=tuple(size), lower=jnp.array(lower),
-                resolution=jnp.array(resolution))
+                upper=jnp.array(upper), lower=jnp.array(lower),
+                resolution=resolution, do_alpha=do_alpha, size=size)
         return closure
 
     @staticmethod
     def to_parser(p: types.ParserLike) -> None:
         """Create grid command line arguments."""
         p.add_argument(
-            "--size", default=[256, 256, 128], nargs='+', type=int,
-            help="Grid size (x, y, z)")
+            "--lower", default=[-4.0, -4.0, -1.0], nargs='+', type=float,
+            help="Lower coordinate (x, y, z).")
         p.add_argument(
-            "--lower", default=[-4, -4, -1], nargs='+', type=float,
-            help="Grid lower coordinate (x, y, z)")
+            "--upper", default=[4.0, 4.0, 1.0], nargs='+', type=float,
+            help="Upper coordinate (x, y, z).")
         p.add_argument(
-            "--resolution", default=[32.0, 32.0, 32.0], nargs='+', type=float,
-            help="Grid resolution in grid cells per meter (x, y, z).")
+            "--resolution", default=25.0, type=float,
+            help="Grid resolution in grid cells per meter.")
+        p.add_argument(
+            "--do_alpha", default=False, action='store_true',
+            help="Enable opacity/transmittance parameter.")
 
     @classmethod
     def args_to_config(cls, args: types.Namespace) -> dict:
         """Create configuration dictionary."""
-        assert len(args.size) == 3
+        assert len(args.upper) == 3
         assert len(args.lower) == 3
-        assert len(args.resolution) == 3
+        grid_size = [
+            math.ceil((l - u) * args.resolution)
+            for u, l in zip(args.lower, args.upper)]
         return {
             "field_name": cls.__name__,
             "field": {
-                "size": args.size, "lower": args.lower,
-                "resolution": args.resolution
+                "lower": args.lower, "upper": args.upper,
+                "resolution": args.resolution, "size": grid_size,
+                "do_alpha": args.do_alpha
             }
         }
