@@ -135,7 +135,7 @@ class VirtualRadar(NamedTuple):
             sigma_samples[..., jnp.newaxis] * gain
             * jnp.exp(transmitted)[..., jnp.newaxis])
 
-        constant = weight / self.n * self.r
+        constant = weight / self.n
         return jnp.sum(amplitude, axis=1) * constant[..., jnp.newaxis]
 
     def column_forward(

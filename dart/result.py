@@ -47,6 +47,7 @@ class DartResult:
             self.metadata = json.load(f)
 
         self.DATASET = self.metadata["dataset"]["path"]
+        self.DATADIR = os.path.dirname(self.DATASET)
 
     def dart(self) -> DART:
         """Get DART object."""
@@ -152,7 +153,9 @@ class DartResult:
     def plot_map(
         self, fig, ax, layer: int = 50, checkpoint: str = "map.h5",
         key: str = "sigma", trajectory: bool = True,
-        clip: tuple[float, float] = (1.0, 99.0), filter: int = -1
+        clip: tuple[float, float] = (1.0, 99.0), filter: int = -1,
+        colorbar: bool = True,
+        crop: Optional[tuple[float, float, float, float]] = None
     ) -> None:
         """Draw map."""
         mapfile = self.load(checkpoint)
@@ -171,33 +174,46 @@ class DartResult:
 
         xmin, ymin, zmin = mapfile["lower"].reshape(-1)
         xmax, ymax, zmax = mapfile["upper"].reshape(-1)
-        extents = [ymin, ymax, xmin, xmax]
-
+        extents = [ymin, ymax, xmax, xmin]
         ims = ax.imshow(layer, extent=extents, aspect=1)
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", size="5%", pad=0.1)
-        fig.colorbar(ims, cax)
 
+        if crop is not None:
+            ax.set_xlim(crop[0], crop[1])
+            ax.set_ylim(crop[2], crop[3])
+        if colorbar:
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.1)
+            fig.colorbar(ims, cax)
         if trajectory:
             traj = self.data(["pos"])["pos"]
-            ax.plot(traj[:, 0], traj[:, 1], color='red', linewidth=0.5)
+            ax.plot(traj[:, 1], traj[:, 0], color='red', linewidth=0.5)
 
-        ax.set_title(self.name)
         ax.grid()
 
-    def plot_gt_map(self, fig, ax, layer: int = 50):
+    def plot_gt_map(
+        self, fig, ax, layer: int = 50, colorbar: bool = True,
+        trajectory: bool = True,
+        crop: Optional[tuple[float, float, float, float]] = None
+    ) -> None:
         """Draw ground truth map."""
         mapfile = np.load(os.path.join(
             os.path.dirname(self.DATASET), "map.npz"))
 
         xmin, ymin, zmin = mapfile["lower"].reshape(-1)
         xmax, ymax, zmax = mapfile["upper"].reshape(-1)
-        extents = [ymin, ymax, xmin, xmax]
+        extents = [ymin, ymax, xmax, xmin]
+        layer = mapfile["grid"][..., layer]
+        ims = ax.imshow(layer, extent=extents, aspect=1)
 
-        ims = ax.imshow(
-            mapfile["grid"][..., layer], extent=extents, aspect=1)
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", size="5%", pad=0.1)
-        fig.colorbar(ims, cax)
-        ax.set_title("Ground Truth")
+        if crop is not None:
+            ax.set_xlim(crop[0], crop[1])
+            ax.set_ylim(crop[2], crop[3])
+        if colorbar:
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.1)
+            fig.colorbar(ims, cax)
+        if trajectory:
+            traj = self.data(["pos"])["pos"]
+            ax.plot(traj[:, 1], traj[:, 0], color='red', linewidth=0.5)
+
         ax.grid()

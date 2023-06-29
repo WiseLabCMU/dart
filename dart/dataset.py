@@ -7,7 +7,7 @@ import numpy as np
 from scipy.io import loadmat
 import h5py
 
-from jaxtyping import Integer, Array, PyTree
+from jaxtyping import Integer, Array, PyTree, Float
 from beartype.typing import Any, Optional
 
 from .fields import GroundTruth
@@ -130,10 +130,22 @@ def __make_dataset(
     return dataset_valid
 
 
+def __doppler_decimation(
+    rda: Float[types.ArrayLike, "Ni Nr Nd Na"], factor: int
+) -> Float[types.ArrayLike, "Ni Nr Nd Na"]:
+    """Apply doppler averaging decimation."""
+    Ni, Nr, Nd, Na = rda.shape
+    assert Nd % factor == 0
+    decimated = jnp.mean(
+        rda.reshape(Ni, Nr, Nd // factor, factor, Na), axis=3, keepdims=True)
+    return jnp.tile(decimated, (1, 1, 1, factor, 1)).reshape(rda.shape)
+
+
 def doppler_columns(
     sensor: VirtualRadar, path: str = "data/cup.mat", norm: float = 1e4,
     pval: float = 0., iid_val: bool = False, min_speed: float = 0.1,
-    repeat: int = 0, threshold: float = 0.0, key: types.PRNGSeed = 42
+    repeat: int = 0, threshold: float = 0.0, doppler_decimation: int = 0,
+    key: types.PRNGSeed = 42
 ) -> tuple[types.Dataset, Optional[types.Dataset], dict[str, PyTree]]:
     """Load dataset trajectory and images.
 
@@ -159,6 +171,8 @@ def doppler_columns(
         velocities are rejected.
     repeat: Repeat dataset within each epoch to reduce overhead.
     threshold: Mask out values less than the provided threshold (set to 0).
+    doppler_decimation: Simulate a lower doppler resolution by setting each
+        block of consecutive doppler columns to their average.
     key: Random key to shuffle dataset frames. Does not shuffle columns.
 
     Returns
@@ -169,6 +183,10 @@ def doppler_columns(
     """
     pose, range_doppler = __raw_image_traj(
         path, norm=norm, sensor=sensor, threshold=threshold)
+
+    if doppler_decimation > 0:
+        range_doppler = __doppler_decimation(range_doppler, doppler_decimation)
+
     idx = jnp.arange(range_doppler.shape[0], dtype=jnp.int32)
     valid_speed = (pose.s > min_speed) & (pose.s < sensor.d[-1])
 

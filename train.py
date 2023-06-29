@@ -61,6 +61,10 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
     g.add_argument(
         "--repeat", default=0, type=int,
         help="Repeat dataset within each epoch to cut down on overhead.")
+    g.add_argument(
+        "--decimate", default=0, type=int,
+        help="Apply a doppler decimation factor via stochastic averaging. "
+        "Must be a multiple of the number of doppler bins.")
 
     return p
 
@@ -106,7 +110,7 @@ if __name__ == '__main__':
         "dataset": {
             "pval": args.pval, "norm": args.norm, "iid_val": args.iid,
             "path": args.path, "min_speed": args.min_speed,
-            "repeat": args.repeat
+            "repeat": args.repeat, "doppler_decimation": args.decimate
         },
         "schedules": {}
     }

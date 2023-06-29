@@ -17,16 +17,18 @@ class GroundTruth:
     grid: reflectance grid; is trilinearly interpolated.
     lower: Lower corner of the grid.
     resolution: Resolution in units per grid cell.
+    alpha_scale: Alpha in terms of sigma.
     """
 
     def __init__(
         self, grid: Float[Array, "nx ny nz"],
         lower: Float[types.ArrayLike, "3"],
-        resolution: Float[types.ArrayLike, "3"]
+        resolution: Float[types.ArrayLike, "3"], alpha_scale: float = 0.0
     ) -> None:
         self.lower = lower
         self.resolution = resolution
         self.grid = grid
+        self.alpha_scale = alpha_scale
 
     def __call__(
         self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None,
@@ -38,12 +40,13 @@ class GroundTruth:
             (0 <= index) & (index <= jnp.array(self.grid.shape) - 1))
         sigma = jnp.where(
             valid, interpolate(index, self.grid[..., None]), 0.0)[0]
-        return sigma, jnp.array(0.0)
+        return sigma, -self.alpha_scale * sigma
 
     @classmethod
     def from_occupancy(
         cls, occupancy: Bool[Array, "Nx Ny Nz"],
         lower: Float[types.ArrayLike, "3"], upper: Float[types.ArrayLike, "3"],
+        alpha_scale: float = 0.0
     ) -> "GroundTruth":
         """Create ground truth from 0-1 occupancy grid.
 
@@ -52,7 +55,10 @@ class GroundTruth:
         occupancy: source occupancy grid (i.e. from 3D model)
         lower: coordinates of lower bound of the grid
         upper: coordinates of upper bound of the grid
+        alpha_scale: Alpha in terms of sigma.
         """
         resolution = jnp.array(occupancy.shape) / (upper - lower)
         grid = jnp.array(occupancy).astype(jnp.float16)
-        return cls(grid, lower=lower, resolution=resolution)
+        return cls(
+            grid, lower=lower, resolution=resolution,
+            alpha_scale=alpha_scale)

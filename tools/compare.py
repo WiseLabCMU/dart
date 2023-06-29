@@ -15,7 +15,7 @@ import h5py
 from dart import DartResult
 
 
-_desc = "Create a video comparison of different methods (and grouth truth)."
+_desc = "Create a video comparison of different methods (and ground truth)."
 
 
 def _parse(p):
