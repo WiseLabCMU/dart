@@ -44,11 +44,13 @@ def _main(args):
         x = result.data(keys=["pos"])["pos"]
         args.lower = np.min(x, axis=0) - args.padding
         args.upper = np.max(x, axis=0) + args.padding
-        resolution = (args.resolution * (args.upper - args.lower)).astype(int)
     else:
         assert len(args.lower) == 3
         assert len(args.upper) == 3
-        resolution = (args.resolution * 3)[:3]
+        args.lower = np.array(args.lower)
+        args.upper = np.array(args.upper)
+
+    resolution = (args.resolution * (args.upper - args.lower)).astype(int)
     print("Bounds: {:.1f}x{:.1f}x{:.1f}m ({}x{}x{}px)".format(
         *(args.upper - args.lower), *resolution))
 

@@ -35,8 +35,11 @@ def script_train(cfg: dict) -> None:
     start = time.time()
 
     state = dart.init(train.batch(2), key=k2)
+    # drop_remainder is necessary to prevent JAX from re-jitting the train
+    # function on the last batch (potentially causing OOM errors).
     state, train_log, val_log = dart.fit(
-        train.batch(cfg["batch"]), state, epochs=cfg["epochs"], tqdm=tqdm,
+        train.batch(cfg["batch"], drop_remainder=True),
+        state, epochs=cfg["epochs"], tqdm=tqdm,
         key=k3, val=val.batch(cfg["batch"]),
         save=os.path.join(cfg["out"], "checkpoints", "checkpoint"))
     dart.save(os.path.join(cfg["out"], "model"), state)

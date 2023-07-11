@@ -11,15 +11,11 @@ from functools import partial
 from dart import DartResult
 
 
-_desc = "Compute SSIM for range-doppler-azimuth images."
+_desc = "Compute validation-set SSIM for range-doppler-azimuth images."
 
 
 def _parse(p):
     p.add_argument("-p", "--path", help="Path to result directory.")
-    p.add_argument(
-        "--clip", type=float, default=99.9,
-        help="Clip maximum value by percentile (required for long-tailed "
-        "floating point input to SSIM).")
     p.add_argument(
         "--eps", type=float, default=5e-3,
         help="Threshold to exclude empty regions from SSIM calculation.")
@@ -30,6 +26,10 @@ def _parse(p):
     p.add_argument(
         "--baseline", default=False, action='store_true',
         help="Run baseline SSIM on the validation set for this method.")
+    p.add_argument(
+        "--psnr", default=None, type=int,
+        help="If passed, run PSNR reference instead.")
+
     return p
 
 
@@ -37,34 +37,41 @@ def _main(args):
 
     print("Loading...")
     result = DartResult(args.path)
-    validx = result.load(result.VALSET)["val"]
+    validx = np.sort(result.load(result.VALSET)["val"])
 
     gt = h5py.File(result.DATASET)['rad'][validx]
+    pmax = np.max(gt)
+    gt = jnp.clip(gt, 0.0, pmax) / pmax
+
     if args.baseline:
-        dsdir = os.path.dirname(result.DATASET)
         pred = h5py.File(
-            os.path.join(dsdir, "simulated.h5"))["rad"][validx]
+            os.path.join(result.DATADIR, "simulated.h5"))["rad"][validx]
+
+        # Clip baseline only separately
+        bmax = np.max(pred)
+        pred = jnp.clip(pred, 0.0, bmax) / bmax
+    elif args.psnr is not None:
+        sigma = 1 / np.sqrt(10**(args.psnr / 10.0))
+        noise = np.random.normal(size=gt.shape, scale=sigma)
+        pred = np.clip(gt + noise, 0, 1)
     else:
         pred = result.open(result.RADAR)['rad'][validx]
-
-    def _scale(x):
-        pmax = np.percentile(x, args.clip)
-        return jnp.clip(x, 0.0, pmax) / pmax
-
-    gt_clip = _scale(gt)
-    pred_clip = _scale(pred)
+        pred = jnp.clip(pred, 0.0, pmax) / pmax
 
     print("Running...")
     ssim_func = jax.jit(jax.vmap(partial(
         ssim, max_val=1.0, eps=args.eps, filter_size=args.size,
         filter_sigma=args.sigma)))
 
-    res, weight = ssim_func(gt_clip, pred_clip)
-    print("SSIM:", np.mean(res))
+    res, weight = ssim_func(gt, pred)
+    print("SSIM: mean={}, median={}".format(
+        jnp.nanmean(res), jnp.nanmedian(res)))
 
     if args.baseline:
-        out = "ssim_baseline.npz"
+        out = os.path.join(result.DATADIR, "ssim_simulated.npz")
+    elif args.psnr is not None:
+        out = os.path.join(result.DATADIR, "ssim_{}db.npz".format(args.psnr))
     else:
-        out = "ssim.npz"
+        out = os.path.join(args.path, "ssim.npz")
 
-    np.savez(os.path.join(args.path, out), ssim=res, weight=weight)
+    np.savez(out, ssim=res, weight=weight)
