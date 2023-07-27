@@ -1,7 +1,7 @@
 % ------------------- PARAMS ------------------------------- %
 
-DATADIR = '/media/john/Extreme Pro/dart/';
-DATASET = 'cichall-4';
+DATADIR = '~/Desktop/dartdata';
+DATASET = 'cichall';
 BATCH_SIZE = 50000;
 
 % TRAJ_METHOD = 'optitrack';
@@ -12,13 +12,15 @@ INTERP_TRAJ_FS = 200;
 
 RANGE_DECIMATION = 4;      % max_range=21m when range_decimation=1
 DOPPLER_DECIMATION = 1;    % max_velocity=2m/s when doppler_decimation=1
-FRAMELEN = 512;
-STRIDE = 128;
+FRAMELEN = 256;
+STRIDE = 64;
 PROCESS_AZIMUTH = true;
 
 CHIRPLEN = 512;
-CHIRP_DT = 5e-4;
-DMAX = 3.7898;
+% CHIRP_DT = 5e-4;
+CHIRP_DT = 1e-3;
+% DMAX = 3.7898;
+DMAX = 1.8949;
 RMAX = 21.5991;
 
 GEN_MAP = false;
