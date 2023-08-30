@@ -8,3 +8,4 @@ beartype
 dm-haiku
 optax
 h5py
+plyfile
