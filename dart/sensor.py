@@ -31,8 +31,6 @@ class VirtualRadar(NamedTuple):
     ----------
     r, d: Range, doppler bins used for (r, d) images. Pass as (min, max, bins),
         i.e. the args of linspace in configuration (for `from_config`).
-    theta_lim, phi_lim: Bounds (radians) on elevation and azimuth angle;
-        +/- pi/12 (15 degrees) and pi/3 (60 degrees) by default.
     n: Angular resolution; number of bins in a full circle of the
         (range sphere, doppler plane) intersection
     k: Sample size for stochastic integration
@@ -41,8 +39,6 @@ class VirtualRadar(NamedTuple):
 
     r: Float32[Array, "Nr"]
     d: Float32[Array, "Nd"]
-    theta_lim: float
-    phi_lim: float
     n: int
     k: int
     gain: types.GainPattern
@@ -59,14 +55,12 @@ class VirtualRadar(NamedTuple):
 
     @classmethod
     def from_config(
-        cls, theta_lim: float = jnp.pi / 12, phi_lim: float = jnp.pi / 3,
-        n: int = 256, k: int = 128, r: list = [], d: list = [],
+        cls, n: int = 256, k: int = 128, r: list = [], d: list = [],
         gain: str = "awr1843boost"
     ) -> "VirtualRadar":
         """Create from configuration parameters."""
         return cls(
-            r=jnp.linspace(*r), d=jnp.linspace(*d),
-            theta_lim=theta_lim, phi_lim=phi_lim, n=n, k=k,
+            r=jnp.linspace(*r), d=jnp.linspace(*d), n=n, k=k,
             gain=getattr(antenna, gain))
 
     def sample_rays(
@@ -181,11 +175,7 @@ class VirtualRadar(NamedTuple):
         Output mask for each bin.
         """
         t = project_angle(d, jnp.arange(self.n) * self.bin_width, pose)
-        theta, phi = vec_to_angle(t)
-        return (
-            (theta < self.theta_lim) & (theta > -self.theta_lim)
-            & (phi < self.phi_lim) & (phi > -self.phi_lim)
-            & (t[0] > 0))
+        return (t[0] > 0)
 
     def sample_points(
         self, key: types.PRNGKey, r: Float32[Array, ""],
