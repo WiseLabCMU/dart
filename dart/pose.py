@@ -40,10 +40,15 @@ def make_pose(
     s = jnp.nan_to_num(jnp.linalg.norm(v_sensor), nan=0.0)
     v = jnp.nan_to_num(v_sensor / s, nan=0.0)
 
-    # This takes an identity matrix, mods out v, and turns the remainder
-    # into an orthonormal basis using SVD for best stability.
-    _, _, _V = jnp.linalg.svd(jnp.eye(3) - jnp.outer(v, v))
-    p, q = _V[:2]
+    # # This takes an identity matrix, mods out v, and turns the remainder
+    # # into an orthonormal basis using SVD for best stability.
+    # _, _, _V = jnp.linalg.svd(jnp.eye(3) - jnp.outer(v, v))
+    # p, q = _V[:2]
+
+    # Make sure p points in the direction of +x (projected onto the pq plane)
+    p = jnp.array((1, 0, 0)) - v[0] * v
+    p /= jnp.linalg.norm(p)
+    q = jnp.cross(v, p)
 
     return types.RadarPose(v=v, s=s, p=p, q=q, x=x, A=A, i=i)
 
