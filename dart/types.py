@@ -87,13 +87,11 @@ class TrainingColumn(NamedTuple):
     Attributes
     ----------
     pose: pose for each column (96 bytes).
-    valid: validity of each angular bin; bit-packed bool array (n / 8 bytes).
     weight: velocity-corrected weight of each bin (4 bytes).
     doppler: doppler value for this column (4 bytes).
     """
 
     pose: RadarPose
-    valid: UInt8[Array, "n8"]
     weight: Float32[Array, ""]
     doppler: RadarFloat[Array, ""]
 
