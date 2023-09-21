@@ -137,14 +137,21 @@ key.p = 1;
 if event.Button == 1 && (sel_plots.numEntries == 0 || ~sel_plots.isKey(key))
     s = norm(vel);
     v = rot.' * vel.' / s;
-    [~,~,V] = svd(eye(3)-v*v');
-    p = V(:,1);
-    q = V(:,2);
+%     [~,~,V] = svd(eye(3)-v*v');
+%     p = V(:,1);
+%     q = V(:,2);
+    p = [1, 0, 0] - v(1)*v;
+    p = p / norm(p, 2);
+    q = cross(v, p);
     dnorm = d/s;
-    
+
+    psi_min = acos(-v(1) * d / sqrt((1 - v(1).^2) * (s.^2 - d.^2)));
     psi = linspace(0,2*pi,256);
+    psi_masked = linspace(-psi_min, psi_min, 256);
     t = r*(sqrt(1-dnorm^2)*(p*cos(psi)+q*sin(psi))-v*dnorm);
+    t_masked = r*(sqrt(1-dnorm^2)*(p*cos(psi_masked)+q*sin(psi_masked))-v*dnorm);
     tworld = pos.'+rot*t;
+    tworld_masked = pos.'+rot*t_masked;
     
     subplot(2,3,1);
     hold on;
@@ -159,6 +166,10 @@ if event.Button == 1 && (sel_plots.numEntries == 0 || ~sel_plots.isKey(key))
     subplot(2,3,[2,3,5,6]);
     key.p = 3;
     sel_plots(key) = plot3(tworld(1,:),tworld(2,:),tworld(3,:),'r','LineWidth',2);
+
+    key.p = 4;
+    sel_plots(key) = plot3(tworld_masked(1,:),tworld_masked(2,:),tworld_masked(3,:),'go','LineWidth',2);
+
 elseif event.Button == 3 && sel_plots.numEntries > 0 && sel_plots.isKey(key)
     key.p = 1;
     delete(sel_plots(key));
@@ -167,6 +178,9 @@ elseif event.Button == 3 && sel_plots.numEntries > 0 && sel_plots.isKey(key)
     delete(sel_plots(key));
     sel_plots(key) = [];
     key.p = 3;
+    delete(sel_plots(key));
+    sel_plots(key) = [];
+    key.p = 4;
     delete(sel_plots(key));
     sel_plots(key) = [];
 end
