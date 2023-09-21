@@ -140,16 +140,24 @@ if event.Button == 1 && (sel_plots.numEntries == 0 || ~sel_plots.isKey(key))
 %     [~,~,V] = svd(eye(3)-v*v');
 %     p = V(:,1);
 %     q = V(:,2);
-    p = [1, 0, 0] - v(1)*v;
-    p = p / norm(p, 2);
+    p = [1; 0; 0] - v(1)*v;
+    p = p ./ norm(p, 2);
     q = cross(v, p);
     dnorm = d/s;
 
-    psi_min = acos(-v(1) * d / sqrt((1 - v(1).^2) * (s.^2 - d.^2)));
+    hh = -v(1) * dnorm / sqrt(1 - v(1).^2);
+    rr = sqrt(1 - dnorm.^2);
+    if hh > rr
+        psi_min = pi;
+    elseif hh < -rr
+        psi_min = 0;
+    else
+        psi_min = acos(hh / rr);
+    end
     psi = linspace(0,2*pi,256);
     psi_masked = linspace(-psi_min, psi_min, 256);
-    t = r*(sqrt(1-dnorm^2)*(p*cos(psi)+q*sin(psi))-v*dnorm);
-    t_masked = r*(sqrt(1-dnorm^2)*(p*cos(psi_masked)+q*sin(psi_masked))-v*dnorm);
+    t = r * (rr * (p * cos(psi) + q * sin(psi)) - v * dnorm);
+    t_masked = r * (rr * (p * cos(psi_masked) + q * sin(psi_masked)) - v * dnorm);
     tworld = pos.'+rot*t;
     tworld_masked = pos.'+rot*t_masked;
     
