@@ -82,7 +82,7 @@ class TrainingColumn(NamedTuple):
 
     For 256 range bins and 256 angular bins, this takes::
 
-        96 + 256 / 8 + 4 + 4 = 136 bytes.
+        96 + 4 + 4 = 104 bytes.
 
     Attributes
     ----------

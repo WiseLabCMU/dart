@@ -2,7 +2,7 @@
 
 from functools import partial
 
-from jaxtyping import Float32, Bool, Array, Integer
+from jaxtyping import Float32, Array
 from beartype.typing import NamedTuple
 
 from jax import numpy as jnp
@@ -18,7 +18,7 @@ def vec_to_angle(
     t: Float32[Array, "3 k"]
 ) -> tuple[Float32[Array, "k"], Float32[Array, "k"]]:
     """Get azimuth and elevation from unit sphere values."""
-    x, y, z = t
+    _, y, z = t
     theta = jnp.arcsin(jnp.clip(z, -0.99999, 0.99999))
     phi = jnp.arcsin(jnp.clip(y / jnp.cos(theta), -0.99999, 0.99999))
     return (theta, phi)
