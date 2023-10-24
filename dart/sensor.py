@@ -76,22 +76,19 @@ class VirtualRadar(NamedTuple):
         -------
         psi_min angle in radians.
         """
-        dnorm = d / s
+        dnorm = d / pose.s
         vx = pose.v[0]
-        s = pose.s
         h = vx * dnorm / jnp.sqrt(1 - vx * vx)
         r = jnp.sqrt(1 - dnorm * dnorm)
         psi_min = jnp.arccos(h / r)
 
         return jnp.where(
-            h < -r,
-            jnp.pi,
+            (jnp.abs(dnorm) > 1) | (h > r),
+            0,
             jnp.where(
-                (jnp.abs(dnorm) > 1) | (h > r),
-                0,
-                psi_min
-            )
-        )
+                h < -r,
+                jnp.pi,
+                psi_min))
     
     def sample_rays(
         self, key: types.PRNGKey,

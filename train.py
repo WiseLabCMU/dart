@@ -23,9 +23,6 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
     g = p.add_argument_group(title="Sensor")
     g.add_argument("--sensor", default=None, help="Sensor parameters (.json).")
     g.add_argument(
-        "-n", default=256, type=int,
-        help="Override on stochastic integration angular bin resolution (n).")
-    g.add_argument(
         "-k", default=128, type=int,
         help="Override on stochastic integration number of samples (k).")
 
@@ -97,7 +94,7 @@ if __name__ == '__main__':
 
     with open(args.sensor) as f:
         sensor_cfg = json.load(f)
-    sensor_cfg.update(n=args.n, k=args.k)
+    sensor_cfg.update(k=args.k)
 
     cfg = {
         "sensor": sensor_cfg,
