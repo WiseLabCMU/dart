@@ -107,7 +107,8 @@ def __make_dataset(
     """Split poses/images into columns."""
     def process_image(pose):
         def make_column(doppler):
-            weight = sensor.n / pose.s
+            psi_min = sensor.get_psi_min(d=doppler, pose=pose)
+            weight = psi_min / jnp.pi / pose.s
             return types.TrainingColumn(
                 pose=pose, weight=weight, doppler=doppler)
         return jax.vmap(make_column)(sensor.d)

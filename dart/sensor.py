@@ -31,22 +31,14 @@ class VirtualRadar(NamedTuple):
     ----------
     r, d: Range, doppler bins used for (r, d) images. Pass as (min, max, bins),
         i.e. the args of linspace in configuration (for `from_config`).
-    n: Angular resolution; number of bins in a full circle of the
-        (range sphere, doppler plane) intersection
     k: Sample size for stochastic integration
     gain: Antenna gain pattern.
     """
 
     r: Float32[Array, "Nr"]
     d: Float32[Array, "Nd"]
-    n: int
     k: int
     gain: types.GainPattern
-
-    @property
-    def bin_width(self):
-        """Alias for the width of bins in stochastic integration."""
-        return 2 * jnp.pi / self.n
 
     @property
     def _extents(self):
@@ -55,21 +47,61 @@ class VirtualRadar(NamedTuple):
 
     @classmethod
     def from_config(
-        cls, n: int = 256, k: int = 128, r: list = [], d: list = [],
+        cls, k: int = 128, r: list = [], d: list = [],
         gain: str = "awr1843boost"
     ) -> "VirtualRadar":
         """Create from configuration parameters."""
         return cls(
-            r=jnp.linspace(*r), d=jnp.linspace(*d), n=n, k=k,
+            r=jnp.linspace(*r), d=jnp.linspace(*d), k=k,
             gain=getattr(antenna, gain))
+    
+    @staticmethod
+    def get_psi_min(
+        d: Float32[Array, ""], pose: types.RadarPose
+    ) -> Float32[Array, ""]:
+        """Get psi value representing visible region of integration circle.
 
+        Visible psi angles fall in the range of (-psi_min, psi_min). These
+        angles all fall in front of the radar (+x).
+        psi_min = pi means the entire circle is visible.
+        psi_min = 0 means none of the circle is visible (behind the radar
+        or speed is too low for this Doppler bin).
+        
+        Parameters
+        ----------
+        d: Doppler bin.
+        pose: Sensor pose parameters.
+        
+        Returns
+        -------
+        psi_min angle in radians.
+        """
+        dnorm = d / s
+        vx = pose.v[0]
+        s = pose.s
+        h = vx * dnorm / jnp.sqrt(1 - vx * vx)
+        r = jnp.sqrt(1 - dnorm * dnorm)
+        psi_min = jnp.arccos(h / r)
+
+        return jnp.where(
+            h < -r,
+            jnp.pi,
+            jnp.where(
+                (jnp.abs(dnorm) > 1) | (h > r),
+                0,
+                psi_min
+            )
+        )
+    
     def sample_rays(
-            self, d: Float32[Array, ""], pose: types.RadarPose
+        self, key: types.PRNGKey,
+        d: Float32[Array, ""], pose: types.RadarPose
     ) -> Float32[Array, "3 k"]:
         """Sample rays according to pre-computed psi mask.
 
         Parameters
         ----------
+        key : PRNGKey for random sampling.
         d: Doppler bin.
         pose: Sensor pose parameters.
 
@@ -77,11 +109,11 @@ class VirtualRadar(NamedTuple):
         -------
         Generated samples.
         """
-        vx = pose.v[0]
-        s = pose.s
-        psi_min = jnp.arccos(-vx * d / jnp.sqrt((1 - vx * vx) * (s * s - d * d)))
-        #TODO fail if psi_min < 0
-        psi = jnp.linspace(-psi_min, psi_min, self.n)
+        psi_min = self.get_psi_min(d, pose)
+        #TODO fail if psi_min = 0, shouldn't happen for now with dataset
+        delta_psi = 2 * psi_min / self.k
+        psi = jnp.linspace(-psi_min, psi_min - delta_psi, self.k)
+        psi += random.uniform(key) * delta_psi
         points = project_angle(d, psi, pose)
         return points
 
@@ -122,17 +154,17 @@ class VirtualRadar(NamedTuple):
             sigma_samples[..., jnp.newaxis] * gain
             * jnp.exp(transmitted)[..., jnp.newaxis])
 
-        constant = weight / self.n
-        return jnp.sum(amplitude, axis=1) * constant[..., jnp.newaxis]
+        return jnp.sum(amplitude, axis=1) * weight[..., jnp.newaxis]
 
     def column_forward(
-        self, column: types.TrainingColumn,
+        self, key: types.PRNGKey, column: types.TrainingColumn,
         sigma: types.SigmaField, adjust: Adjustment
     ) -> Float32[Array, "Nr Na"]:
         """Render a training column.
 
         Parameters
         ----------
+        key : PRNGKey for random sampling.
         column: Pose and y_true.
         sigma: Field function.
         adjust: Pose adjustment function.
@@ -143,12 +175,13 @@ class VirtualRadar(NamedTuple):
         """
         pose = adjust(column.pose)
 
-        t = self.sample_rays(d=column.doppler, pose=pose)
+        t = self.sample_rays(key, d=column.doppler, pose=pose)
         return self._render_column(
             t=t, sigma=sigma, pose=pose, weight=column.weight)
 
     def render(
-        self, sigma: types.SigmaField, pose: types.RadarPose
+        self, key: types.PRNGKey, sigma: types.SigmaField,
+        pose: types.RadarPose
     ) -> Float32[Array, "Nr Nd Na"]:
         """Render single (range, doppler) radar image.
 
@@ -156,6 +189,7 @@ class VirtualRadar(NamedTuple):
 
         Parameters
         ----------
+        key : PRNGKey for random sampling.
         sigma: Field function.
         pose: Sensor pose parameters.
 
@@ -164,11 +198,16 @@ class VirtualRadar(NamedTuple):
         Rendered image. Points not observed within the field of view are
         rendered as 0.
         """
-        weight = self.n / pose.s
+        psi_min: Float32[Array, "Nd"] = vmap(
+            partial(self.get_psi_min, pose=pose)
+        )(d=self.d)
+        weight = psi_min / jnp.pi / pose.s
+
+        keys = jnp.array(random.split(key, self.d.shape[0]))
 
         t_sensor: Float32[Array, "Nd 3"] = vmap(
             partial(self.sample_rays, pose=pose)
-        )(d=self.d)
+        )(keys, d=self.d)
 
         out: Float32[Array, "Nd Nr Na"] = vmap(
             partial(self._render_column, sigma=sigma, pose=pose)
