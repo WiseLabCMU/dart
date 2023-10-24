@@ -82,13 +82,13 @@ class TrainingColumn(NamedTuple):
 
     For 256 range bins and 256 angular bins, this takes::
 
-        96 + 4 + 4 = 104 bytes.
+        96 + 4 + 2 = 102 bytes.
 
     Attributes
     ----------
     pose: pose for each column (96 bytes).
     weight: velocity-corrected weight of each bin (4 bytes).
-    doppler: doppler value for this column (4 bytes).
+    doppler: doppler value for this column (2 bytes).
     """
 
     pose: RadarPose

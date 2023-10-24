@@ -89,6 +89,10 @@ while true
         rr = squeeze(rot(sld.Value,:,:));
         pp = pos(sld.Value,:);
         vv = vel(sld.Value,:);
+        s = norm(vv);
+        dnorm = d/s;
+        vnorm = rr.' * vv.' / s;
+
         pose = rigidtform3d(rr * axang2rotm([0,1,0,deg2rad(90)]), pp);
         cam.AbsolutePose = pose;
         refreshdata(q1, 'caller');
@@ -100,8 +104,15 @@ while true
         c = squeeze(real_rad(sld.Value,:,:));
         image(x, y, (c - min(c(:))) / (max(c(:)) - min(c(:))) * 255, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
         hold on;
-        xline(norm(vv),'r--','LineWidth',2);
-        xline(-norm(vv),'r--','LineWidth',2);
+        xline(s,'r--','LineWidth',2);
+        xline(-s,'r--','LineWidth',2);
+        if vnorm(1) > 0
+            xline(-s,'g--','LineWidth',2);
+            xline(s*sqrt(1-vnorm(1).^2),'g--','LineWidth',2);
+        else
+            xline(s,'g--','LineWidth',2);
+            xline(-s*sqrt(1-vnorm(1).^2),'g--','LineWidth',2);
+        end
         axis tight; axis xy;
         xlabel('Doppler (m/s)');
         ylabel('Range (m)');
@@ -113,8 +124,15 @@ while true
         d = squeeze(real_rad(sld.Value,:,:));
         image(x, y, (d - min(d(:))) / (max(d(:)) - min(d(:))) * 255, 'ButtonDownFcn', {@pixelclick_callback,pp,vv,rr});
         hold on;
-        xline(norm(vv),'r--','LineWidth',2);
-        xline(-norm(vv),'r--','LineWidth',2);
+        xline(s,'r--','LineWidth',2);
+        xline(-s,'r--','LineWidth',2);
+        if vnorm(1) > 0
+            xline(-s,'g--','LineWidth',2);
+            xline(s*sqrt(1-vnorm(1).^2),'g--','LineWidth',2);
+        else
+            xline(s,'g--','LineWidth',2);
+            xline(-s*sqrt(1-vnorm(1).^2),'g--','LineWidth',2);
+        end
         axis tight; axis xy;
         xlabel('Doppler (m/s)');
         ylabel('Range (m)');
@@ -137,19 +155,16 @@ key.p = 1;
 if event.Button == 1 && (sel_plots.numEntries == 0 || ~sel_plots.isKey(key))
     s = norm(vel);
     v = rot.' * vel.' / s;
-%     [~,~,V] = svd(eye(3)-v*v');
-%     p = V(:,1);
-%     q = V(:,2);
     p = [1; 0; 0] - v(1)*v;
     p = p ./ norm(p, 2);
     q = cross(v, p);
     dnorm = d/s;
 
-    hh = -v(1) * dnorm / sqrt(1 - v(1).^2);
+    hh = v(1) * dnorm / sqrt(1 - v(1).^2);
     rr = sqrt(1 - dnorm.^2);
-    if hh > rr
+    if hh < -rr
         psi_min = pi;
-    elseif hh < -rr
+    elseif hh > rr
         psi_min = 0;
     else
         psi_min = acos(hh / rr);
