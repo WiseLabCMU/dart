@@ -1,6 +1,0 @@
-start motive
-make sure only mmwave rigid body is selected
-ssh Administrator@win-qbb0j8pltgl.arena.andrew.cmu.edu
-run optitrack data collection exe on nuc
-run t265 data collection on nuc (python)
-run chunkdata (camera) exe on nuc
