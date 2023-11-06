@@ -46,6 +46,7 @@ def make_pose(
     # p, q = _V[:2]
 
     # Make sure p points in the direction of +x (projected onto the pq plane)
+    #TODO is v 1x3 or 3x1?
     p = jnp.array((1, 0, 0)) - v[0] * v
     p /= jnp.linalg.norm(p)
     q = jnp.cross(v, p)

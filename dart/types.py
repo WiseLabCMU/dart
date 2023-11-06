@@ -82,18 +82,16 @@ class TrainingColumn(NamedTuple):
 
     For 256 range bins and 256 angular bins, this takes::
 
-        96 + 256 / 8 + 4 + 4 = 136 bytes.
+        96 + 4 + 2 = 102 bytes.
 
     Attributes
     ----------
     pose: pose for each column (96 bytes).
-    valid: validity of each angular bin; bit-packed bool array (n / 8 bytes).
     weight: velocity-corrected weight of each bin (4 bytes).
-    doppler: doppler value for this column (4 bytes).
+    doppler: doppler value for this column (2 bytes).
     """
 
     pose: RadarPose
-    valid: UInt8[Array, "n8"]
     weight: Float32[Array, ""]
     doppler: RadarFloat[Array, ""]
 
