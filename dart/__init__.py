@@ -5,7 +5,6 @@ with install_import_hook("dart", ("beartype", "beartype")):
     from dart import dataset
     from dart import types
     from dart import fields
-    from dart import preprocess
     from dart import utils
     from dart.dart import DART
     from dart.sensor import VirtualRadar
@@ -14,7 +13,7 @@ with install_import_hook("dart", ("beartype", "beartype")):
     from dart.script import script_train
 
 __all__ = [
-    "dataset", "types", "fields", "preprocess", "utils",
+    "dataset", "types", "fields", "utils",
     "DART", "VirtualRadar",
     "VirtualCamera", "VirtualCameraImage",
     "DartResult",
