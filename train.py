@@ -117,7 +117,7 @@ if __name__ == '__main__':
         cfg["adjustment"] = {}
     else:
         cfg["adjustment_name"] = "Position"
-        cfg["adjustment"] = {"n": 10000, "k": 100, "alpha": args.adj}
+        cfg["adjustment"] = {"n": 100, "k": 100, "alpha": args.adj}
 
     cfg.update(args.field.args_to_config(args))
     script_train(cfg)

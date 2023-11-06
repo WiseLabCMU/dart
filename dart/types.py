@@ -29,7 +29,8 @@ PRNGSeed = Union[int, PRNGKey]
 
 #: Reflectance field
 SigmaField = Callable[
-    [Float32[Array, "3"]], tuple[Float32[Array, ""], Float32[Array, ""]]]
+    [Float32[Array, "3"], Float32[Array, "3"]],
+    tuple[Float32[Array, ""], Float32[Array, ""]]]
 
 #: Antenna gain pattern
 GainPattern = Callable[

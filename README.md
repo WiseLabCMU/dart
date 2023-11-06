@@ -1,5 +1,9 @@
 # DART: Doppler-Aided Radar Tomography
 
+Implementation of *(Solving) Two Birds with one DART: Implicit Doppler Tomography for Radar Mapping and Novel View Synthesis*
+
+![DART method overview.](docs/dart.svg)
+
 ## Setup
 
 0. Ensure that you have python (`>=3.8`), CUDA (`>=11.8`), and CUDNN.
@@ -14,49 +18,49 @@
 
 2. Install `libhdf5`:
     ```sh
-    sudo apt-get install libhdf5-dev
+    sudo apt-get -y install libhdf5-dev
     ```
 
 3. Install python dependencies:
-
     ```sh
     pip install -r requirements.txt
     ```
+    - Use Python 3.11, CUDA 11.8, Jax 0.4.10, and ```pip install -r requirements-pinned.txt``` to get the exact version of dependencies that we used.
 
 ## Usage
 
 TL;DR:
 ```sh
-TARGET=output DATASET=data/aframe make experiment
+TARGET=output DATASET=cichallway make experiment
 ```
 
 With arguments:
 ```sh
-TARGET=output METHOD=ngp DATASET=data/aframe FLAGS="--min_speed 0.25 --epochs 5" make experiment
+TARGET=output METHOD=ngp DATASET=cichallway FLAGS="--min_speed 0.25 --epochs 5" make experiment
 ```
 
 - `METHOD=ngp`: model to train (`ngp`, `ngpsh`, `grid`).
-- `TARGET=path/to/dataset`: path to dataset files, organized as follows:
+- `DATASET=path/to/dataset`: dataset to use, organized as follows:
     ```
-    results/path/to/dataset/
+    data/path/to/dataset/
         sensor.json       # Sensor configuration file
-        data.mat          # Data file with pose and range-doppler images.
+        data.h5          # Data file with pose and range-doppler images.
     ```
-    *Note*: `dataset.json` and `dataset.mat` can also be specified by `-s path/to/dataset.json` and `-p path/to/dataset.mat`.
+    *Note*: `sensor.json` and `dataset.h5` can also be specified by `-s path/to/dataset.json` and `-p path/to/dataset.h5`.
 - `TARGET=path/to/output`: save results (checkpoints, evaluation, and configuration) to `results/path/to/output`.
 - `FLAGS=...`: arguments to pass to `train.py`; see `python train.py -h` and `python train.py ngp -h`, replacing `ngp` with the target method.
 
 This creates the following files in `results/output`:
-```
+```sh
 results/
     output/
-        metadata.json     # Model/dataset/training metadata
-        model.chkpt       # Model weights checkpoint
-        pred.h5           # Predicted range-doppler images
-        cam.h5            # Virtual camera renderings for the trajectory
-        map.h5            # Map of the scene sampled at 25 units/meter
-        output.video.mp4  # Output camera + radar video
-        output.map.mp4    # Video where each frame is a horizontal slice
+        metadata.json       # Model/dataset/training metadata
+        model.chkpt         # Model weights checkpoint
+        pred.h5             # Predicted range-doppler images
+        cam.h5              # Virtual camera renderings for the trajectory
+        map.h5              # Map of the scene sampled at 25 units/meter
+        output.video.mp4    # Output camera + radar video
+        output.map.mp4      # Video where each frame is a horizontal slice
 ```
 
 Multiple models on the same trajectory can also be combined into a single output video:

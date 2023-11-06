@@ -15,12 +15,12 @@ from .pose import project_angle, sensor_to_world
 
 
 def vec_to_angle(
-    t: Float32[Array, "3 k"]
+    t: Float32[Array, "3 k"], eps: float = 1e-5
 ) -> tuple[Float32[Array, "k"], Float32[Array, "k"]]:
     """Get azimuth and elevation from unit sphere values."""
     _, y, z = t
-    theta = jnp.arcsin(jnp.clip(z, -0.99999, 0.99999))
-    phi = jnp.arcsin(jnp.clip(y / jnp.cos(theta), -0.99999, 0.99999))
+    theta = jnp.arcsin(jnp.clip(z, eps - 1, 1 - eps))
+    phi = jnp.arcsin(jnp.clip(y / jnp.cos(theta), eps - 1, 1 - eps))
     return (theta, phi)
 
 
@@ -84,11 +84,7 @@ class VirtualRadar(NamedTuple):
 
         return jnp.where(
             (jnp.abs(dnorm) > 1) | (h > r),
-            0,
-            jnp.where(
-                h < -r,
-                jnp.pi,
-                psi_min))
+            0, jnp.where(h < -r, jnp.pi, psi_min))
     
     def sample_rays(
         self, key: types.PRNGKey,
@@ -110,9 +106,8 @@ class VirtualRadar(NamedTuple):
         #TODO fail if psi_min = 0, shouldn't happen for now with dataset
         delta_psi = 2 * psi_min / self.k
         psi = jnp.linspace(-psi_min, psi_min - delta_psi, self.k)
-        psi += random.uniform(key) * delta_psi
-        points = project_angle(d, psi, pose)
-        return points
+        offset = random.uniform(key) * delta_psi
+        return project_angle(d, psi + offset, pose)
 
     def _render_column(
         self, t: Float32[Array, "3 k"], sigma: types.SigmaField,
@@ -137,21 +132,20 @@ class VirtualRadar(NamedTuple):
 
         def project_rays(r):
             t_world = sensor_to_world(r=r, t=t, pose=pose)
-            return vmap(sigma)(t_world.T, dx=dx.T)
+            return vmap(sigma)(t_world.T, dx.T)
 
         sigma_samples, alpha_samples = vmap(project_rays)(self.r)
 
-        # Return signal
         transmitted = jnp.concatenate([
             jnp.zeros((1, t.shape[1])),
             jnp.cumsum(alpha_samples[:-1], axis=0)
         ], axis=0)
+
         gain = self.gain(*vec_to_angle(t))
         amplitude: Float32[Array, "Nr k Na"] = (
-            sigma_samples[..., jnp.newaxis] * gain
-            * jnp.exp(transmitted)[..., jnp.newaxis])
+            sigma_samples[..., None] * gain * jnp.exp(transmitted)[..., None])
 
-        return jnp.sum(amplitude, axis=1) * weight[..., jnp.newaxis]
+        return jnp.sum(amplitude, axis=1) * weight[..., None]
 
     def column_forward(
         self, key: types.PRNGKey, column: types.TrainingColumn,

@@ -143,7 +143,10 @@ class DART:
         def loss_func(params, rng, batch, **kwargs):
             columns, y_true = batch
             y_pred, reg = self.model.apply(params, rng, columns, **kwargs)
-            return self.loss(y_pred, y_true) + reg * kwargs.get("reg", 1.0)
+
+            train_loss = self.loss(y_pred, y_true.astype(jnp.float32))
+            reg_loss = reg * kwargs.get("reg", 1.0)
+            return train_loss + reg_loss
 
         # Note: not putting step in a closure here (jitting grads and updates
         # separately) results in a ~100x performance penalty!

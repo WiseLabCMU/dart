@@ -11,6 +11,35 @@ from dart import types
 from ._spatial import interpolate, spherical_harmonics
 
 
+def _clip(x):
+    return jnp.minimum(0.0, x)
+
+@jax.custom_vjp
+def clip(x):
+    """Gradient estimator for the transmittance activation `min(0, alpha)`.
+
+    At a high level, we don't pass through gradients if we are already
+    clipping alpha and the gradients want to push alpha even more positive.
+
+    Specifically:
+      - `g < 0` indicates alpha will decrease the loss. If `alpha > 0`, then
+        this won't be productive, so we don't pass the grads.
+      - Otherwise, we use a straight-through estimator (i.e. if `alpha <= 0`,
+        or if `alpha > 0` is being clipped, but the gradient is trying to
+        un-clip it).
+    """
+    return _clip(x)
+
+def _clip_fwd(x):
+    return _clip(x), x
+
+def _clip_bwd(res, g):
+    grad = jnp.where((res > 0) & (g < 0), 0.0, g)
+    return (grad,)
+
+clip.defvjp(_clip_fwd, _clip_bwd)
+
+
 class NGP(hk.Module):
     """NGP field [1] with sigma (reflectance) and alpha (transmittance) output.
 
@@ -41,17 +70,17 @@ class NGP(hk.Module):
         self.alpha_scale = alpha_scale
         mlp: list[Callable] = []
         for u in units:
-            mlp += [hk.Linear(u), jax.nn.leaky_relu]
-        mlp.append(hk.Linear(_head))
-        self.head = hk.Sequential(mlp)
+            mlp += [hk.Linear(u), jax.nn.gelu]  # type: ignore
+        mlp.append(hk.Linear(_head))  # type: ignore
+        self.head = hk.Sequential(mlp)  # type: ignore
 
     def hash(self, x: Integer[Array, "3"]) -> Integer[Array, ""]:
         """Apply hash function specified by NGP (Eq. 4 [1])."""
-        ix = x.astype(jnp.uint32)
+        ix = x.astype(jnp.uint32) - (x < 0).astype(jnp.uint32)
         pi2 = jnp.array(2654435761, dtype=jnp.uint32)
         pi3 = jnp.array(805459861, dtype=jnp.uint32)
 
-        return (ix[0] + ix[1] * pi2 + ix[2] * pi3) % self.size[0]
+        return (ix[0] ^ (ix[1] * pi2) ^ (ix[2] * pi3)) % self.size[0]
 
     def lookup(self, x: Float32[Array, "3"]) -> Float32[Array, "n d"]:
         """Multiresolution hash table lookup."""
@@ -74,7 +103,8 @@ class NGP(hk.Module):
         """Index into learned reflectance map."""
         table_out = self.lookup(x)
         sigma, alpha = self.head(table_out.reshape(-1))
-        return sigma, jnp.minimum(0.0, alpha) * self.alpha_scale
+        # return sigma, jnp.minimum(0.0, alpha) * self.alpha_scale
+        return sigma, clip(alpha) * self.alpha_scale
 
     @classmethod
     def from_config(
@@ -82,7 +112,7 @@ class NGP(hk.Module):
     ) -> Callable[[], "NGP"]:
         """Create NGP haiku closure from config items."""
         def closure():
-            return cls(
+            return cls(  # type: ignore
                 levels=base * 2**(exponent * jnp.arange(levels)),
                 size=(2**size, features), **kwargs)
         return closure
@@ -167,12 +197,10 @@ class NGPSH(NGP):
             sh = spherical_harmonics(dx, self.harmonics)
             components = mlp_out[2:] / jnp.linalg.norm(mlp_out[2:], ord=2)
             proj = jnp.sum(components * sh)
-            sigma = sigma * proj
-            alpha = alpha * proj
-        else:
-            alpha = -jnp.abs(alpha)
+            sigma = sigma * jnp.abs(proj)
+            alpha = alpha * jnp.abs(proj)
 
-        return sigma, jnp.minimum(0.0, alpha) * self.alpha_scale
+        return sigma, clip(alpha) * self.alpha_scale
 
     @staticmethod
     def to_parser(p: types.ParserLike) -> None:

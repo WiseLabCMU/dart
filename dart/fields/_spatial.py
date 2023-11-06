@@ -38,7 +38,7 @@ def interpolate(
     bounds = jnp.stack([jnp.floor(x), jnp.ceil(x)]).astype(jnp.int32)
     # Corner values
     c = bounds[mask, [0, 1, 2]]
-    if isinstance(grid, jnp.ndarray):
+    if isinstance(grid, jnp.ndarray):  # type: ignore
         values = grid[c[:, 0], c[:, 1], c[:, 2]].reshape(8, -1)
     else:
         values = grid(c).reshape(8, -1)

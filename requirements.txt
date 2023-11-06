@@ -3,9 +3,11 @@ matplotlib
 scipy
 tensorflow
 tqdm
-jaxtyping
-beartype
 dm-haiku
 optax
 h5py
 plyfile
+jaxtyping
+beartype
+mypy
+types-tqdm

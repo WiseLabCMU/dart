@@ -13,9 +13,9 @@ class Adjustment(hk.Module):
     """Adjustment base class."""
 
     @classmethod
-    def from_config(cls):
+    def from_config(cls, *args, **kwargs) -> Callable[[], "Adjustment"]:
         """Create identity closure."""
-        return lambda: cls()
+        return lambda: cls(*args, **kwargs)  # type: ignore
 
     @overload
     def __call__(self, pose: Literal[None]) -> Float32[Array, ""]:
@@ -26,7 +26,11 @@ class Adjustment(hk.Module):
         ...
 
     def __call__(self, pose: Optional[types.RadarPose]):
-        """No adjustment."""
+        """No adjustment.
+        
+        Returns the regularization value for the adjustment (0.0) if `pose` is
+        `None`; otherwise, returns the adjusted pose.
+        """
         if pose is None:
             return jnp.array(0.0)
         else:
@@ -40,7 +44,14 @@ class Identity(Adjustment):
 
 
 class Position(Adjustment):
-    """Position adjustment parameters."""
+    """Position adjustment parameters.
+    
+    Parameters
+    ----------
+    n: interval between keypoints.
+    k: total number of keypoints.
+    alpha: regularization multiplier.
+    """
 
     def __init__(self, n: int, k: int, alpha: float = 1.) -> None:
         super().__init__()
@@ -48,30 +59,21 @@ class Position(Adjustment):
         self.k = k
         self.alpha = alpha
 
-    @classmethod
-    def from_config(
-        cls, n=10000, k=100, alpha=100.
-    ) -> Callable[[], "Position"]:
-        """Create NGP haiku closure from config items."""
-        def closure():
-            return cls(n=n, k=k, alpha=alpha)
-        return closure
-
     def __call__(self, pose: Optional[types.RadarPose]):
         """Apply pose adjustments."""
-        deltas = hk.get_parameter("delta", shape=(self.k, 3), init=jnp.zeros)
+        delta = hk.get_parameter("delta", shape=(self.k, 3), init=jnp.zeros)
 
         if pose is None:
-            return jnp.sum(jnp.abs(jnp.diff(deltas))) * self.alpha
+            return jnp.sum(jnp.abs(delta)) * self.alpha
         else:
-            raw = pose.i * (self.k - 1) / (self.n - 1)
+            raw = pose.i * (self.k - 1) / self.n
             left = jnp.floor(raw).astype(jnp.int32)
             right = jnp.ceil(raw).astype(jnp.int32)
 
-            interp = (
-                deltas[left] * (right - raw) + deltas[right] * (raw - left))
-            deltas_final = jnp.where(left == right, deltas[left], interp)
+            def _interp(d):
+                interp = d[left] * (right - raw) + d[right] * (raw - left)
+                return jnp.where(left == right, d[left], interp)
 
             return types.RadarPose(
                 v=pose.v, p=pose.p, q=pose.q, s=pose.s,
-                x=pose.x + deltas_final, A=pose.A, i=pose.i)
+                x=pose.x + _interp(delta), A=pose.A, i=pose.i)

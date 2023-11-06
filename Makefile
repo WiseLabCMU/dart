@@ -1,15 +1,16 @@
-ifndef BATCH
-BATCH=2
-endif
-ifndef DART
-DART=python manage.py
-endif
-ifndef TRAIN
-TRAIN=python train.py
-endif
-ifndef METHOD
-METHOD=ngpsh
-endif
+#  ____________       ______  _______
+#     _______  \  /\ (_____ \(_______)
+#      ___   \  \/  \ _____) )_
+#   _____ |   | / /\ (_____ (| |
+#     ___ |__/ / /  \ \    | | |___
+#   __________/_/    \_|   |_|\____)
+#     Doppler Aided Radar Tomography
+#
+
+BATCH?=2
+DART?=python manage.py
+TRAIN?=python train.py
+METHOD?=ngpsh
 
 .phony: experiment
 experiment: train slices evaluate

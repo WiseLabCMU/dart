@@ -64,7 +64,7 @@ class VoxelGrid(hk.Module):
     ) -> Callable[[], "VoxelGrid"]:
         """Create simple grid haiku closure from config items."""
         def closure():
-            return cls(
+            return cls(  # type: ignore
                 upper=jnp.array(upper), lower=jnp.array(lower),
                 resolution=resolution, do_alpha=do_alpha, size=size)
         return closure
