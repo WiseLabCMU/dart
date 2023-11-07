@@ -122,7 +122,8 @@ class DART:
         dataset: types.Dataset, epoch: int = 0, step: int = 0
     ) -> float:
         """Run validation."""
-        hypers = self._hypers(epoch=epoch, step=step, train=False)
+        hypers = jax.tree_util.tree_map(
+            jnp.array, self._hypers(epoch=epoch, step=step, train=False))
         losses = []
         for batch in tqdm(dataset, unit="batch", desc="    Validating"):
             key, rng = jax.random.split(key, 2)

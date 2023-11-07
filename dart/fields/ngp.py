@@ -13,8 +13,8 @@ from jax import numpy as jnp
 import jax
 import haiku as hk
 
-from jaxtyping import Float32, Integer, Array
-from beartype.typing import Optional, Callable
+from jaxtyping import Float32, Integer, Array, Float
+from beartype.typing import Optional, Callable, Union
 
 from dart import types
 from ._spatial import interpolate, spherical_harmonics
@@ -184,9 +184,16 @@ class NGPSH(NGP):
 
     def __call__(
         self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None,
-        **kwargs
+        alpha_clip: Optional[types.FloatLike] = None, **kwargs
     ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
-        """Index into learned reflectance map."""
+        """Index into learned reflectance map.
+        
+        Parameters
+        ----------
+        x, dx: Query position and orientation.
+        alpha_clip: Alpha clipping threshold to eliminate false "radar
+            absorbing stealth composites".
+        """
         table_out = self.lookup(x)
         mlp_out = self.head(table_out.reshape(-1))
         sigma, alpha = mlp_out[:2]
@@ -197,6 +204,9 @@ class NGPSH(NGP):
             proj = jnp.sum(components * sh)
             sigma = sigma * jnp.abs(proj)
             alpha = alpha * jnp.abs(proj)
+
+        if alpha_clip is not None:
+            alpha = jnp.where(sigma > alpha_clip, alpha, 0)
 
         return sigma, clip(alpha) * self.alpha_scale
 

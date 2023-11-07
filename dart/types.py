@@ -5,7 +5,7 @@ from argparse import ArgumentParser, _ArgumentGroup, Namespace
 import numpy as np
 import tensorflow as tf
 
-from jaxtyping import Array, Float32, UInt8, Int32, UInt32, PyTree
+from jaxtyping import Array, Float32, UInt8, Int32, UInt32, PyTree, Float
 from jaxtyping import Float16 as RadarFloat
 
 from beartype.typing import Union, Callable, NamedTuple
@@ -41,6 +41,9 @@ HyperparameterSchedule = Callable[[int, int], PyTree]
 
 #: Numpy or JAX
 ArrayLike = Union[Array, np.ndarray]
+
+#: Scalar or array
+FloatLike = Union[Float[ArrayLike, ""], float]
 
 
 class CameraPose(NamedTuple):

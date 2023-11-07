@@ -105,11 +105,9 @@ class DartResult:
                 arr[..., i:arr.shape[2] - (conv - i)] for i in range(conv + 1)
             ) / (conv + 1)
 
-        if sigma:
-            lower, upper = np.percentile(arr, clip)
-            arr = np.clip(arr, max(lower, 0.0), upper) / upper
-        else:
-            arr = np.exp(arr)  # type: ignore
+        lower, upper = np.percentile(arr, clip)
+        lower = max(lower, 0.0)
+        arr = np.clip(arr, lower, upper) / (upper - lower)
 
         return (
             mpl.colormaps['viridis'](arr)[..., :3] * 255  # type: ignore

@@ -28,7 +28,7 @@ def _parse(p):
         "-c", "--camera", default=False, action="store_true",
         help="Render camera image instead of radar image.")
     p.add_argument(
-        "--clip", default=0.1, type=float,
+        "--clip", default=0.01, type=float,
         help="Inclusion threshold for camera rendering.")
     p.add_argument(
         "--depth", default=5.0, type=float, help="Maximum depth to render.")

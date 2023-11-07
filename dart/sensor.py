@@ -121,7 +121,6 @@ class VirtualRadar(NamedTuple):
         sigma: Field function.
         pose: Sensor pose.
         weight: Sample size weight.
-        kwargs: Non-vectorized passthrough to sigma (i.e. hyperparams).
 
         Returns
         -------

@@ -37,7 +37,7 @@ def _main(args):
     sigma = res.colorize_map(
         mapfile["sigma"], conv=args.radius * 2, sigma=True, clip=(1.0, 99.0))
     alpha = res.colorize_map(
-        mapfile["alpha"], conv=args.radius * 2, sigma=False)
+        -mapfile["alpha"], conv=args.radius * 2, sigma=False, clip=(1.0, 99.0))
 
     lower = mapfile["lower"]
     upper = mapfile["upper"]

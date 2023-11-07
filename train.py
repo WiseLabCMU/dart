@@ -109,7 +109,11 @@ if __name__ == '__main__':
             "path": args.path, "min_speed": args.min_speed,
             "repeat": args.repeat, "doppler_decimation": args.decimate
         },
-        "schedules": {}
+        "schedules": {
+            "alpha_clip": {
+                "func": "linear", "args": {
+                    "start": -0.1, "end": 0.1, "steps": 1500, "warmup": 0}}
+        }
     }
 
     if args.adj < 0:

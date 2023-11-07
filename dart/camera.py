@@ -108,8 +108,8 @@ class VirtualCamera(NamedTuple):
 
         tx = jnp.concatenate([jnp.zeros((1)), jnp.cumsum(alpha[:-1])])
         sigma = jnp.nan_to_num(sigma, nan=0.0, copy=False)
-        # rx = jnp.exp(tx) * sigma
-        rx = sigma
+        rx = jnp.exp(tx) * sigma
+        # rx = sigma
 
         d_idx = jnp.argmax(rx)
         d_clip = jnp.where(rx[d_idx] >= self.clip, d_idx / self.d, 1.0)
