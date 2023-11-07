@@ -11,7 +11,7 @@ import numpy as np
 from jax import numpy as jnp
 
 from beartype.typing import Optional, Any
-from jaxtyping import Integer, Array, Float, UInt8
+from jaxtyping import Integer, Float, UInt8
 
 from .dart import DART
 from .utils import colormap
@@ -54,7 +54,7 @@ class DartResult:
         return DART.from_config(**self.metadata)
 
     def trajectory_dataset(
-        self, subset: Optional[Integer[Array, "nval"]] = None
+        self, subset: Optional[Integer[types.ArrayLike, "nval"]] = None
     ) -> types.Dataset:
         """Load trajectory dataset."""
         return trajectory(self.metadata["dataset"]["path"], subset=subset)
@@ -111,7 +111,9 @@ class DartResult:
         else:
             arr = np.exp(arr)  # type: ignore
 
-        return (mpl.colormaps['viridis'](arr)[..., :3] * 255).astype(np.uint8)
+        return (
+            mpl.colormaps['viridis'](arr)[..., :3] * 255  # type: ignore
+        ).astype(np.uint8)
 
     @staticmethod
     def colorize_radar(

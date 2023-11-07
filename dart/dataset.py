@@ -7,7 +7,7 @@ import numpy as np
 from scipy.io import loadmat
 import h5py
 
-from jaxtyping import Integer, Array, PyTree, Float
+from jaxtyping import Integer, PyTree, Float
 from beartype.typing import Any, Optional
 
 from .fields import GroundTruth
@@ -54,7 +54,7 @@ def gt_map(file: str) -> GroundTruth:
 
 
 def trajectory(
-    traj: str, subset: Optional[Integer[Array, "nval"]] = None
+    traj: str, subset: Optional[Integer[types.ArrayLike, "nval"]] = None
 ) -> types.Dataset:
     """Generate trajectory dataset."""
     data = load_arrays(traj)
@@ -73,7 +73,8 @@ def __raw_image_traj(
     src = load_arrays(path)
     idxs = jnp.arange(src["vel"].shape[0])
     pose = jax.vmap(make_pose)(src["vel"], src["pos"], src["rot"], idxs)
-    image = jnp.where(src["rad"] > threshold, src["rad"], threshold) / norm
+    image = jnp.where(  # type: ignore
+        src["rad"] > threshold, src["rad"], threshold) / norm
 
     if sensor is not None:
         if image.shape[1] > len(sensor.r):
@@ -92,7 +93,7 @@ def __raw_image_traj(
 
 def image_traj(
     path: str, norm: float = 1e4,
-    subset: Optional[Integer[Array, "nval"]] = None
+    subset: Optional[Integer[types.ArrayLike, "nval"]] = None
 ) -> types.Dataset:
     """Dataset with trajectory and images."""
     data = __raw_image_traj(path, norm=norm, sensor=None)

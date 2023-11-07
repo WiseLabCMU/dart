@@ -95,26 +95,3 @@ def load_weights(path: str) -> dict:
     flattened = np.load(path + ".npz")
 
     return jax.tree_util.tree_map(flattened.get, schema)
-
-
-def straight_through(
-    x: Float32[Array, "..."],
-    func: Callable[[Float32[Array, "..."]], Float32[Array, "..."]]
-) -> Float32[Array, "..."]:
-    """Create straight-through estimator of a function.
-
-    NOTE: the function must take a single tensor as a argument, producing a
-    tensor with the same shape (otherwise straight-through gradients
-    make no sense!).
-
-    Parameters
-    ----------
-    x: function input args.
-    func: function to apply.
-
-    Returns
-    -------
-    Output of the function, with gradients passed straight through.
-    """
-    zero = x - jax.lax.stop_gradient(x)
-    return zero + jax.lax.stop_gradient(func(x))

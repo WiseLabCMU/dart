@@ -1,4 +1,13 @@
-"""Instant Neural Graphics Primitive (NGP) based fields."""
+"""Instant Neural Graphics Primitive (NGP) based fields.
+
+References
+----------
+[1] Muller et al, "Instant Neural Graphics Primitives with a
+    Multiresolution Hash Encoding," 2022.
+[2] Yu et al, "PlenOctrees For Real-time Rendering of Neural Radiance
+    Fields," 2021.
+[3] Nerfacto. https://docs.nerf.studio/nerfology/methods/nerfacto.html
+"""
 
 from jax import numpy as jnp
 import jax
@@ -51,11 +60,6 @@ class NGP(hk.Module):
     units: MLP network parameters.
     alpha_scale: Transmittance scale factor (for initialization stability).
     _head: MLP output dimensionality (should always be 2).
-
-    References
-    ----------
-    [1] Muller et al, "Instant Neural Graphics Primitives with a
-        Multiresolution Hash Encoding," 2022.
     """
 
     _description = "NGP (instant Neural Graphics Primitive) architecture"
@@ -70,7 +74,7 @@ class NGP(hk.Module):
         self.alpha_scale = alpha_scale
         mlp: list[Callable] = []
         for u in units:
-            mlp += [hk.Linear(u), jax.nn.gelu]  # type: ignore
+            mlp += [hk.Linear(u), jax.nn.leaky_relu]  # type: ignore
         mlp.append(hk.Linear(_head))  # type: ignore
         self.head = hk.Sequential(mlp)  # type: ignore
 
@@ -84,7 +88,9 @@ class NGP(hk.Module):
 
     def lookup(self, x: Float32[Array, "3"]) -> Float32[Array, "n d"]:
         """Multiresolution hash table lookup."""
-        xscales = x.reshape(1, -1) * self.levels.reshape(-1, 1)
+        xscales = (
+            x[None, :] * self.levels[:, None]
+            + jnp.arange(self.levels.shape[0])[:, None])
         grid = hk.get_parameter(
             "grid", (self.levels.shape[0], *self.size),
             init=hk.initializers.RandomUniform(0, 0.01))
@@ -103,7 +109,6 @@ class NGP(hk.Module):
         """Index into learned reflectance map."""
         table_out = self.lookup(x)
         sigma, alpha = self.head(table_out.reshape(-1))
-        # return sigma, jnp.minimum(0.0, alpha) * self.alpha_scale
         return sigma, clip(alpha) * self.alpha_scale
 
     @classmethod
@@ -129,7 +134,7 @@ class NGP(hk.Module):
             "--base", default=4., type=float,
             help="Size of base (most coarse) hash table level.")
         p.add_argument(
-            "--size", default=16, type=int,
+            "--size", default=20, type=int,
             help="Hash table size, in powers of 2.")
         p.add_argument(
             "--features", default=2, type=int,
@@ -156,7 +161,7 @@ class NGP(hk.Module):
 
 
 class NGPSH(NGP):
-    """NGP [1] field with spherical harmonics [2].
+    """NGP [1] field with plenoctrees-style spherical harmonics [2].
 
     Has two different behaviors:
      1. Ray-tracing mode (dx=float[3]): apply spherical harmonic coefficients
@@ -168,16 +173,9 @@ class NGPSH(NGP):
     ----------
     harmonics: Number of spherical harmonic coefficients.
     kwargs: Passed to NGP.
-
-    References
-    ----------
-    [1] Muller et al, "Instant Neural Graphics Primitives with a
-        Multiresolution Hash Encoding," 2022.
-    [2] Yu et al, "PlenOctrees For Real-time Rendering of Neural Radiance
-        Fields," 2021.
     """
 
-    _description = "NGP with view dependence using spherical harmonics"
+    _description = "NGP with plenoctrees-style view dependence"
 
     def __init__(self, harmonics: int = 25, **kwargs) -> None:
         assert harmonics in {1, 4, 9, 16, 25}
@@ -215,5 +213,65 @@ class NGPSH(NGP):
         """Create configuration dictionary."""
         cfg = NGP.args_to_config(args)
         cfg["field_name"] = "NGPSH"
+        cfg["field"]["harmonics"] = args.harmonics
+        return cfg
+
+
+class NGPSH2(NGP):
+    """NGP [1] field with neural network-style view dependence [3]."""
+
+    _description = "NGP with nerfacto-style view dependence"
+
+    def __init__(self, harmonics: int = 16, **kwargs) -> None:
+        assert harmonics in {1, 4, 9, 16, 25}
+        self.harmonics = harmonics
+        super().__init__(_head=2, **kwargs)
+
+    def __call__(
+        self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None,
+        **kwargs
+    ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
+        """Index into learned reflectance map."""
+        table_out = self.lookup(x)
+        sh = (
+            spherical_harmonics(dx, self.harmonics) if dx is not None
+            else jnp.zeros(self.harmonics, dtype=jnp.float32))
+
+        mlp_out = self.head(jnp.concatenate([table_out.reshape(-1), sh]))
+        sigma, alpha = mlp_out
+        return sigma, clip(alpha) * self.alpha_scale
+
+    @staticmethod
+    def to_parser(p: types.ParserLike) -> None:
+        """Create NGP command line arguments."""
+        p.add_argument(
+            "--levels", default=12, type=int, help="Hash table levels.")
+        p.add_argument(
+            "--exponent", default=0.43, type=float,
+            help="Hash table level exponent, in powers of 2.")
+        p.add_argument(
+            "--base", default=4., type=float,
+            help="Size of base (most coarse) hash table level.")
+        p.add_argument(
+            "--size", default=20, type=int,
+            help="Hash table size, in powers of 2.")
+        p.add_argument(
+            "--features", default=2, type=int,
+            help="Number of features per hash table level.")
+        p.add_argument(
+            "--units", default=[64], nargs='+', type=int,
+            help="Number of hidden units in the MLP head.")
+        p.add_argument(
+            "--alpha_scale", default=0.1, type=float,
+            help="Transmittance scale factor for intialization stability.")
+        p.add_argument(
+            "--harmonics", default=16, type=int,
+            help="Number of spherical harmonics.")
+
+    @staticmethod
+    def args_to_config(args: types.Namespace) -> dict:
+        """Create configuration dictionary."""
+        cfg = NGP.args_to_config(args)
+        cfg["field_name"] = "NGPSH2"
         cfg["field"]["harmonics"] = args.harmonics
         return cfg

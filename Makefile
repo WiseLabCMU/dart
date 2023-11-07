@@ -11,25 +11,58 @@ BATCH?=2
 DART?=python manage.py
 TRAIN?=python train.py
 METHOD?=ngpsh
+RESOLUTION?=50
+
+_TGT=results/$(TARGET)
+_MAP=results/$(TARGET)/map.h5
+_RAD=results/$(TARGET)/rad.h5
+_CAM=results/$(TARGET)/cam.h5
+_SSIM=results/$(TARGET)/ssim.npz
+_SLICES=results/$(TARGET)/$(TARGET).slice.z.mp4
+_VIDEO=results/$(TARGET)/$(TARGET).video.mp4
+
+
+# -- DART Scripts -------------------------------------------------------------
+
+# Train
+$(_TGT):
+	$(TRAIN) $(METHOD) -p data/$(DATASET) -o results/$(TARGET) $(FLAGS)
+# Map
+$(_MAP): $(_TGT)
+	$(DART) map -p results/$(TARGET) --resolution $(RESOLUTION)
+# Map video
+$(_SLICES): $(_MAP)
+	$(DART) slice -p results/$(TARGET)
+# Radar evaluation
+$(_RAD): $(_TGT)
+	$(DART) evaluate -p results/$(TARGET) -a -b $(BATCH)
+# SSIM calculation
+$(_SSIM): $(_TGT)
+	$(DART) ssim -p results/$(TARGET)
+# Camera evaluation
+$(_CAM): $(_TGT)
+	$(DART) evaluate -p results/$(TARGET) -ac -b $(BATCH)
+# Camera/Radar video
+$(_VIDEO): $(_RAD) $(_CAM)
+	$(DART) video -p results/$(TARGET)
+
+
+# -- Aliases ------------------------------------------------------------------
+
+.phony: train map slices radar ssim camera video
+train: results/$(TARGET)
+map: $(_MAP)
+slices: $(_SLICES)
+radar: $(_RAD)
+ssim: results/$(TARGET)/ssim.npz
+camera: $(_CAM)
+video: $(_VIDEO)
 
 .phony: experiment
 experiment: train slices evaluate
 
-.phony: train slices evaluate video
-train:
-	$(TRAIN) $(METHOD) -p data/$(DATASET) -o results/$(TARGET) $(FLAGS)
 
-slices:
-	$(DART) map -p results/$(TARGET) --resolution 50
-	$(DART) slice -p results/$(TARGET)
-
-evaluate:
-	$(DART) evaluate -p results/$(TARGET) -a -b $(BATCH)
-	$(DART) ssim -p results/$(TARGET)
-
-video: evaluate
-	$(DART) evaluate -p results/$(TARGET) -ac -b $(BATCH)
-	$(DART) video -p results/$(TARGET)
+# -- Utilities ----------------------------------------------------------------
 
 .phony: typecheck
 typecheck:

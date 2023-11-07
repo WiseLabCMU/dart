@@ -64,16 +64,14 @@ class Position(Adjustment):
         delta = hk.get_parameter("delta", shape=(self.k, 3), init=jnp.zeros)
 
         if pose is None:
-            return jnp.sum(jnp.abs(delta)) * self.alpha
+            return 0.0  # jnp.sum(jnp.linalg.norm(delta, axis=1)) * self.alpha
         else:
-            raw = pose.i * (self.k - 1) / self.n
+            raw = pose.i.astype(jnp.float32) / self.n
             left = jnp.floor(raw).astype(jnp.int32)
-            right = jnp.ceil(raw).astype(jnp.int32)
-
-            def _interp(d):
-                interp = d[left] * (right - raw) + d[right] * (raw - left)
-                return jnp.where(left == right, d[left], interp)
+            dx = (
+                delta[left] * (left + 1 - raw)
+                + delta[left + 1] * (raw - left))
 
             return types.RadarPose(
                 v=pose.v, p=pose.p, q=pose.q, s=pose.s,
-                x=pose.x + _interp(delta), A=pose.A, i=pose.i)
+                x=pose.x + dx, A=pose.A, i=pose.i)

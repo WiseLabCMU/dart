@@ -107,15 +107,16 @@ class VirtualCamera(NamedTuple):
         sigma, alpha = vmap(project)(jnp.linspace(0, self.max_depth, self.d))
 
         tx = jnp.concatenate([jnp.zeros((1)), jnp.cumsum(alpha[:-1])])
-        sigma = jnp.nan_to_num(sigma, nan=0.0, copy=False).astype(jnp.float16)
-        rx = tx * jnp.exp(sigma)
+        sigma = jnp.nan_to_num(sigma, nan=0.0, copy=False)
+        # rx = jnp.exp(tx) * sigma
+        rx = sigma
 
         d_idx = jnp.argmax(rx)
         d_clip = jnp.where(rx[d_idx] >= self.clip, d_idx / self.d, 1.0)
 
         return (
             d_clip.astype(jnp.float16),
-            rx[d_idx].astype(jnp.float16),
+            sigma[d_idx].astype(jnp.float16),
             jnp.sum(rx).astype(jnp.float16))
 
     def render(
