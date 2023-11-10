@@ -3,12 +3,13 @@
 import os
 from tqdm import tqdm
 from functools import partial
+import json
 
 import numpy as np
 from jax import numpy as jnp
 import jax
 
-from dart import VirtualCamera, DartResult
+from dart import VirtualCamera, DartResult, dataset, DART
 
 
 _desc = "Evaluate DART trained checkpoint for an input trajectory."
@@ -70,19 +71,16 @@ def _main(args):
     if args.batch is None:
         args.batch = 4 if args.camera else 32
 
+    with open(os.path.join(args.path, "metadata.json")) as f:
+        dart = DART.from_config(**json.load(f))
+
     result = DartResult(args.path)
-    dart = result.dart()
     params = dart.load(os.path.join(args.path, "model"))
 
-    subset = None if args.all else np.load(
-        os.path.join(args.path, "metadata.npz"))["val"]
-    traj = result.trajectory_dataset(subset=subset)
+    traj = dataset.trajectory(os.path.join(result.DATADIR, "trajectory.h5"))
 
     render_func = _render_camera if args.camera else _render_radar
     out = render_func(dart, params, args, traj)
 
     outfile = DartResult.CAMERA if args.camera else DartResult.RADAR
-    if not args.all:
-        outfile.replace(".h5", "_val.h5")
-
     result.save(outfile, out)

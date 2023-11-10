@@ -6,6 +6,7 @@ with install_import_hook("dart", ("beartype", "beartype")):
     from dart import types
     from dart import fields
     from dart import utils
+    from dart import pose
     from dart.dart import DART
     from dart.sensor import VirtualRadar
     from dart.camera import VirtualCamera, VirtualCameraImage
@@ -17,5 +18,5 @@ __all__ = [
     "DART", "VirtualRadar",
     "VirtualCamera", "VirtualCameraImage",
     "DartResult",
-    "script_train"
+    "script_train", "pose"
 ]

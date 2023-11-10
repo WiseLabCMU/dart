@@ -18,8 +18,8 @@ from jax import numpy as jnp
 
 
 def make_pose(
-    v: Float32[Array, "3"], x: Float32[Array, "3"], A: Float32[Array, "3 3"],
-    i: Int32[Array, ""]
+    v: Float32[types.ArrayLike, "3"], x: Float32[types.ArrayLike, "3"],
+    A: Float32[types.ArrayLike, "3 3"], i: Int32[types.ArrayLike, ""]
 ) -> types.RadarPose:
     """Create pose data namedtuple.
 
@@ -70,7 +70,7 @@ def sensor_to_world(
     -------
     Projected points at the specified range in world-space.
     """
-    return pose.x.reshape(3, 1) + jnp.matmul(pose.A, r * t)
+    return pose.x[:, None] + jnp.matmul(pose.A, r * t)
 
 
 def project_angle(
@@ -93,5 +93,5 @@ def project_angle(
         jnp.sqrt(1 - jnp.minimum(1, d_norm**2)) * (
             jnp.outer(pose.p, jnp.cos(psi))
             + jnp.outer(pose.q, jnp.sin(psi)))
-        - pose.v.reshape(3, 1) * d_norm)
+        - pose.v[:, None] * d_norm)
     )

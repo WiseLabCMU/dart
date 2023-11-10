@@ -29,7 +29,7 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
     g = p.add_argument_group(title="Training")
     g.add_argument("--lr", default=0.01, type=float, help="Learning Rate.")
     g.add_argument(
-        "-e", "--epochs", default=5, type=int,
+        "-e", "--epochs", default=3, type=int,
         help="Number of epochs to train.")
     g.add_argument("-b", "--batch", default=1024, type=int, help="Batch size.")
     g.add_argument(
@@ -47,12 +47,6 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
         "--adj", type=float, default=-1, help="Adjustment regularization.")
 
     g = p.add_argument_group(title="Dataset")
-    g.add_argument(
-        "--norm", default=1.0, type=float,
-        help="Normalization value.")
-    g.add_argument(
-        "--min_speed", default=0.2, type=float, help="Reject frames with "
-        "insufficient (i.e. not enough doppler bins); 0 to disable.")
     g.add_argument(
         "-p", "--path", default="data", help="Dataset file or directory.")
     g.add_argument(
@@ -105,14 +99,14 @@ if __name__ == '__main__':
             "delta": args.loss_delta
         },
         "dataset": {
-            "pval": args.pval, "norm": args.norm, "iid_val": args.iid,
-            "path": args.path, "min_speed": args.min_speed,
-            "repeat": args.repeat, "doppler_decimation": args.decimate
+            "pval": args.pval, "iid_val": args.iid,
+            "path": args.path,
+            "doppler_decimation": args.decimate
         },
         "schedules": {
-            "alpha_clip": {
-                "func": "linear", "args": {
-                    "start": -0.1, "end": 0.1, "steps": 1500, "warmup": 0}}
+            # "alpha_clip": {
+            #     "func": "linear_piecewise", "args": {
+            #         "values": [-1.0, 0.0, 0.05], "steps": [100, 500]}}
         }
     }
 

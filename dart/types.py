@@ -4,12 +4,13 @@ from argparse import ArgumentParser, _ArgumentGroup, Namespace
 
 import numpy as np
 import tensorflow as tf
-
-from jaxtyping import Array, Float32, UInt8, Int32, UInt32, PyTree, Float
-from jaxtyping import Float16 as RadarFloat
-
-from beartype.typing import Union, Callable, NamedTuple
+import h5py
 from jax.random import PRNGKeyArray
+
+from jaxtyping import Array, Float32, Int32, UInt32, PyTree, Float
+from jaxtyping import Float16 as RadarFloat
+from beartype.typing import Union, Callable, NamedTuple
+
 
 #: Argument parser or parser group
 ParserLike = Union[ArgumentParser, _ArgumentGroup]
@@ -54,8 +55,8 @@ class CameraPose(NamedTuple):
         world-space.
     """
 
-    x: Float32[Array, "3"]
-    A: Float32[Array, "3 3"]
+    x: Float32[Array, "... 3"]
+    A: Float32[Array, "... 3 3"]
 
 
 class RadarPose(NamedTuple):
@@ -72,13 +73,24 @@ class RadarPose(NamedTuple):
     i: index of pose relative to the original order.
     """
 
-    v: Float32[Array, "3"]
-    p: Float32[Array, "3"]
-    q: Float32[Array, "3"]
-    s: Float32[Array, ""]
-    x: Float32[Array, "3"]
-    A: Float32[Array, "3 3"]
-    i: Int32[Array, ""]
+    v: Float32[ArrayLike, "... 3"]
+    p: Float32[ArrayLike, "... 3"]
+    q: Float32[ArrayLike, "... 3"]
+    s: Float32[ArrayLike, "..."]
+    x: Float32[ArrayLike, "... 3"]
+    A: Float32[ArrayLike, "... 3 3"]
+    i: Int32[ArrayLike, "..."]
+
+    @classmethod
+    def from_h5file(cls, file) -> "RadarPose":
+        """Load from file."""
+        return cls(**{
+            k: np.array(file[k]) for k in ['v', 'p', 'q', 's', 'x', 'A', 'i']})
+
+    def to_h5file(self, file) -> None:
+        """Save to file."""
+        for key in ['v', 'p', 'q', 's', 'x', 'A', 'i']:
+            file.create_dataset(key, data=getattr(self, key))
 
 
 class TrainingColumn(NamedTuple):
@@ -96,8 +108,8 @@ class TrainingColumn(NamedTuple):
     """
 
     pose: RadarPose
-    weight: Float32[Array, ""]
-    doppler: RadarFloat[Array, ""]
+    weight: Float32[ArrayLike, "..."]
+    doppler: RadarFloat[ArrayLike, "..."]
 
 
 #: Image data

@@ -8,7 +8,7 @@ from . import video
 from . import slice
 from . import ssim
 from . import gt_map
-from . import compare
+from . import compare, dataset
 
 
 commands = {
@@ -21,4 +21,5 @@ commands = {
     "ssim": ssim,
     "gt_map": gt_map,
     "compare": compare,
+    "dataset": dataset
 }

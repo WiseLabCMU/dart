@@ -115,7 +115,7 @@ class DartResult:
 
     @staticmethod
     def colorize_radar(
-        cmap: Float[types.ArrayLike, "..."],
+        cmap: UInt8[types.ArrayLike, "..."],
         rad: Float[types.ArrayLike, "..."],
         clip: tuple[float, float] = (5.0, 99.9),
         square: bool = True
@@ -141,7 +141,7 @@ class DartResult:
 
         p5, p95 = jnp.nanpercentile(rad, jnp.array(clip))
         rad = (rad - p5) / (p95 - p5)
-        colors = (colormap(cmap, rad) * 255).astype(jnp.uint8)
+        colors = colormap(cmap, rad)
         if len(rad.shape) == 4:
             if rad.shape[-1] > 1:
                 return _tile(colors)

@@ -41,7 +41,7 @@ def _main(args):
 
     if args.lower is None or args.upper is None:
         args.padding = np.array((args.padding * 3)[:3])
-        x = result.data(keys=["pos"])["pos"]
+        x = result.data(keys=["x"])["x"]
         args.lower = np.min(x, axis=0) - args.padding
         args.upper = np.max(x, axis=0) + args.padding
     else:

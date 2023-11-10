@@ -72,9 +72,9 @@ def __raw_image_traj(
     """Load image-trajectory data."""
     src = load_arrays(path)
     idxs = jnp.arange(src["vel"].shape[0])
-    pose = jax.vmap(make_pose)(src["vel"], src["pos"], src["rot"], idxs)
-    image = jnp.where(  # type: ignore
-        src["rad"] > threshold, src["rad"], threshold) / norm
+    pose = jax.vmap(make_pose)(
+        src["vel"], src["pos"], src["rot"], idxs)
+    image = (np.maximum(src["rad"], threshold) / norm).astype(np.float16)
 
     if sensor is not None:
         if image.shape[1] > len(sensor.r):
@@ -82,7 +82,6 @@ def __raw_image_traj(
         if image.shape[2] > len(sensor.d):
             crop = int((image.shape[2] - len(sensor.d)) / 2)
             image = image[:, :, crop:-crop]
-        # Copy to garbage-collect the initial (larger) array
         image = np.copy(image)
 
     if len(image.shape) < 4:
@@ -102,34 +101,6 @@ def image_traj(
     return types.Dataset.from_tensor_slices(data)
 
 
-def __make_dataset(
-    sensor: VirtualRadar, data: types.RangeDopplerData
-) -> types.DopplerColumnData:
-    """Split poses/images into columns."""
-    def process_image(pose):
-        def make_column(doppler):
-            psi_min = sensor.get_psi_min(d=doppler, pose=pose)
-            weight = psi_min / jnp.pi / pose.s
-            return types.TrainingColumn(
-                pose=pose, weight=weight, doppler=doppler)
-        return jax.vmap(make_column)(sensor.d)
-
-    poses, images = data
-    columns = jax.jit(jax.vmap(process_image))(poses)
-
-    images_col = jnp.swapaxes(images, 1, 2)
-    dataset = (columns, images_col)
-
-    # Flatten (index, doppler) order
-    flattened = jax.tree_util.tree_map(
-        lambda x: x.reshape(-1, *x.shape[2:]), dataset)
-
-    # Remove invalid doppler columns
-    not_empty = flattened[0].weight > 0
-    dataset_valid = jax.tree_util.tree_map(lambda x: x[not_empty], flattened)
-    return dataset_valid
-
-
 def __doppler_decimation(
     rda: Float[types.ArrayLike, "Ni Nr Nd Na"], factor: int
 ) -> Float[types.ArrayLike, "Ni Nr Nd Na"]:
@@ -142,9 +113,8 @@ def __doppler_decimation(
 
 
 def doppler_columns(
-    sensor: VirtualRadar, path: str = "data/cup.mat", norm: float = 1e4,
-    pval: float = 0., iid_val: bool = False, min_speed: float = 0.1,
-    repeat: int = 0, threshold: float = 0.0, doppler_decimation: int = 0,
+    sensor: VirtualRadar, path: str,
+    pval: float = 0., iid_val: bool = False, doppler_decimation: int = 0,
     key: types.PRNGSeed = 42
 ) -> tuple[types.Dataset, Optional[types.Dataset], dict[str, PyTree]]:
     """Load dataset trajectory and images.
@@ -163,7 +133,7 @@ def doppler_columns(
     path: Path to file containing data.
     norm: Normalization factor.
     pval: Proportion of dataset to hold as a validation set. If `pval=0`,
-        no validation datset is returned.
+        no validation dataset is returned.
     iid_val: If True, then shuffles the dataset before training so that the
         validation split is drawn randomly from the dataset instead of just
         from the end.
@@ -181,40 +151,33 @@ def doppler_columns(
     val: Val dataset.
     validx: Indices of original images corresponding to the validation set.
     """
-    pose, range_doppler = __raw_image_traj(
-        path, norm=norm, sensor=sensor, threshold=threshold)
+    file = h5py.File(path)
 
-    if doppler_decimation > 0:
-        range_doppler = __doppler_decimation(range_doppler, doppler_decimation)
+    pose = types.RadarPose.from_h5file(file)
+    idx = np.array(file["idx"])
+    rad = np.array(file["rad"], dtype=np.float16)
+    weight = np.array(file["weight"], dtype=np.float32)
+    doppler = np.array(file["doppler"], dtype=np.float32)
 
-    idx = jnp.arange(range_doppler.shape[0], dtype=jnp.int32)
-    valid_speed = (pose.s > min_speed) & (pose.s < sensor.d[-1])
+    meta = types.TrainingColumn(pose=pose, weight=weight, doppler=doppler)
+    data = (meta, rad)
 
-    print("Loaded dataset: {} valid frames (speed > {}) / {}".format(
-        jnp.sum(valid_speed), min_speed, range_doppler.shape[0]))
-    data = jax.tree_util.tree_map(
-        lambda x: x[valid_speed], (pose, range_doppler, idx))
+    print("Loaded dataset : {} valid columns".format(rad.shape))
 
     if iid_val:
         data = utils.shuffle(data, key=key)
 
-    pose, image, idx = data
+    meta, rad = data
     nval = 0 if pval <= 0 else int(utils.get_size(data) * pval)
-    train, val = utils.split((pose, image), nval=nval)
+    train, val = utils.split((meta, rad), nval=nval)
 
     if not iid_val:
         train = utils.shuffle(train, key=key)
 
-    train = __make_dataset(sensor, train)
-    print("Train split : {} images --> {} valid columns".format(
-        len(idx) - int(nval), train[1].shape))
+    print("Train split    : {} columns".format(train[1].shape))
     train = types.Dataset.from_tensor_slices(train)
     if val is not None:
-        val = __make_dataset(sensor, val)
-        print("Test split  : {} images --> {} valid columns".format(
-            nval, val[1].shape))
+        print("Test split     : {} columns".format(val[1].shape))
         val = types.Dataset.from_tensor_slices(val)
-    if repeat > 0:
-        train = train.repeat(repeat)
 
     return train, val, {"val": idx[-nval:]}

@@ -59,7 +59,7 @@ camera: $(_CAM)
 video: $(_VIDEO)
 
 .phony: experiment
-experiment: train slices evaluate
+experiment: train slices video
 
 
 # -- Utilities ----------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 from jax import numpy as jnp
 
-from jaxtyping import Float, Array
+from jaxtyping import Float, Array, Num
 from dart import types
 
 
@@ -36,9 +36,9 @@ def hsv_to_rgb(
 
 
 def colormap(
-    colors: Float[types.ArrayLike, "n 3"],
+    colors: Num[types.ArrayLike, "n 3"],
     data: Float[types.ArrayLike, "..."]
-) -> Float[Array, "... 3"]:
+) -> Num[Array, "... 3"]:
     """Apply a discrete colormap."""
     fidx = data * (colors.shape[0] - 1)
     left = jnp.clip(jnp.floor(fidx).astype(int), 0, colors.shape[0] - 1)
