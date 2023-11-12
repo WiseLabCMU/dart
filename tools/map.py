@@ -1,7 +1,7 @@
-"""Draw model map."""
+"""Evaluate DART model in a grid."""
 
-import json
 import os
+import h5py
 from tqdm import tqdm
 from functools import partial
 
@@ -10,9 +10,6 @@ from jax import numpy as jnp
 import jax
 
 from dart import DartResult
-
-
-_desc = "Evaluate DART model in a grid."
 
 
 def _parse(p):
@@ -36,12 +33,11 @@ def _parse(p):
     return p
 
 
-def _main(args):
-    result = DartResult(args.path)
-
+def _set_bounds(args, res):
     if args.lower is None or args.upper is None:
         args.padding = np.array((args.padding * 3)[:3])
-        x = result.data(keys=["x"])["x"]
+        x = np.array(h5py.File(
+            os.path.join(res.DATADIR, "trajectory.h5"))["pos"])
         args.lower = np.min(x, axis=0) - args.padding
         args.upper = np.max(x, axis=0) + args.padding
     else:
@@ -49,6 +45,11 @@ def _main(args):
         assert len(args.upper) == 3
         args.lower = np.array(args.lower)
         args.upper = np.array(args.upper)
+
+
+def _main(args):
+    result = DartResult(args.path)
+    _set_bounds(args, result)
 
     resolution = (args.resolution * (args.upper - args.lower)).astype(int)
     print("Bounds: {:.1f}x{:.1f}x{:.1f}m ({}x{}x{}px)".format(

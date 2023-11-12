@@ -55,9 +55,7 @@ def _main(args):
     mask = h5py.File(os.path.join(res.DATADIR, "trajectory.h5"))['mask']
     gt = np.array(h5py.File(os.path.join(res.DATADIR, "radar.h5"))["rad"][mask])
 
-    # validx = np.zeros(rad.shape[0], dtype=bool)
-    # valset = np.load(os.path.join(args.path, "metadata.npz"))["val"]
-    # validx[valset] = True
+    valstart = np.min(np.load(os.path.join(args.path, "metadata.npz"))["val"])
 
     fourcc = cv2.VideoWriter_fourcc(*args.fourcc)
     out = cv2.VideoWriter(
@@ -82,8 +80,8 @@ def _main(args):
             fg = _resize(fg, (args.size, args.size))
             f = np.concatenate([fc, fr, fg], axis=1)
 
-            # label = "{}{}".format("v" if validx[frame_idx] else "t", frame_idx)
-            label = str(frame_idx)
+            label = "{}:{}".format(
+                "t" if frame_idx < valstart else "v", frame_idx)
             cv2.putText(
                 f, label, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1,
                 (255, 255, 255), 2, cv2.LINE_AA)

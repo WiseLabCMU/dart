@@ -10,14 +10,17 @@ import jax
 from jax import numpy as jnp
 import numpy as np
 
-
 from jaxtyping import PyTree
 from beartype.typing import TypeVar, Optional, Union
 from dart import types
 
 
 def tf_to_jax(batch: PyTree) -> PyTree:
-    """Convert tensorflow array to jax array without copying."""
+    """Convert tensorflow array to jax array without copying.
+    
+    NOTE: going through dlpack is much slower, so it seems jax/tf have some
+    kind of interop going on under the hood already.
+    """
     return jax.tree_util.tree_map(jnp.array, batch)
 
 

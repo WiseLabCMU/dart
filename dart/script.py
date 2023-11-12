@@ -24,7 +24,7 @@ def script_train(cfg: dict) -> None:
     k1, k2, k3 = jax.random.split(root, 3)
 
     dart = DART.from_config(**cfg)
-    train, val, meta = doppler_columns(dart.sensor, key=k1, **cfg["dataset"])
+    train, val, meta = doppler_columns(key=k1, **cfg["dataset"])
     assert val is not None
     train = train.shuffle(cfg["shuffle_buffer"], reshuffle_each_iteration=True)
 

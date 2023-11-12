@@ -46,13 +46,6 @@ def load_arrays(file: str, keys: Optional[list[str]] = None) -> Any:
             "Unknown file type: {} (expected .npz, .h5, or .mat)".format(file))
 
 
-def gt_map(file: str) -> GroundTruth:
-    """Load ground truth reflectance map."""
-    data = load_arrays(file)
-    return GroundTruth.from_occupancy(
-        jnp.array(data['grid']), data["lower"], data["upper"])
-
-
 def trajectory(
     traj: str, subset: Optional[Integer[types.ArrayLike, "nval"]] = None
 ) -> types.Dataset:
@@ -113,8 +106,8 @@ def __doppler_decimation(
 
 
 def doppler_columns(
-    sensor: VirtualRadar, path: str,
-    pval: float = 0., iid_val: bool = False, doppler_decimation: int = 0,
+    path: str, pval: float = 0., iid_val: bool = False,
+    doppler_decimation: int = 0,
     key: types.PRNGSeed = 42
 ) -> tuple[types.Dataset, Optional[types.Dataset], dict[str, PyTree]]:
     """Load dataset trajectory and images.
@@ -129,55 +122,50 @@ def doppler_columns(
 
     Parameters
     ----------
-    sensor: Sensor profile for this dataset.
     path: Path to file containing data.
-    norm: Normalization factor.
     pval: Proportion of dataset to hold as a validation set. If `pval=0`,
         no validation dataset is returned.
     iid_val: If True, then shuffles the dataset before training so that the
         validation split is drawn randomly from the dataset instead of just
         from the end.
-    min_speed: Minimum speed for usable samples. Images with lower
-        velocities are rejected.
-    repeat: Repeat dataset within each epoch to reduce overhead.
-    threshold: Mask out values less than the provided threshold (set to 0).
-    doppler_decimation: Simulate a lower doppler resolution by setting each
-        block of consecutive doppler columns to their average.
     key: Random key to shuffle dataset frames. Does not shuffle columns.
 
     Returns
     -------
     train: Train dataset.
     val: Val dataset.
-    validx: Indices of original images corresponding to the validation set.
+    meta: Metadata (exact split indices).
     """
     file = h5py.File(path)
 
     pose = types.RadarPose.from_h5file(file)
-    idx = np.array(file["idx"])
     rad = np.array(file["rad"], dtype=np.float16)
     weight = np.array(file["weight"], dtype=np.float32)
     doppler = np.array(file["doppler"], dtype=np.float32)
+    idx = np.arange(rad.shape[0])
 
     meta = types.TrainingColumn(pose=pose, weight=weight, doppler=doppler)
-    data = (meta, rad)
+    data = (meta, rad), idx
 
     print("Loaded dataset : {} valid columns".format(rad.shape))
 
     if iid_val:
         data = utils.shuffle(data, key=key)
 
-    meta, rad = data
-    nval = 0 if pval <= 0 else int(utils.get_size(data) * pval)
-    train, val = utils.split((meta, rad), nval=nval)
+    nval = 0 if pval <= 0 else int(rad.shape[0] * pval)
+    (train, itrain), _val = utils.split(data, nval=nval)
 
     if not iid_val:
         train = utils.shuffle(train, key=key)
 
     print("Train split    : {} columns".format(train[1].shape))
     train = types.Dataset.from_tensor_slices(train)
-    if val is not None:
+    if _val is not None:
+        val, ival = _val
         print("Test split     : {} columns".format(val[1].shape))
         val = types.Dataset.from_tensor_slices(val)
+    else:
+        val = None
+        ival = np.zeros(0, dtype=bool)
 
-    return train, val, {"val": idx[-nval:]}
+    return train, val, {"train": itrain, "val": ival}

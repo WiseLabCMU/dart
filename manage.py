@@ -12,8 +12,7 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers()
     for name, command in commands.items():
         p = subparsers.add_parser(
-            name, help=command._desc.split('\n')[0],
-            description=command._desc,
+            name, help=command.__doc__, description=command.__doc__,
             formatter_class=RawTextHelpFormatter)
         command._parse(p)
         p.set_defaults(_func=command._main)

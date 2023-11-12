@@ -37,7 +37,7 @@ $(_SLICES): $(_MAP)
 $(_RAD): $(_TGT)
 	$(DART) evaluate -p results/$(TARGET) -a -b $(BATCH)
 # SSIM calculation
-$(_SSIM): $(_TGT)
+$(_SSIM): $(_RAD)
 	$(DART) ssim -p results/$(TARGET)
 # Camera evaluation
 $(_CAM): $(_TGT)
@@ -54,7 +54,7 @@ train: results/$(TARGET)
 map: $(_MAP)
 slices: $(_SLICES)
 radar: $(_RAD)
-ssim: results/$(TARGET)/ssim.npz
+ssim: $(_SSIM)
 camera: $(_CAM)
 video: $(_VIDEO)
 

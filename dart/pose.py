@@ -55,7 +55,7 @@ def make_pose(
 
 
 def sensor_to_world(
-    r: Float32[Array, ""], t: Float32[Array, "3 k"],
+    r: Float32[types.ArrayLike, ""], t: Float32[types.ArrayLike, "3 k"],
     pose: Union[types.CameraPose, types.RadarPose]
 ) -> Float32[Array, "3 k"]:
     """Project points to world-space.
@@ -74,7 +74,8 @@ def sensor_to_world(
 
 
 def project_angle(
-    d: Float32[Array, ""], psi: Float32[Array, "n"], pose: types.RadarPose
+    d: Float32[types.ArrayLike, ""], psi: Float32[types.ArrayLike, "n"],
+    pose: types.RadarPose
 ) -> Float32[Array, "3 n"]:
     """Project angles to intersection circle on a unit sphere.
 

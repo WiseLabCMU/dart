@@ -4,7 +4,7 @@ import jax
 from jax import numpy as jnp
 import jax.scipy as jsp
 
-from jaxtyping import Float, Float32, Array
+from jaxtyping import Float, Array
 
 
 def ssim(

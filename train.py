@@ -45,6 +45,9 @@ def _parse_common(p: ArgumentParser) -> ArgumentParser:
     g.add_argument("--weight", default=None, help="Loss weighting.")
     g.add_argument(
         "--adj", type=float, default=-1, help="Adjustment regularization.")
+    g.add_argument(
+        "--clip", default=0.05, type=float,
+        help="Alpha clipping threshold for sigma.")
 
     g = p.add_argument_group(title="Dataset")
     g.add_argument(
@@ -104,9 +107,9 @@ if __name__ == '__main__':
             "doppler_decimation": args.decimate
         },
         "schedules": {
-            # "alpha_clip": {
-            #     "func": "linear_piecewise", "args": {
-            #         "values": [-1.0, 0.0, 0.05], "steps": [100, 500]}}
+            "alpha_clip": {
+                "func": "linear_piecewise", "args": {
+                    "values": [-1.0, 0.0, args.clip], "steps": [100, 500]}}
         }
     }
 

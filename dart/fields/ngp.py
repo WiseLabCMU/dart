@@ -13,8 +13,8 @@ from jax import numpy as jnp
 import jax
 import haiku as hk
 
-from jaxtyping import Float32, Integer, Array, Float
-from beartype.typing import Optional, Callable, Union
+from jaxtyping import Float32, Integer, Array
+from beartype.typing import Optional, Callable
 
 from dart import types
 from ._spatial import interpolate, spherical_harmonics
@@ -104,11 +104,15 @@ class NGP(hk.Module):
 
     def __call__(
         self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None,
-        **kwargs
+        alpha_clip: Optional[types.FloatLike] = None, **kwargs
     ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
         """Index into learned reflectance map."""
         table_out = self.lookup(x)
         sigma, alpha = self.head(table_out.reshape(-1))
+
+        if alpha_clip is not None:
+            alpha = jnp.where(sigma > alpha_clip, alpha, 0)
+
         return sigma, clip(alpha) * self.alpha_scale
 
     @classmethod
@@ -239,7 +243,7 @@ class NGPSH2(NGP):
 
     def __call__(
         self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None,
-        **kwargs
+        alpha_clip: Optional[types.FloatLike] = None, **kwargs
     ) -> tuple[Float32[Array, ""], Float32[Array, ""]]:
         """Index into learned reflectance map."""
         table_out = self.lookup(x)
@@ -249,6 +253,10 @@ class NGPSH2(NGP):
 
         mlp_out = self.head(jnp.concatenate([table_out.reshape(-1), sh]))
         sigma, alpha = mlp_out
+
+        if alpha_clip is not None:
+            alpha = jnp.where(sigma > alpha_clip, alpha, 0)
+
         return sigma, clip(alpha) * self.alpha_scale
 
     @staticmethod

@@ -1,4 +1,4 @@
-"""Evaluate model."""
+"""Evaluate DART trained checkpoint for an input trajectory."""
 
 import os
 from tqdm import tqdm
@@ -10,9 +10,6 @@ from jax import numpy as jnp
 import jax
 
 from dart import VirtualCamera, DartResult, dataset, DART
-
-
-_desc = "Evaluate DART trained checkpoint for an input trajectory."
 
 
 def _parse(p):

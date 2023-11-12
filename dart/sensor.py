@@ -58,7 +58,7 @@ class VirtualRadar(NamedTuple):
     @staticmethod
     def get_psi_min(
         d: Float32[types.ArrayLike, ""], pose: types.RadarPose
-    ) -> Float32[types.ArrayLike, ""]:
+    ) -> Float32[Array, ""]:
         """Get psi value representing visible region of integration circle.
 
         Visible psi angles fall in the range of (-psi_min, psi_min). These

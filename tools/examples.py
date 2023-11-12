@@ -1,4 +1,4 @@
-"""Plot examples."""
+"""Draw sample predicted/actual range-doppler images."""
 
 import json
 import os
@@ -7,9 +7,6 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 from dart import dataset, DartResult
-
-
-_desc = "Draw sample predicted/actual range-doppler images."
 
 
 def _parse(p):

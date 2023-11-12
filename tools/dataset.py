@@ -1,4 +1,4 @@
-"""Create filtered train/val dataset."""
+"""Create filtered train/val dataset (`JAX_PLATFORM_NAME=cpu` suggested)."""
 
 import os
 import h5py
@@ -9,9 +9,6 @@ from jax import numpy as jnp
 import numpy as np
 
 from dart import pose, VirtualRadar
-
-
-_desc = "Create filtered train/val dataset."
 
 
 def _parse(p):
@@ -51,9 +48,12 @@ def _load_data(slam, radar, sensor, norm: float = 1.0):
     poses_col = jax.tree_util.tree_map(
         lambda arr: np.repeat(arr, nd, axis=0), poses)
     doppler = np.tile(sensor.d, ni)
-    idx = np.repeat(np.arange(ni, dtype=np.uint32), nd)
+    i_doppler = np.tile(np.arange(len(sensor.d), dtype=np.uint16), ni)
+    i_frame = np.repeat(np.arange(ni, dtype=np.uint16), nd)
 
-    return poses_col, doppler, images_col, idx
+    return poses_col, {
+        "doppler": doppler, "rad": images_col,
+        "doppler_idx": i_doppler, "frame_idx": i_frame}
 
 
 def _main(args):
@@ -70,19 +70,16 @@ def _main(args):
     with open(os.path.join(args.path, "sensor.json")) as f:
         sensor = VirtualRadar.from_config(**json.load(f))
 
-    poses, doppler, images, idx = _load_data(
-        slam, radar, sensor, norm=args.norm)
+    poses, data = _load_data(slam, radar, sensor, norm=args.norm)
 
     # Filter by invalid columns
-    psi_min = jax.vmap(sensor.get_psi_min)(d=doppler, pose=poses)
+    psi_min = jax.vmap(sensor.get_psi_min)(d=data["doppler"], pose=poses)
     weight = psi_min / jnp.pi / poses.s
     mask = weight > 0
     print("Valid columns: {}/{}".format(np.sum(mask), mask.shape[0]))
-    poses, weight, doppler, images, idx = jax.tree_util.tree_map(
-        lambda arr: arr[mask], (poses, weight, doppler, images, idx))
+    poses, data = jax.tree_util.tree_map(lambda arr: arr[mask], (poses, data))
 
-    outfile.create_dataset("idx", data=idx)
-    outfile.create_dataset("rad", data=images)
-    outfile.create_dataset("weight", data=weight)
-    outfile.create_dataset("doppler", data=doppler)
+    for k, v in data.items():
+        outfile.create_dataset(k, data=v)
+    outfile.create_dataset("weight", data=weight[mask])
     poses.to_h5file(outfile)

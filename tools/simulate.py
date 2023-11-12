@@ -1,4 +1,4 @@
-"""Generate simulated data."""
+"""Generate a simulated dataset from a ground truth reflectance grid."""
 
 import json
 import os
@@ -10,12 +10,7 @@ import numpy as np
 from jax import numpy as jnp
 import jax
 
-from dart import VirtualRadar, dataset
-
-
-_desc = (
-    "Generate a simulated dataset from a trajectory and a ground truth "
-    "reflectance grid.")
+from dart import VirtualRadar, dataset, fields
 
 
 def _parse(p):
@@ -36,7 +31,10 @@ def _main(args):
         cfg = json.load(f)
     sensor = VirtualRadar.from_config(**cfg)
 
-    gt = dataset.gt_map(os.path.join(args.path, "map.npz"))
+    gt_data = np.load(os.path.join(args.path, "map.npz"))
+    gt = fields.GroundTruth.from_occupancy(
+        jnp.array(gt_data['grid']), gt_data['lower'], gt_data['upper'])
+
     traj = dataset.trajectory(os.path.join(args.path, "data.h5"))
 
     render = partial(sensor.render, sigma=gt)

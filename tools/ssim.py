@@ -1,4 +1,4 @@
-"""SSIM evaluation metric."""
+"""Compute validation-set SSIM for range-doppler-azimuth images."""
 
 import os
 import numpy as np
@@ -9,9 +9,6 @@ from dart.utils import ssim
 from functools import partial
 
 from dart import DartResult
-
-
-_desc = "Compute validation-set SSIM for range-doppler-azimuth images."
 
 
 def _parse(p):
@@ -39,13 +36,13 @@ def _main(args):
     result = DartResult(args.path)
     validx = np.sort(result.load(result.VALSET)["val"])
 
-    gt = h5py.File(result.DATASET)['rad'][validx]
+    gt = np.array(h5py.File(result.DATASET)['rad'])[validx]
     pmax = np.max(gt)
     gt = jnp.clip(gt, 0.0, pmax) / pmax
 
     if args.baseline:
-        pred = h5py.File(
-            os.path.join(result.DATADIR, "simulated.h5"))["rad"][validx]
+        pred = np.array(h5py.File(
+            os.path.join(result.DATADIR, "simulated.h5"))["rad"])[validx]
 
         # Clip baseline only separately
         bmax = np.max(pred)

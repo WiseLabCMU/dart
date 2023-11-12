@@ -1,4 +1,4 @@
-"""Create MRI-style video from map."""
+"""Render MRI-style slices, and write each slice to a frame in a video."""
 
 import os
 from tqdm import tqdm
@@ -6,9 +6,6 @@ from tqdm import tqdm
 from dart import DartResult
 import numpy as np
 import cv2
-
-
-_desc = "Render MRI-style slices, and write each slice to a frame in a video."
 
 
 def _parse(p):
