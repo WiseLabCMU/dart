@@ -2,14 +2,13 @@
 
 import os
 import h5py
-from tqdm import tqdm
 from functools import partial
 
 import numpy as np
 from jax import numpy as jnp
 import jax
 
-from dart import DartResult, DART
+from dart import DartResult, DART, utils
 
 
 def _parse(p):
@@ -68,17 +67,8 @@ def _main(args):
     x, y, z = [
         jnp.linspace(lower, upper, res) for lower, upper, res in
         zip(args.lower, args.upper, resolution)]
-
     render = jax.jit(partial(dart.grid, params, x, y))
-
-    sigma, alpha = [], []
-    for _ in tqdm(range(int(np.ceil(resolution[2] / args.batch)))):
-        _sigma, _alpha = render(z=z[:args.batch])
-        z = z[args.batch:]
-        sigma.append(_sigma)
-        alpha.append(_alpha)
-    sigma = np.concatenate(sigma, axis=2)
-    alpha = np.concatenate(alpha, axis=2)
+    sigma, alpha = utils.vmap_batch(render, z, batch=args.batch, axis=2)
 
     result.save(outfile, {
         "sigma": sigma, "alpha": alpha,

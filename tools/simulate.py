@@ -1,6 +1,5 @@
 """Generate a simulated dataset from a ground truth reflectance grid."""
 
-import json
 import os
 from tqdm import tqdm
 import h5py

@@ -38,7 +38,8 @@ def _get_val_idx(result):
     return np.unique(data["frame_idx"][splits["val"]])[1:]  # type: ignore
 
 
-def _metrics(y_true, y_hat, **kwargs):
+def _metrics(y, **kwargs):
+    y_true, y_hat = y
     y_true = y_true.astype(jnp.float32)
     y_hat = y_hat.astype(jnp.float32)
     mse, alpha = metrics.mse(y_true, y_hat)
@@ -73,16 +74,8 @@ def _main(args):
     eval_func = jax.jit(jax.vmap(partial(
         _metrics, max_val=1.0, eps=args.eps, filter_size=args.size,
         filter_sigma=args.sigma)))
+    res = utils.vmap_batch(eval_func, (gt, pred), batch=args.batch)
 
-    res = []
-    for _ in tqdm(range(int(np.ceil(gt.shape[0] / args.batch)))):
-        y_true = gt[:args.batch]
-        y_hat = pred[:args.batch]
-        res.append(eval_func(y_true, y_hat))
-        gt = gt[args.batch:]
-        pred = pred[args.batch:]
-
-    res = utils.tree_concatenate(res)
     for k in ["alpha", "ssim", "mse"]:
         print("{}: mean={}, median={}".format(
             k, np.nanmean(res[k]), np.nanmedian(res[k])))

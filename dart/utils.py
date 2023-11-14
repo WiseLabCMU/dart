@@ -4,8 +4,7 @@ from tqdm import tqdm
 import json
 from functools import partial
 
-from jaxtyping import PyTree, Float32, Array
-from beartype.typing import Callable
+from jaxtyping import PyTree
 
 import jax
 from jax import numpy as jnp
@@ -101,12 +100,13 @@ def load_weights(path: str) -> dict:
     return jax.tree_util.tree_map(flattened.get, schema)
 
 
-def tree_concatenate(trees: list[PyTree], _np=jnp) -> PyTree:
+def tree_concatenate(trees: list[PyTree], _np=jnp, axis=0) -> PyTree:
     """Takes a list of trees and concatenates every corresponding leaf."""
     treedef = jax.tree_util.tree_structure(trees[0])
     leaves = [jax.tree_util.tree_flatten(t)[0] for t in trees]
 
-    result_leaves = list(map(partial(_np.concatenate, axis=0), zip(*leaves)))
+    result_leaves = list(map(
+        partial(_np.concatenate, axis=axis), zip(*leaves)))
     return jax.tree_util.tree_unflatten(treedef, result_leaves)
 
 
@@ -121,3 +121,17 @@ def tree_stack(trees: list[PyTree], _np=jnp) -> PyTree:
 
     result_leaves = list(map(_np.stack, zip(*leaves)))
     return jax.tree_util.tree_unflatten(treedef, result_leaves)
+
+
+def vmap_batch(func, data: PyTree, batch: int, _np=jnp, axis=0) -> PyTree:
+    """Apply vectorized function in a batched manner.
+
+    NOTE: `vmap_batch(func, data)` is equivalent to `func(data)`, but with
+    reduced memory usage.
+    """
+    res = []
+    for _ in tqdm(range(int(np.ceil(get_size(data) / batch)))):
+        batched = jax.tree_util.tree_map(lambda x: x[:batch], data)
+        res.append(func(batched))
+        data = jax.tree_util.tree_map(lambda x: x[batch:], data)
+    return tree_concatenate(res, _np=_np, axis=axis)

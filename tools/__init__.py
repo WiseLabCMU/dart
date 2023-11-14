@@ -2,7 +2,6 @@
 
 from . import evaluate
 from . import map
-from . import examples
 from . import simulate
 from . import video
 from . import slice
@@ -14,7 +13,6 @@ commands = {
     "evaluate": evaluate,
     "video": video,
     "slice": slice,
-    "examples": examples,
     "map": map,
     "metrics": metrics,
     "compare": compare,

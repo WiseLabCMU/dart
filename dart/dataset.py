@@ -10,7 +10,6 @@ import h5py
 from jaxtyping import Integer, PyTree, Float
 from beartype.typing import Any, Optional
 
-from .fields import GroundTruth
 from .pose import make_pose
 from .sensor import VirtualRadar
 from . import types, utils

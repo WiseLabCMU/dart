@@ -11,6 +11,7 @@ DART?=python manage.py
 TRAIN?=python train.py
 METHOD?=ngpsh
 RESOLUTION?=50
+TARGET?=$(DATASET)/$(METHOD)
 
 _TGT=results/$(TARGET)
 _MAP=results/$(TARGET)/map.h5
@@ -37,7 +38,7 @@ $(_RAD): $(_TGT)
 	$(DART) evaluate -p results/$(TARGET) -a -b $(BATCH)
 # SSIM calculation
 $(_METRICS): $(_RAD)
-	$(DART) ssim -p results/$(TARGET)
+	$(DART) metrics -p results/$(TARGET)
 # Camera evaluation
 $(_CAM): $(_TGT)
 	$(DART) evaluate -p results/$(TARGET) -ac -b $(BATCH)
