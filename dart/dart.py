@@ -3,6 +3,7 @@
 from tqdm import tqdm as default_tqdm
 from functools import partial
 import os
+import json
 
 import jax
 import numpy as np
@@ -80,6 +81,15 @@ class DART:
             schedules={
                 k: getattr(components.schedules, v["func"])(**v["args"])
                 for k, v in schedules.items()})
+
+    @classmethod
+    def from_file(cls, path: str) -> "DART":
+        """Create DART from config file."""
+        if os.path.isdir(path):
+            path = os.path.join(path, "metadata.json")
+        with open(path) as f:
+            cfg = json.load(f)
+        return cls.from_config(**cfg)
 
     def init(
         self, dataset: types.Dataset, key: types.PRNGSeed = 42

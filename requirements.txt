@@ -11,3 +11,4 @@ jaxtyping
 beartype
 mypy
 types-tqdm
+pandas

@@ -1,5 +1,7 @@
 """Ray sampling routines."""
 
+import os
+import json
 from functools import partial
 
 from jaxtyping import Float32, Array
@@ -54,7 +56,16 @@ class VirtualRadar(NamedTuple):
         return cls(
             r=jnp.linspace(*r), d=jnp.linspace(*d), k=k,
             gain=getattr(antenna, gain))
-    
+
+    @classmethod
+    def from_file(cls, path: str) -> "VirtualRadar":
+        """Load configuration file."""
+        if os.path.isdir(path):
+            path = os.path.join(path, "sensor.json")
+        with open(path) as f:
+            cfg = json.load(f)
+        return cls.from_config(**cfg)
+
     @staticmethod
     def get_psi_min(
         d: Float32[types.ArrayLike, ""], pose: types.RadarPose

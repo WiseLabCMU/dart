@@ -1,10 +1,9 @@
-#  ____________       ______  _______
-#     _______  \  /\ (_____ \(_______)
-#      ___   \  \/  \ _____) )_
-#   _____ |   | / /\ (_____ (| |
-#     ___ |__/ / /  \ \    | | |___
-#   __________/_/    \_|   |_|\____)
-#     Doppler Aided Radar Tomography
+#     ____________       ______  _____
+#          ______ \  /\ (_____ \(_____)
+#        _____   \ \/  \ ____)  ) |
+#         ___ |__/ / /\ (____  (  |_
+#      ___________/ /  \_|   |_|\___)
+#      Doppler Aided Radar Tomography
 #
 
 BATCH?=2
@@ -17,7 +16,7 @@ _TGT=results/$(TARGET)
 _MAP=results/$(TARGET)/map.h5
 _RAD=results/$(TARGET)/rad.h5
 _CAM=results/$(TARGET)/cam.h5
-_SSIM=results/$(TARGET)/ssim.npz
+_METRICS=results/$(TARGET)/metrics.npz
 _SLICES=results/$(TARGET)/$(TARGET).slice.z.mp4
 _VIDEO=results/$(TARGET)/$(TARGET).video.mp4
 
@@ -37,7 +36,7 @@ $(_SLICES): $(_MAP)
 $(_RAD): $(_TGT)
 	$(DART) evaluate -p results/$(TARGET) -a -b $(BATCH)
 # SSIM calculation
-$(_SSIM): $(_RAD)
+$(_METRICS): $(_RAD)
 	$(DART) ssim -p results/$(TARGET)
 # Camera evaluation
 $(_CAM): $(_TGT)
@@ -49,17 +48,18 @@ $(_VIDEO): $(_RAD) $(_CAM)
 
 # -- Aliases ------------------------------------------------------------------
 
-.phony: train map slices radar ssim camera video
+.phony: train map slices radar metrics camera video
 train: results/$(TARGET)
 map: $(_MAP)
 slices: $(_SLICES)
 radar: $(_RAD)
-ssim: $(_SSIM)
+metrics: $(_METRICS)
 camera: $(_CAM)
 video: $(_VIDEO)
 
-.phony: experiment
-experiment: train slices video
+.phony: experiment ablation
+experiment: train slices video metrics
+ablation: train radar metrics
 
 
 # -- Utilities ----------------------------------------------------------------
@@ -73,7 +73,7 @@ typecheck:
 baselines:
 	$(DART) gt_map -p data/$(DATASET) $(FLAGS)
 	$(DART) simulate -p data/$(DATASET)
-	$(DART) ssim --baseline -p results/$(TARGET)
-	$(DART) ssim --psnr 35 -p results/$(TARGET)
-	$(DART) ssim --psnr 30 -p results/$(TARGET)
-	$(DART) ssim --psnr 25 -p results/$(TARGET)
+	$(DART) metrics --baseline -p results/$(TARGET)
+	$(DART) metrics --psnr 35 -p results/$(TARGET)
+	$(DART) metrics --psnr 30 -p results/$(TARGET)
+	$(DART) metrics --psnr 25 -p results/$(TARGET)

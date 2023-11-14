@@ -1,4 +1,4 @@
-"""Jax jit+vmap-friendly SSIM Computation."""
+"""Jax jit+vmap-friendly metrics."""
 
 import jax
 from jax import numpy as jnp
@@ -7,12 +7,31 @@ import jax.scipy as jsp
 from jaxtyping import Float, Array
 
 
+def mse(
+    y_true: Float[Array, "..."], y_hat: Float[Array, "..."]
+) -> tuple[Float[Array, ""], Float[Array, ""]]:
+    """Compute MSE with optimal scaling computation.
+    
+    Parameters
+    ----------
+    y_true, y_hat: input actual/predicted data.
+
+    Returns
+    -------
+    mse: MSE of the optimally-scaled `y_hat`.
+    alpha: Optimal scale factor.
+    """
+    alpha = jnp.sum(y_true * y_hat) / jnp.sum(y_hat**2)
+    mse = jnp.sum(jnp.square(y_true - alpha * y_hat))
+    return mse, alpha
+
+
 def ssim(
     img0: Float[Array, "width height channels"],
     img1: Float[Array, "width height channels"],
     max_val: float = 1.0, filter_size: int = 11, filter_sigma: float = 1.5,
     k1: float = 0.01, k2: float = 0.03, eps: float = 1e-2
-):  #  -> Float32[Array, ""]:
+) -> tuple[Float[Array, ""], Float[Array, ""]]:
     """Jax jit+vmap-friendly SSIM computation from two images.
 
     The SSIM calculation has been modified to exclude regions which are
@@ -84,4 +103,4 @@ def ssim(
 
     mask = (mu0 > eps)
     ssim = jnp.sum(ssim_map * mask) / jnp.sum(mask)
-    return ssim, jnp.sum(mask)
+    return ssim, jnp.sum(mask).astype(jnp.float32)

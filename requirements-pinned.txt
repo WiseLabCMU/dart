@@ -12,3 +12,4 @@ jax==0.4.10
 plyfile
 mypy
 types-tqdm
+pandas==2.0.2

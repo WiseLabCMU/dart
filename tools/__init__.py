@@ -6,8 +6,7 @@ from . import examples
 from . import simulate
 from . import video
 from . import slice
-from . import ssim
-from . import compare, dataset
+from . import metrics, compare, dataset
 
 
 commands = {
@@ -17,7 +16,7 @@ commands = {
     "slice": slice,
     "examples": examples,
     "map": map,
-    "ssim": ssim,
+    "metrics": metrics,
     "compare": compare,
     "dataset": dataset
 }

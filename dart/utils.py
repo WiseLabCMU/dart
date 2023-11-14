@@ -2,6 +2,7 @@
 
 from tqdm import tqdm
 import json
+from functools import partial
 
 from jaxtyping import PyTree, Float32, Array
 from beartype.typing import Callable
@@ -98,3 +99,25 @@ def load_weights(path: str) -> dict:
     flattened = np.load(path + ".npz")
 
     return jax.tree_util.tree_map(flattened.get, schema)
+
+
+def tree_concatenate(trees: list[PyTree], _np=jnp) -> PyTree:
+    """Takes a list of trees and concatenates every corresponding leaf."""
+    treedef = jax.tree_util.tree_structure(trees[0])
+    leaves = [jax.tree_util.tree_flatten(t)[0] for t in trees]
+
+    result_leaves = list(map(partial(_np.concatenate, axis=0), zip(*leaves)))
+    return jax.tree_util.tree_unflatten(treedef, result_leaves)
+
+
+def tree_stack(trees: list[PyTree], _np=jnp) -> PyTree:
+    """Takes a list of trees and stacks every corresponding leaf.
+
+    For example, given two trees ((a, b), c) and ((a', b'), c'), returns
+    ((stack(a, a'), stack(b, b')), stack(c, c')).
+    """
+    treedef = jax.tree_util.tree_structure(trees[0])
+    leaves = [jax.tree_util.tree_flatten(t)[0] for t in trees]
+
+    result_leaves = list(map(_np.stack, zip(*leaves)))
+    return jax.tree_util.tree_unflatten(treedef, result_leaves)

@@ -14,7 +14,7 @@ from beartype.typing import Optional, Any
 from jaxtyping import Integer, Float, UInt8
 
 from .dart import DART
-from .utils import colormap
+from .jaxcolors import colormap
 from .dataset import load_arrays, trajectory
 from . import types
 

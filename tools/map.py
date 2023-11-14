@@ -9,7 +9,7 @@ import numpy as np
 from jax import numpy as jnp
 import jax
 
-from dart import DartResult
+from dart import DartResult, DART
 
 
 def _parse(p):
@@ -62,7 +62,7 @@ def _main(args):
         outfile = "map.{}.h5".format(args.checkpoint)
         args.checkpoint = os.path.join("checkpoints", args.checkpoint)
 
-    dart = result.dart()
+    dart = DART.from_file(args.path)
     params = dart.load(os.path.join(args.path, args.checkpoint))
 
     x, y, z = [
