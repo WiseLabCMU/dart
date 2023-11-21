@@ -19,11 +19,11 @@ def mse(
     Returns
     -------
     mse: MSE of the optimally-scaled `y_hat`.
-    alpha: Optimal scale factor.
+    xi: Optimal scale factor.
     """
-    alpha = jnp.sum(y_true * y_hat) / jnp.sum(y_hat**2)
-    mse = jnp.sum(jnp.square(y_true - alpha * y_hat))
-    return mse, alpha
+    xi = jnp.sum(y_true * y_hat) / jnp.sum(y_hat**2)
+    mse = jnp.sum(jnp.square(y_true - xi * y_hat))
+    return mse, xi
 
 
 def ssim(

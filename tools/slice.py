@@ -32,9 +32,9 @@ def _main(args):
     mapfile = res.load(DartResult.MAP)
 
     sigma = res.colorize_map(
-        mapfile["sigma"], conv=args.radius * 2, sigma=True, clip=(1.0, 99.0))
+        mapfile["sigma"], conv=args.radius * 2, sigma=True, clip=(1.0, 99.))
     alpha = res.colorize_map(
-        -mapfile["alpha"], conv=args.radius * 2, sigma=False, clip=(1.0, 99.0))
+        -mapfile["alpha"], conv=args.radius * 2, sigma=False, clip=(1.0, 99.))
 
     lower = mapfile["lower"]
     upper = mapfile["upper"]

@@ -18,6 +18,9 @@ def _parse(p):
         "-r", "--key", default=42, type=int, help="Random seed.")
     p.add_argument("-o", "--out", default=None, help="Save path.")
     p.add_argument("-b", "--batch", default=16, type=int, help="Batch size")
+    p.add_argument(
+        "-m", "--mode", default="lidar",
+        help="Simulation source (lidar/cfar).")
     return p
 
 
@@ -32,13 +35,24 @@ def _load_poses(path):
 
 def _main(args):
     if args.out is None:
-        args.out = os.path.join(args.path, "simulated.h5")
+        args.out = os.path.join(args.path, "baselines/{}.h5".format(args.mode))
 
     sensor = VirtualRadar.from_file(args.path)
-    gt_data = np.load(os.path.join(args.path, "map.npz"))
-    gt = fields.GroundTruth.from_occupancy(
-        jnp.array(gt_data['grid']), gt_data['lower'], gt_data['upper'],
-        alpha_scale=100.0)
+    
+    if args.mode == "lidar":
+        gt_data = np.load(os.path.join(args.path, "map.npz"))
+        gt = fields.GroundTruth.from_occupancy(
+            jnp.array(gt_data['grid']), gt_data['lower'], gt_data['upper'],
+            alpha_scale=100.0)
+    elif args.mode.startswith("cfar"):
+        gt_data = np.load(os.path.join(args.path, "{}.npz".format(args.mode)))
+        gt = fields.GroundTruth(
+            jnp.array(gt_data['grid'] / np.max(gt_data['grid'])),
+            gt_data['lower'], jnp.array(
+                gt_data['grid'].shape) / (gt_data['upper'] - gt_data['lower']),
+            alpha_scale=0.0)
+    else:
+        raise ValueError("Unknown mode: {}.".format(args.mode))
 
     traj = _load_poses(os.path.join(args.path, "trajectory.h5"))
 

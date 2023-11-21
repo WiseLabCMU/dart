@@ -6,6 +6,7 @@ from . import simulate
 from . import video
 from . import slice
 from . import metrics, compare, dataset
+from . import psnr
 
 
 commands = {
@@ -16,5 +17,6 @@ commands = {
     "map": map,
     "metrics": metrics,
     "compare": compare,
-    "dataset": dataset
+    "dataset": dataset,
+    "psnr": psnr
 }

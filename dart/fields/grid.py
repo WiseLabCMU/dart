@@ -1,5 +1,7 @@
 """Basic Plenoxels-inspired Grid."""
 
+import os
+import numpy as np
 from jax import numpy as jnp
 import haiku as hk
 import math
@@ -73,10 +75,10 @@ class VoxelGrid(hk.Module):
     def to_parser(p: types.ParserLike) -> None:
         """Create grid command line arguments."""
         p.add_argument(
-            "--lower", default=[-4.0, -4.0, -1.0], nargs='+', type=float,
+            "--lower", default=None, nargs='+', type=float,
             help="Lower coordinate (x, y, z).")
         p.add_argument(
-            "--upper", default=[4.0, 4.0, 1.0], nargs='+', type=float,
+            "--upper", default=None, nargs='+', type=float,
             help="Upper coordinate (x, y, z).")
         p.add_argument(
             "--resolution", default=25.0, type=float,
@@ -88,6 +90,12 @@ class VoxelGrid(hk.Module):
     @classmethod
     def args_to_config(cls, args: types.Namespace) -> dict:
         """Create configuration dictionary."""
+        if args.lower is None or args.upper is None:
+            datadir = os.path.dirname(args.path)
+            npz = np.load(os.path.join(datadir, "map.npz"))
+            args.lower = npz['lower'].tolist()
+            args.upper = npz['upper'].tolist()
+
         assert len(args.upper) == 3
         assert len(args.lower) == 3
         grid_size = [
