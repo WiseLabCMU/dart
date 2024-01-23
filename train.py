@@ -106,12 +106,13 @@ if __name__ == '__main__':
             "path": args.path,
             "doppler_decimation": args.decimate
         },
-        "schedules": {
-            "alpha_clip": {
-                "func": "linear_piecewise", "args": {
-                    "values": [-1.0, 0.0, args.clip], "steps": [100, 500]}}
-        }
+        "schedules": {}
     }
+
+    if args.clip > 0:
+        cfg["schedules"]["alpha_clip"] = {
+            "func": "linear_piecewise", "args": {
+                "values": [-1.0, 0.0, args.clip], "steps": [100, 500]}}
 
     if args.adj < 0:
         cfg["adjustment_name"] = "Identity"

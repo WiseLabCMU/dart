@@ -3,10 +3,24 @@
 import os
 import numpy as np
 from jaxtyping import Num
-from beartype.typing import Union
 
 
 BASELINES = ['lidar', 'nearest', 'cfar', 'cfar_1e-2', 'cfar_1e-5', 'cfar_1e-8']
+
+DATASETS = {
+    "boxes2": "Lab 1",
+    "boxes3": "Lab 2",
+    "wiselab4": "Office 1",
+    "wiselab5": "Office 2",
+    "mallesh-half": "Rowhouse 1",
+    "mallesh-1br": "Rowhouse 2",
+    "mallesh-full": "Rowhouse 3",
+    "agr-ground": "House 1",
+    "agr-full": "House 2",
+    "agr-yard": "Yard",
+    "tianshu-full": "Apartment 1",
+    "tianshu-half": "Apartment 2"
+}
 
 
 def load_dir(path, key="ssim", baselines=BASELINES):

@@ -13,7 +13,7 @@ from jax import numpy as jnp
 import jax
 import haiku as hk
 
-from jaxtyping import Float32, Integer, Array
+from jaxtyping import Float32, Integer, Array, Float
 from beartype.typing import Optional, Callable
 
 from dart import types
@@ -102,6 +102,17 @@ class NGP(hk.Module):
 
         return jax.vmap(interpolate_level)(xscales, grid)
 
+    def _activation(
+        self, sigma: Float[Array, ""], alpha: Float[Array, ""],
+        alpha_clip: Optional[types.FloatLike] = None
+    ) -> tuple[Float[Array, ""], Float[Array, ""]]:
+        """Apply clipping activation function."""
+        if alpha_clip is not None:
+            alpha = jnp.where(sigma > alpha_clip, alpha, 0)
+
+        # return sigma, clip(alpha) * self.alpha_scale
+        return sigma, jnp.minimum(alpha, 0.0) * self.alpha_scale
+
     def __call__(
         self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None,
         alpha_clip: Optional[types.FloatLike] = None, **kwargs
@@ -109,11 +120,7 @@ class NGP(hk.Module):
         """Index into learned reflectance map."""
         table_out = self.lookup(x)
         sigma, alpha = self.head(table_out.reshape(-1))
-
-        if alpha_clip is not None:
-            alpha = jnp.where(sigma > alpha_clip, alpha, 0)
-
-        return sigma, clip(alpha) * self.alpha_scale
+        return self._activation(sigma, alpha, alpha_clip=alpha_clip)
 
     @classmethod
     def from_config(
@@ -209,10 +216,7 @@ class NGPSH(NGP):
             sigma = sigma * jnp.abs(proj)
             alpha = alpha * jnp.abs(proj)
 
-        if alpha_clip is not None:
-            alpha = jnp.where(sigma > alpha_clip, alpha, 0)
-
-        return sigma, clip(alpha) * self.alpha_scale
+        return self._activation(sigma, alpha, alpha_clip=alpha_clip)
 
     @staticmethod
     def to_parser(p: types.ParserLike) -> None:
@@ -254,10 +258,7 @@ class NGPSH2(NGP):
         mlp_out = self.head(jnp.concatenate([table_out.reshape(-1), sh]))
         sigma, alpha = mlp_out
 
-        if alpha_clip is not None:
-            alpha = jnp.where(sigma > alpha_clip, alpha, 0)
-
-        return sigma, clip(alpha) * self.alpha_scale
+        return self._activation(sigma, alpha, alpha_clip=alpha_clip)
 
     @staticmethod
     def to_parser(p: types.ParserLike) -> None:

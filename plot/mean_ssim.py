@@ -3,27 +3,15 @@
 import numpy as np
 from scipy.stats import norm
 
-from _stats import load_dir
+from _stats import load_dir, DATASETS
 
-datasets = {
-    "boxes2": "Lab 1",
-    "boxes3": "Lab 2",
-    "wiselab4": "Office 1",
-    "wiselab5": "Office 2",
-    "mallesh-half": "Rowhouse 1",
-    "mallesh-1br": "Rowhouse 2",
-    "mallesh-full": "Rowhouse 3",
-    "agr-ground": "House 1",
-    "agr-full": "House 2",
-    "agr-yard": "Yard",
-    "tianshu-full": "Apartment 1",
-    "tianshu-half": "Apartment 2"
-}
+
 methods = {
     "ngpsh": "Dart",
     "lidar": "Lidar",
     "nearest": "Nearest",
     "cfar": "CFAR",
+    "ngpsh2": "NeRF-style View Dependence",
     "ngp": "No View Dependence",
     "grid5": "20cm Grid",
     "grid10": "10cm Grid",
@@ -32,7 +20,7 @@ methods = {
 
 
 agg = {k: [] for k in methods}
-for ds in datasets:
+for ds in DATASETS:
     ssim = load_dir(ds)
     for k in methods:
         try:
