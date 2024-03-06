@@ -1,0 +1,92 @@
+/* Main Settings */
+ :root {
+    --mobile-thresh: 700px;
+    --width: calc(min(90vw, 80vw + 50px, 1000px));
+	--dark: #000;
+    --disabled: #888;
+    --surface: #ddd;
+	--highlight: #005cf1;
+	--light: #fff;
+	--highlight-tl: rgba(0, 92, 241, 0.8);
+	--light-tl: rgba(255, 255, 255, 0.8);
+    --radius: 4px; 
+}
+
+/* Elements */
+ html, body{
+	font-family: 'Open Sans', sans-serif;
+	font-size: 15px;
+    font-weight: 400;
+	line-height: 1.5;
+	color: var(--dark);
+	background-color: #fff;
+	width: 100%;
+	margin: 0;
+}
+
+ul li { white-space: normal; }
+img { width: 100%; vertical-align: middle; }
+a {
+	color: inherit; background-color: transparent;
+	-webkit-text-decoration-skip: objects;
+}
+a:active, a:hover { outline-width:0; }
+h1 { font-size: 60px; font-weight: 300; }
+h2 { font-size: 32px; font-weight: 400; }
+h3 { font-size: 24px; font-weight: 400; }
+h4 { font-size: 20px; font-weight: 400; }
+h5 { font-size: 18px; font-weight: 400; }
+h6 { font-size: 16px; font-weight: 400; }
+h1, h2, h3, h4, h5, h6 { margin: 10px 0; }
+hr { border-top: 1px solid var(--dark); margin: 20px 10%; }
+
+/* Paper-style paragraph */
+.p { margin-top: 1em; margin-bottom: 1em; }
+.p ol, .p ul {
+    counter-reset: list;
+    margin-top: 0.5em; margin-bottom: 0.5em;
+}
+.p p { margin-top: 0.5em; margin-bottom: 0.5em; }
+.p ol > li { list-style: none; }
+.p ol > li:before {
+    content: "(" counter(list) ") ";
+    counter-increment: list;
+}
+
+/* Main container */
+.container {
+    width: var(--width);
+    padding: calc(min(5vw, 80px)) 0;
+}
+.container .section { width: 100%; padding-bottom: 2em; }
+.container .section:not(:first-child) {
+    margin-top: calc(min(1000px, 90vw) * 0.02);
+}
+
+/* Mobile Management */
+.only-mobile, .no-mobile { display: inline-block; }
+/* Narrow screen */
+@media screen and (max-width: 700px) {
+	.no-mobile { display: none !important; }
+    .biography { width: 90vw; }
+    .container { margin-left: calc(0.5 * (100vw - var(--width))); }
+}
+/* Wide screen */
+@media screen and (min-width: 700px) {
+	.only-mobile { display: none !important; }
+    .biography { width: calc(var(--width) * 0.65); }
+    .container { margin-left: calc(0.5 * (100vw - var(--width))); }
+}
+
+/* Papers */
+.authors > span:not(:last-child) { margin-right: 3em; }
+.authors > span { display: inline-block; }
+.paper-links { padding: 1em 0em; }
+.paper-links > a, .button {
+    background-color: var(--dark); color: var(--light);
+    padding: 0.5em 1em; text-decoration: none; border-radius: var(--radius);
+    display: inline-block; margin: 0.2em 0em;
+}
+.paper-links > a:not(:last-child) { margin-right: 0.5em; }
+.paper-links > a:hover {
+    background-color: var(--highlight-tl); color: var(--light) }

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+
+<title>DART</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+<div class="container">
+
+<div class="section">
+    <h1 style="font-weight: 500">DART <img src='logo.svg' style='height: 1.3em; width: auto; vertical-align: text-top'></h1>
+    <h2>Implicit Doppler Tomography for Radar Novel View Synthesis</h2>
+    <div class="authors">
+        <span><a href="https://tianshu.io">Tianshu Huang</a><sup>*1</sup></span>
+        <span>John Miller<sup>*12</sup></span>
+        <span><a href="https://akarsh-prabhakara.github.io/">Akarsh Prabhakara</a><sup>1</sup></span>
+        <span><a href="https://taojin-6.github.io/">Tao Jin</a><sup>1</sup></span>
+        <span><a href="https://wise.ece.cmu.edu/about.html">Tarana Laroia</a><sup>1</sup></span>
+        <span><a href="https://zicokolter.com/">Zico Kolter</a><sup>12</sup></span>
+        <span><a href="https://users.ece.cmu.edu/~agr/">Anthony Rowe</a><sup>12</sup></span>
+    </div>
+    <div class="authors">
+        <span><sup>*</sup>Equal Contribution</span>
+        <span><sup>1</sup>Carnegie Mellon University</span>
+        <span><sup>2</sup>Bosch Research</span>
+    </div>
+    <div class="paper-links">
+        <a href="504.html" target="_blank">Paper</a>
+        <a href="https://github.com/WiseLabCMU/dart" target="_blank">Implementation</a>
+        <a href="https://github.com/WiseLabCMU/rover" target="_blank">Data Collection</a>
+        <a href="https://github.com/WiseLabCMU/dart/blob/main/docs/datasets.md" target="_blank">Dataset</a>
+    </div>
+</div>
+
+<div class="section">
+<div style="width: 100%; height: 400px; background-color: gray">
+    Video / Image gallery
+</div>
+
+<p>
+<b>Abstract:</b>
+Simulation is an invaluable tool for radio-frequency system designers that enables rapid prototyping of various algorithms for imaging, target detection, classification, and tracking. However, simulating realistic radar scans is a challenging task that requires an accurate model of the scene, radio frequency material properties, and a corresponding radar synthesis function. Rather than specifying these models explicitly, we propose DART &mdash; Doppler Aided Radar Tomography, a Neural Radiance Field-inspired method which uses radar-specific physics to create a reflectance and transmittance-based rendering pipeline for range-Doppler images. We then evaluate DART by constructing a custom data collection platform and collecting a novel radar dataset together with accurate position and instantaneous velocity measurements from lidar-based localization. In comparison to state-of-the-art baselines, DART synthesizes superior radar range-Doppler images from novel views across all datasets and additionally can be used to generate high quality tomographic images.
+</p>
+
+<img src="dart.svg">
+</div>
+
+</div>
+</body>
+</html>

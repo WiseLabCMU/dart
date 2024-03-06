@@ -1,6 +1,6 @@
 # DART: Doppler-Aided Radar Tomography
 
-Implementation of *DART: Implicit Doppler Tomography for Radar Mapping and Novel View Synthesis*
+Implementation of *DART: Implicit Doppler Tomography for Radar Novel View Synthesis*
 
 ![DART method overview.](docs/dart.svg)
 
