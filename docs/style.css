@@ -1,6 +1,5 @@
 /* Main Settings */
  :root {
-    --mobile-thresh: 700px;
     --width: calc(min(90vw, 80vw + 50px, 1000px));
 	--dark: #000;
     --disabled: #888;
@@ -57,25 +56,11 @@ hr { border-top: 1px solid var(--dark); margin: 20px 10%; }
 .container {
     width: var(--width);
     padding: calc(min(5vw, 80px)) 0;
+    margin-left: calc(0.5 * (100vw - var(--width)));
 }
 .container .section { width: 100%; padding-bottom: 2em; }
 .container .section:not(:first-child) {
     margin-top: calc(min(1000px, 90vw) * 0.02);
-}
-
-/* Mobile Management */
-.only-mobile, .no-mobile { display: inline-block; }
-/* Narrow screen */
-@media screen and (max-width: 700px) {
-	.no-mobile { display: none !important; }
-    .biography { width: 90vw; }
-    .container { margin-left: calc(0.5 * (100vw - var(--width))); }
-}
-/* Wide screen */
-@media screen and (min-width: 700px) {
-	.only-mobile { display: none !important; }
-    .biography { width: calc(var(--width) * 0.65); }
-    .container { margin-left: calc(0.5 * (100vw - var(--width))); }
 }
 
 /* Papers */
