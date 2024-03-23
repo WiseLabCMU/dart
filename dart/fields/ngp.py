@@ -110,8 +110,7 @@ class NGP(hk.Module):
         if alpha_clip is not None:
             alpha = jnp.where(sigma > alpha_clip, alpha, 0)
 
-        # return sigma, clip(alpha) * self.alpha_scale
-        return sigma, jnp.minimum(alpha, 0.0) * self.alpha_scale
+        return sigma, clip(alpha) * self.alpha_scale
 
     def __call__(
         self, x: Float32[Array, "3"], dx: Optional[Float32[Array, "3"]] = None,
