@@ -5,9 +5,8 @@ from argparse import ArgumentParser, _ArgumentGroup, Namespace
 import numpy as np
 import tensorflow as tf
 import h5py
-from jax.random import PRNGKeyArray
 
-from jaxtyping import Array, Float32, Int32, UInt32, PyTree, Float
+from jaxtyping import Array, Float32, Int32, UInt32, PyTree, Float, PRNGKeyArray
 from jaxtyping import Float16 as RadarFloat
 from beartype.typing import Union, Callable, NamedTuple
 
