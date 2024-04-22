@@ -2,7 +2,9 @@
 
 ## DART Datasets
 
-Our datasets can be downloaded on [Google Drive](https://drive.google.com/drive/folders/1qQevEA1HEqn0aE0R7GFG5ePQRTLksiRM?usp=sharing); the total size is 50GB.
+Our datasets can be downloaded from [Zenodo](https://zenodo.org/records/10938617); the total size is 42.1GB (compressed).
+
+**NOTE**: our datasets have been migrated from Google Drive to Zenodo due to recent storage limit changes. Each trace has been compressed into a `.zip` archive to fit in Zenodo's 50GB limit, and will need to be decompressed after downloading.
 
 These datasets were collected using our data collection platform, [Rover](https://github.com/thetianshuhuang/rover), which creates `radar.h5` and `trajectory.h5` data files, along with `sensor.json` and `metadata.json` dataset information files.
 
